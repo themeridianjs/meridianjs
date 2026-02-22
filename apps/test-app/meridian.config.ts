@@ -9,6 +9,7 @@ export default defineConfig({
   modules: [
     // Infrastructure
     { resolve: "@meridian/event-bus-local" },
+    { resolve: "@meridian/job-queue-local" },
     // Domain modules — order matters: project before issue (issue resolves projectModuleService)
     { resolve: "@meridian/user" },
     { resolve: "@meridian/workspace" },

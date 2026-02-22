@@ -12,6 +12,8 @@
     "@meridian/notification": "*",
     "@meridian/auth": "*",
     "@meridian/event-bus-local": "*",
+    "@meridian/job-queue-local": "*",
+    "@meridian/job-queue-redis": "*",
     "@meridian/framework": "*",
     "@meridian/framework-utils": "*",
     "@meridian/issue": "*",

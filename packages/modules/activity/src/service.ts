@@ -39,4 +39,24 @@ export class ActivityModuleService extends MeridianService({ Activity: ActivityM
     const repo = this.container.resolve<any>("activityRepository")
     return repo.find({ entity_type: entityType, entity_id: entityId })
   }
+
+  /**
+   * Hard-delete activity records older than `daysOld` days.
+   * Called by the cleanup-old-activities scheduled job.
+   * Returns the number of records deleted.
+   */
+  async purgeOldActivities(daysOld: number): Promise<number> {
+    const repo = this.container.resolve<any>("activityRepository")
+    const cutoff = new Date()
+    cutoff.setDate(cutoff.getDate() - daysOld)
+
+    // MikroORM supports query operators like $lt directly in filters
+    const old = await repo.find({ created_at: { $lt: cutoff } })
+    if (old.length === 0) return 0
+
+    for (const record of old) {
+      await repo.removeAndFlush(record)
+    }
+    return old.length
+  }
 }
