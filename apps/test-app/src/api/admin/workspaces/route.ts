@@ -11,7 +11,7 @@ export const GET = async (req: any, res: Response) => {
 
 export const POST = async (req: any, res: Response) => {
   const workspaceService = req.scope.resolve("workspaceModuleService") as any
-  const { name } = req.body
+  const { name, plan } = req.body
 
   if (!name || typeof name !== "string" || name.trim().length === 0) {
     res.status(400).json({ error: { message: "name is required" } })
@@ -19,6 +19,10 @@ export const POST = async (req: any, res: Response) => {
   }
 
   const slug = workspaceService.generateSlug(name.trim())
-  const workspace = await workspaceService.createWorkspace({ name: name.trim(), slug })
+  const workspace = await workspaceService.createWorkspace({
+    name: name.trim(),
+    slug,
+    plan: plan ?? "free",
+  })
   res.status(201).json({ workspace })
 }
