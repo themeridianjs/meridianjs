@@ -1,0 +1,26 @@
+import { model } from "@meridian/framework-utils"
+
+const Issue = model.define("issue", {
+  id: model.id().primaryKey(),
+  /** Full identifier, e.g. "PROJ-42" */
+  identifier: model.text(),
+  /** Sequential number within the project, e.g. 42 */
+  number: model.number(),
+  title: model.text(),
+  description: model.text().nullable(),
+  type: model.enum(["bug", "feature", "task", "epic", "story"]).default("task"),
+  priority: model.enum(["urgent", "high", "medium", "low", "none"]).default("none"),
+  status: model.enum(["backlog", "todo", "in_progress", "in_review", "done", "cancelled"]).default("backlog"),
+  /** Denormalized — not a FK */
+  project_id: model.text(),
+  workspace_id: model.text(),
+  assignee_id: model.text().nullable(),
+  reporter_id: model.text().nullable(),
+  /** Parent issue ID for subtasks */
+  parent_id: model.text().nullable(),
+  due_date: model.date().nullable(),
+  /** Story point estimate */
+  estimate: model.number().nullable(),
+})
+
+export default Issue

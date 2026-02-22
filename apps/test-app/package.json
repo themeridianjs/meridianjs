@@ -1,0 +1,29 @@
+{
+  "name": "@meridian/test-app",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --import tsx/esm src/main.ts",
+    "build": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@meridian/activity": "*",
+    "@meridian/auth": "*",
+    "@meridian/event-bus-local": "*",
+    "@meridian/framework": "*",
+    "@meridian/framework-utils": "*",
+    "@meridian/issue": "*",
+    "@meridian/project": "*",
+    "@meridian/sprint": "*",
+    "@meridian/types": "*",
+    "@meridian/user": "*",
+    "@meridian/workflow-engine": "*",
+    "@meridian/workspace": "*"
+  },
+  "devDependencies": {
+    "ts-node": "10.9.2",
+    "tsx": "4.21.0",
+    "typescript": "*"
+  }
+}
