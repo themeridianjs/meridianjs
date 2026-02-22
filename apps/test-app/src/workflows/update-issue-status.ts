@@ -5,6 +5,7 @@ import {
   WorkflowResponse,
   transform,
 } from "@meridian/workflow-engine"
+import { emitEventStep } from "./emit-event.js"
 
 // ─── Input / Output types ────────────────────────────────────────────────────
 
@@ -85,6 +86,16 @@ export const updateIssueStatusWorkflow = createWorkflow(
       newStatus,
     }))
     await logStatusChangedStep(activityInput)
+
+    await emitEventStep({
+      name: "issue.status_changed",
+      data: {
+        issue_id: updated.id,
+        workspace_id: updated.workspace_id,
+        actor_id: actor_id ?? "system",
+        new_status: newStatus,
+      },
+    })
 
     return new WorkflowResponse(updated)
   }

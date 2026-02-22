@@ -6,6 +6,7 @@ import {
   transform,
   when,
 } from "@meridian/workflow-engine"
+import { emitEventStep } from "./emit-event.js"
 
 // ─── Input / Output types ────────────────────────────────────────────────────
 
@@ -102,6 +103,15 @@ export const completeSprintWorkflow = createWorkflow(
       workspace_id: s.project_id, // sprint is scoped to a project; workspace_id TBD
     }))
     await logSprintCompletedStep(activityInput)
+
+    await emitEventStep({
+      name: "sprint.completed",
+      data: {
+        sprint_id: completed.id,
+        project_id: completed.project_id,
+        actor_id: input.actor_id ?? "system",
+      },
+    })
 
     return new WorkflowResponse(completed)
   }

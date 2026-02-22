@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@meridian/activity": "*",
+    "@meridian/notification": "*",
     "@meridian/auth": "*",
     "@meridian/event-bus-local": "*",
     "@meridian/framework": "*",

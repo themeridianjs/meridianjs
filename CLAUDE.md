@@ -317,8 +317,24 @@ if (transaction_status === "reverted") {
 }
 ```
 
-### Phase 5 — Event Bus + Subscribers (pending)
-Planned: `@meridian/event-bus-redis` (BullMQ), `@meridian/notification`, subscribers for `issue.created` / `issue.assigned` / `comment.created`.
+### Phase 5 — Event Bus + Subscribers ✅ COMPLETE
+`@meridian/event-bus-redis` (BullMQ + ioredis) and `@meridian/notification` module. All workflows emit domain events; subscribers create notification records asynchronously.
+
+New packages:
+- `@meridian/event-bus-redis` — BullMQ queue `meridian:events`; Worker fans out to handlers by event name. 3 retries with exponential backoff. Switch from LocalEventBus by changing one line in `meridian.config.ts`.
+- `@meridian/notification` — Notification model + service with `createNotification`, `listNotificationsForUser`, `markAsRead`, `markAllAsRead`.
+
+Shared step `src/workflows/emit-event.ts` — `emitEventStep` resolves eventBus from container. No compensation (fire-and-forget).
+
+Events emitted (final step of each workflow):
+`project.created`, `issue.created`, `issue.status_changed`, `issue.assigned`, `sprint.completed`, `comment.created`
+
+Subscribers: `issue-created.ts` (notifies assignee+reporter), `issue-assigned.ts` (notifies new assignee), `comment-created.ts` (notifies assignee+reporter)
+
+Notification routes:
+- `GET /admin/notifications` — list for current user (`?unread=true`)
+- `POST /admin/notifications/:id/read` — mark single as read
+- `POST /admin/notifications/read-all` — mark all as read
 
 ### Phase 6 — Scheduler (pending)
 Planned: `@meridian/job-queue-redis` (BullMQ cron), `src/jobs/` file-based job loading.

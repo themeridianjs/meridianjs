@@ -17,6 +17,7 @@ export default defineConfig({
     { resolve: "@meridian/issue" },
     { resolve: "@meridian/sprint" },
     { resolve: "@meridian/activity" },
+    { resolve: "@meridian/notification" },
     // Local test module (Phase 1 smoke test)
     { resolve: "./src/modules/hello-module/index.ts" },
   ],
