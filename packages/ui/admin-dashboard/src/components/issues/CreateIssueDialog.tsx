@@ -158,12 +158,12 @@ export function CreateIssueDialog({ open, onClose, projectId, defaultStatus = "b
           {(taskLists ?? []).length > 0 && !defaultParentId && (
             <div className="space-y-1.5">
               <Label>List <span className="text-xs text-muted-foreground font-normal">Optional</span></Label>
-              <Select value={taskListId} onValueChange={setTaskListId}>
+              <Select value={taskListId || "none"} onValueChange={(v) => setTaskListId(v === "none" ? "" : v)}>
                 <SelectTrigger className="h-8 text-xs">
                   <SelectValue placeholder="No list" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="" className="text-xs">
+                  <SelectItem value="none" className="text-xs">
                     <span className="text-muted-foreground">No list</span>
                   </SelectItem>
                   {(taskLists ?? []).map((tl) => (
@@ -176,12 +176,12 @@ export function CreateIssueDialog({ open, onClose, projectId, defaultStatus = "b
           {activeSprints.length > 0 && (
             <div className="space-y-1.5">
               <Label>Sprint <span className="text-xs text-muted-foreground font-normal">Optional</span></Label>
-              <Select value={sprintId} onValueChange={setSprintId}>
+              <Select value={sprintId || "none"} onValueChange={(v) => setSprintId(v === "none" ? "" : v)}>
                 <SelectTrigger className="h-8 text-xs">
                   <SelectValue placeholder="No sprint" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="" className="text-xs">
+                  <SelectItem value="none" className="text-xs">
                     <span className="text-muted-foreground">No sprint</span>
                   </SelectItem>
                   {activeSprints.map((s) => {
