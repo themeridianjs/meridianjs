@@ -33,10 +33,13 @@ export function useUserMap() {
     queryFn: () => api.get<UsersResponse>("/admin/users"),
     select: (data) =>
       new Map(
-        data.users.map((u) => [
-          u.id,
-          { name: `${u.first_name} ${u.last_name}`.trim(), initials: `${u.first_name?.[0] ?? ""}${u.last_name?.[0] ?? ""}`.toUpperCase() },
-        ])
+        data.users.map((u) => {
+          const first = u.first_name ?? ""
+          const last = u.last_name ?? ""
+          const name = `${first} ${last}`.trim() || u.email
+          const initials = (first[0] ?? last[0] ?? u.email?.[0] ?? "U").toUpperCase()
+          return [u.id, { name, initials }]
+        })
       ),
     staleTime: 1000 * 60 * 5,
   })

@@ -60,10 +60,11 @@ export function IssueDetail({ issue, projectId, open, onClose }: IssueDetailProp
   const getCommentAuthor = (authorId: string) => {
     // Prefer current user if it's their own comment
     if (currentUser && authorId === currentUser.id) {
-      return {
-        name: `${currentUser.first_name} ${currentUser.last_name}`.trim(),
-        initials: `${currentUser.first_name?.[0] ?? ""}${currentUser.last_name?.[0] ?? ""}`.toUpperCase(),
-      }
+      const first = currentUser.first_name ?? ""
+      const last = currentUser.last_name ?? ""
+      const name = `${first} ${last}`.trim() || currentUser.email
+      const initials = (first[0] ?? last[0] ?? currentUser.email?.[0] ?? "U").toUpperCase()
+      return { name, initials }
     }
     // Look up in the users map
     const mapped = userMap?.get(authorId)
