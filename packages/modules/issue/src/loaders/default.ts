@@ -2,11 +2,15 @@ import { dmlToEntitySchema, createRepository, createModuleOrm } from "@meridian/
 import type { LoaderOptions, MeridianConfig } from "@meridian/types"
 import IssueModel from "../models/issue.js"
 import CommentModel from "../models/comment.js"
+import AttachmentModel from "../models/attachment.js"
+import TimeLogModel from "../models/time-log.js"
 
 const IssueSchema = dmlToEntitySchema(IssueModel)
 const CommentSchema = dmlToEntitySchema(CommentModel)
+const AttachmentSchema = dmlToEntitySchema(AttachmentModel)
+const TimeLogSchema = dmlToEntitySchema(TimeLogModel)
 
-export const entitySchemas = [IssueSchema, CommentSchema]
+export const entitySchemas = [IssueSchema, CommentSchema, AttachmentSchema, TimeLogSchema]
 
 export default async function defaultLoader({ container }: LoaderOptions): Promise<void> {
   const config = container.resolve<MeridianConfig>("config")
@@ -18,6 +22,8 @@ export default async function defaultLoader({ container }: LoaderOptions): Promi
   container.register({
     issueRepository: createRepository(em, "issue"),
     commentRepository: createRepository(em, "comment"),
+    attachmentRepository: createRepository(em, "attachment"),
+    timeLogRepository: createRepository(em, "time_log"),
     issueOrm: orm,
   })
 }

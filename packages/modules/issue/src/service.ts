@@ -2,6 +2,8 @@ import { MeridianService } from "@meridian/framework-utils"
 import type { MeridianContainer } from "@meridian/types"
 import IssueModel from "./models/issue.js"
 import CommentModel from "./models/comment.js"
+import AttachmentModel from "./models/attachment.js"
+import TimeLogModel from "./models/time-log.js"
 
 export interface CreateIssueInput {
   title: string
@@ -18,9 +20,31 @@ export interface CreateIssueInput {
   estimate?: number
 }
 
+export interface CreateAttachmentInput {
+  issue_id: string
+  filename: string
+  original_name: string
+  mime_type: string
+  size: number
+  url: string
+  uploader_id: string
+  workspace_id: string
+}
+
+export interface CreateManualTimeLogInput {
+  issue_id: string
+  user_id: string
+  workspace_id: string
+  duration_minutes: number
+  description?: string
+  logged_date?: Date
+}
+
 export class IssueModuleService extends MeridianService({
   Issue: IssueModel,
   Comment: CommentModel,
+  Attachment: AttachmentModel,
+  TimeLog: TimeLogModel,
 }) {
   private readonly container: MeridianContainer
 
@@ -92,5 +116,140 @@ export class IssueModuleService extends MeridianService({
     const comment = repo.create(input)
     await repo.persistAndFlush(comment)
     return comment
+  }
+
+  // ---------------------------------------------------------------------------
+  // Attachments
+  // ---------------------------------------------------------------------------
+
+  /** List all attachments for an issue, ordered by creation date. */
+  async listAttachmentsByIssue(issueId: string): Promise<any[]> {
+    const repo = this.container.resolve<any>("attachmentRepository")
+    return repo.find({ issue_id: issueId }, { orderBy: { created_at: "ASC" } })
+  }
+
+  /** Persist an attachment record after the file has been stored on disk. */
+  async createAttachment(input: CreateAttachmentInput): Promise<any> {
+    const repo = this.container.resolve<any>("attachmentRepository")
+    const attachment = repo.create(input)
+    await repo.persistAndFlush(attachment)
+    return attachment
+  }
+
+  /** Delete an attachment record by ID. The caller is responsible for removing the file. */
+  async deleteAttachment(attachmentId: string): Promise<any> {
+    const repo = this.container.resolve<any>("attachmentRepository")
+    const attachment = await repo.findOne({ id: attachmentId })
+    if (!attachment) {
+      throw Object.assign(new Error(`Attachment ${attachmentId} not found`), { status: 404 })
+    }
+    await repo.removeAndFlush(attachment)
+    return attachment
+  }
+
+  // ---------------------------------------------------------------------------
+  // Time Logging
+  // ---------------------------------------------------------------------------
+
+  /** List all time log entries for an issue, newest first. */
+  async listTimeLogsByIssue(issueId: string): Promise<any[]> {
+    const repo = this.container.resolve<any>("timeLogRepository")
+    return repo.find({ issue_id: issueId }, { orderBy: { created_at: "DESC" } })
+  }
+
+  /** Create a manual time log entry with an explicit duration. */
+  async createManualTimeLog(input: CreateManualTimeLogInput): Promise<any> {
+    const repo = this.container.resolve<any>("timeLogRepository")
+    const entry = repo.create({
+      ...input,
+      source: "manual",
+      logged_date: input.logged_date ?? new Date(),
+    })
+    await repo.persistAndFlush(entry)
+    return entry
+  }
+
+  /**
+   * Start a timer for a user on an issue.
+   * Throws if the user already has an active timer on this issue.
+   */
+  async startTimer(issueId: string, userId: string, workspaceId: string): Promise<any> {
+    const repo = this.container.resolve<any>("timeLogRepository")
+
+    const active = await repo.findOne({
+      issue_id: issueId,
+      user_id: userId,
+      started_at: { $ne: null },
+      stopped_at: null,
+    })
+    if (active) {
+      throw Object.assign(
+        new Error("A timer is already running for this issue. Stop it before starting a new one."),
+        { status: 409 }
+      )
+    }
+
+    const entry = repo.create({
+      issue_id: issueId,
+      user_id: userId,
+      workspace_id: workspaceId,
+      source: "timer",
+      started_at: new Date(),
+    })
+    await repo.persistAndFlush(entry)
+    return entry
+  }
+
+  /**
+   * Stop the active timer for a user on an issue.
+   * Calculates duration from started_at and finalises the entry.
+   */
+  async stopTimer(issueId: string, userId: string): Promise<any> {
+    const repo = this.container.resolve<any>("timeLogRepository")
+
+    const active = await repo.findOne({
+      issue_id: issueId,
+      user_id: userId,
+      started_at: { $ne: null },
+      stopped_at: null,
+    })
+    if (!active) {
+      throw Object.assign(
+        new Error("No active timer found for this issue."),
+        { status: 404 }
+      )
+    }
+
+    const now = new Date()
+    const durationMs = now.getTime() - new Date(active.started_at).getTime()
+    const durationMinutes = Math.max(1, Math.round(durationMs / 60_000))
+
+    active.stopped_at = now
+    active.duration_minutes = durationMinutes
+    active.logged_date = now
+    await repo.persistAndFlush(active)
+    return active
+  }
+
+  /** Return the running timer entry for a user on an issue, or null if none. */
+  async getActiveTimer(issueId: string, userId: string): Promise<any | null> {
+    const repo = this.container.resolve<any>("timeLogRepository")
+    return repo.findOne({
+      issue_id: issueId,
+      user_id: userId,
+      started_at: { $ne: null },
+      stopped_at: null,
+    }) ?? null
+  }
+
+  /** Delete a time log entry by ID. */
+  async deleteTimeLog(id: string): Promise<any> {
+    const repo = this.container.resolve<any>("timeLogRepository")
+    const entry = await repo.findOne({ id })
+    if (!entry) {
+      throw Object.assign(new Error(`Time log entry ${id} not found`), { status: 404 })
+    }
+    await repo.removeAndFlush(entry)
+    return entry
   }
 }

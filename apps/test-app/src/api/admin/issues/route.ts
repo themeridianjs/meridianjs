@@ -22,7 +22,7 @@ export const POST = async (req: any, res: Response) => {
     title, project_id, workspace_id,
     description, type, priority, status,
     assignee_ids, reporter_id, parent_id,
-    due_date, estimate,
+    due_date, estimate, sprint_id,
   } = req.body
 
   if (!title || !project_id || !workspace_id) {
@@ -44,6 +44,7 @@ export const POST = async (req: any, res: Response) => {
       parent_id: parent_id ?? null,
       due_date: due_date ? new Date(due_date) : undefined,
       estimate: estimate ?? null,
+      sprint_id: sprint_id ?? null,
       actor_id: req.user?.id ?? null,
     },
   })

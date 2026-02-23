@@ -18,6 +18,8 @@ import {
 } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { IssueAttachments } from "@/components/issues/IssueAttachments"
+import { IssueTimeLog } from "@/components/issues/IssueTimeLog"
 
 // ── Activity helpers ───────────────────────────────────────────────────────────
 
@@ -110,6 +112,8 @@ function renderActivityDescription(
 
 // ── Component ──────────────────────────────────────────────────────────────────
 
+export type ActivityTab = "comments" | "activity" | "attachments" | "time"
+
 interface IssueActivityProps {
   issueId: string
   className?: string
@@ -118,7 +122,7 @@ interface IssueActivityProps {
   /** Called when the user clicks "View all" */
   onViewMore?: () => void
   /** Called whenever the active tab changes */
-  onTabChange?: (tab: "comments" | "activity") => void
+  onTabChange?: (tab: ActivityTab) => void
   /** Hide the built-in comment input (e.g. when parent renders a sticky one) */
   hideCommentInput?: boolean
 }
@@ -132,9 +136,9 @@ export function IssueActivity({
   hideCommentInput,
 }: IssueActivityProps) {
   const [comment, setComment] = useState("")
-  const [activeTab, setActiveTab] = useState<"comments" | "activity">("comments")
+  const [activeTab, setActiveTab] = useState<ActivityTab>("comments")
 
-  const handleTabChange = (tab: "comments" | "activity") => {
+  const handleTabChange = (tab: ActivityTab) => {
     setActiveTab(tab)
     onTabChange?.(tab)
   }
@@ -170,22 +174,30 @@ export function IssueActivity({
   return (
     <div className={className}>
       {/* Tab bar */}
-      <div className="flex items-center gap-0.5 px-6 pt-4 pb-2">
-        {(["comments", "activity"] as const).map((tab) => {
-          const count = tab === "comments" ? (comments?.length ?? 0) : (activities?.length ?? 0)
+      <div className="flex items-center gap-0.5 px-6 pt-4 pb-2 flex-wrap">
+        {(["comments", "activity", "attachments", "time"] as const).map((tab) => {
+          const count =
+            tab === "comments" ? (comments?.length ?? 0) :
+            tab === "activity" ? (activities?.length ?? 0) :
+            undefined
+          const label =
+            tab === "comments" ? "Comments" :
+            tab === "activity" ? "Activity" :
+            tab === "attachments" ? "Attachments" :
+            "Time"
           return (
             <button
               key={tab}
               onClick={() => handleTabChange(tab)}
               className={cn(
-                "px-3 py-1.5 text-xs font-medium rounded-md transition-colors capitalize",
+                "px-3 py-1.5 text-xs font-medium rounded-md transition-colors",
                 activeTab === tab
                   ? "bg-foreground/5 text-foreground"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
               )}
             >
-              {tab}
-              {count > 0 && (
+              {label}
+              {count != null && count > 0 && (
                 <span className="ml-1.5 text-[10px] tabular-nums text-muted-foreground">
                   {count}
                 </span>
@@ -340,6 +352,15 @@ export function IssueActivity({
             <p className="text-sm text-muted-foreground/50 py-2">No activity yet.</p>
           )}
         </div>
+      )}
+      {/* ── Attachments tab ───────────────────────────────────────────────────── */}
+      {activeTab === "attachments" && (
+        <IssueAttachments issueId={issueId} />
+      )}
+
+      {/* ── Time tab ──────────────────────────────────────────────────────────── */}
+      {activeTab === "time" && (
+        <IssueTimeLog issueId={issueId} />
       )}
     </div>
   )

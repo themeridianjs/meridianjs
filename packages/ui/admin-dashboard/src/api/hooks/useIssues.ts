@@ -40,6 +40,7 @@ interface CreateIssueInput {
   project_id: string
   workspace_id: string
   assignee_ids?: string[]
+  sprint_id?: string | null
 }
 
 interface UpdateIssueInput {

@@ -55,4 +55,28 @@ export const api = {
   patch: <T>(path: string, body?: unknown) =>
     request<T>(path, { method: "PATCH", body: JSON.stringify(body) }),
   delete: <T>(path: string) => request<T>(path, { method: "DELETE" }),
+
+  /** Upload a file using multipart/form-data. Omits Content-Type so browser sets boundary. */
+  upload: async <T>(path: string, formData: FormData): Promise<T> => {
+    const token = getToken()
+    const headers: Record<string, string> = {}
+    if (token) headers["Authorization"] = `Bearer ${token}`
+
+    const res = await fetch(`${BASE_URL}${path}`, {
+      method: "POST",
+      headers,
+      body: formData,
+    })
+
+    if (!res.ok) {
+      let data: unknown
+      try { data = await res.json() } catch { data = null }
+      const message =
+        (data as { error?: { message?: string } })?.error?.message ?? `HTTP ${res.status}`
+      throw new ApiError(res.status, message, data)
+    }
+
+    if (res.status === 204) return undefined as T
+    return res.json() as Promise<T>
+  },
 }

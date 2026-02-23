@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react"
 import { useNavigate, useParams } from "react-router-dom"
+import { format } from "date-fns"
 import type { Issue } from "@/api/hooks/useIssues"
 import { useUpdateIssue, useCreateComment } from "@/api/hooks/useIssues"
 import { useProjectStatuses } from "@/api/hooks/useProjectStatuses"
+import { useSprints, type Sprint } from "@/api/hooks/useSprints"
 import { useAuth } from "@/stores/auth"
 import { AssigneeSelector } from "@/components/issues/AssigneeSelector"
-import { IssueActivity } from "@/components/issues/IssueActivity"
+import { IssueActivity, type ActivityTab } from "@/components/issues/IssueActivity"
 import {
   Sheet,
   SheetContent,
@@ -25,8 +27,15 @@ import {
 } from "@/lib/constants"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { RichTextContent } from "@/components/ui/rich-text-editor"
-import { Pencil, X, Check, ExternalLink, Send } from "lucide-react"
+import { Pencil, X, Check, ExternalLink, Send, Layers } from "lucide-react"
 import { toast } from "sonner"
+
+function sprintDateRange(sprint: Sprint): string | null {
+  if (!sprint.start_date && !sprint.end_date) return null
+  const start = sprint.start_date ? format(new Date(sprint.start_date), "MMM d") : "—"
+  const end = sprint.end_date ? format(new Date(sprint.end_date), "MMM d") : "—"
+  return `${start} – ${end}`
+}
 
 interface IssueDetailProps {
   issue: Issue | null
@@ -42,12 +51,14 @@ export function IssueDetail({ issue, projectId, open, onClose }: IssueDetailProp
   const [editTitle, setEditTitle] = useState("")
   const [editDescription, setEditDescription] = useState("")
   const [comment, setComment] = useState("")
-  const [activeActivityTab, setActiveActivityTab] = useState<"comments" | "activity">("comments")
+  const [activeActivityTab, setActiveActivityTab] = useState<ActivityTab>("comments")
 
   const { user: currentUser } = useAuth()
   const updateIssue = useUpdateIssue(issue?.id ?? "", projectId)
   const createComment = useCreateComment(issue?.id ?? "")
   const { data: projectStatuses } = useProjectStatuses(projectId)
+  const { data: sprints } = useSprints(projectId || undefined)
+  const activeSprints = (sprints ?? []).filter((s) => s.status !== "completed")
 
   const statusOptions = projectStatuses && projectStatuses.length > 0
     ? Object.fromEntries(projectStatuses.map((s) => [s.key, s.name]))
@@ -120,6 +131,13 @@ export function IssueDetail({ issue, projectId, open, onClose }: IssueDetailProp
     updateIssue.mutate({ assignee_ids }, {
       onSuccess: () => toast.success("Assignees updated"),
       onError: () => toast.error("Failed to update assignees"),
+    })
+  }
+
+  const handleSprintChange = (sprint_id: string | null) => {
+    updateIssue.mutate({ sprint_id }, {
+      onSuccess: () => toast.success(sprint_id ? "Sprint assigned" : "Removed from sprint"),
+      onError: () => toast.error("Failed to update sprint"),
     })
   }
 
@@ -250,6 +268,42 @@ export function IssueDetail({ issue, projectId, open, onClose }: IssueDetailProp
                 onChange={handleAssigneesChange}
                 disabled={updateIssue.isPending}
               />
+            </div>
+
+            {/* Sprint */}
+            <div>
+              <p className="text-xs text-muted-foreground mb-1.5">Sprint</p>
+              <Select
+                value={issue.sprint_id ?? "none"}
+                onValueChange={(v) => handleSprintChange(v === "none" ? null : v)}
+              >
+                <SelectTrigger className="h-8 text-xs bg-transparent">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <Layers className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                    <SelectValue placeholder="No sprint" />
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none" className="text-xs text-muted-foreground">
+                    No sprint
+                  </SelectItem>
+                  {activeSprints.map((s) => {
+                    const range = sprintDateRange(s)
+                    return (
+                      <SelectItem key={s.id} value={s.id} className="text-xs">
+                        <div className="flex items-baseline gap-1.5">
+                          <span>{s.name}</span>
+                          {range && (
+                            <span className="text-[10px] text-muted-foreground font-normal">
+                              {range}
+                            </span>
+                          )}
+                        </div>
+                      </SelectItem>
+                    )
+                  })}
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Description */}

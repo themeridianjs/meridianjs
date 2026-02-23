@@ -22,6 +22,7 @@ export interface CreateIssueInput {
   parent_id?: string | null
   due_date?: Date
   estimate?: number | null
+  sprint_id?: string | null
   actor_id?: string | null
 }
 
@@ -44,6 +45,7 @@ const createIssueStep = createStep(
       parent_id: input.parent_id ?? null,
       due_date: input.due_date,
       estimate: input.estimate ?? null,
+      sprint_id: input.sprint_id ?? null,
     })
     return new StepResponse(issue, { issueId: issue.id })
   },

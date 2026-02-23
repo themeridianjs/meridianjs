@@ -4,6 +4,7 @@ import { format } from "date-fns"
 import { useIssue, useUpdateIssue } from "@/api/hooks/useIssues"
 import { useProjectByKey } from "@/api/hooks/useProjects"
 import { useProjectStatuses } from "@/api/hooks/useProjectStatuses"
+import { useSprints, type Sprint } from "@/api/hooks/useSprints"
 import { AssigneeSelector } from "@/components/issues/AssigneeSelector"
 import { IssueActivity } from "@/components/issues/IssueActivity"
 import { RichTextEditor, RichTextContent } from "@/components/ui/rich-text-editor"
@@ -25,10 +26,19 @@ import {
   ChevronLeft, Pencil,
   Circle, Clock, ArrowRight, Eye, CheckCircle2, XCircle,
   Zap, ArrowUp, Minus, ArrowDown,
-  Bug, Sparkles, CheckSquare, HelpCircle,
+  Bug, Sparkles, CheckSquare, HelpCircle, Layers,
 } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function sprintDateRange(sprint: Sprint): string | null {
+  if (!sprint.start_date && !sprint.end_date) return null
+  const start = sprint.start_date ? format(new Date(sprint.start_date), "MMM d") : "—"
+  const end = sprint.end_date ? format(new Date(sprint.end_date), "MMM d") : "—"
+  return `${start} – ${end}`
+}
 
 // ── Property row ──────────────────────────────────────────────────────────────
 
@@ -116,6 +126,8 @@ export function IssueDetailPage() {
   const { data: issue, isLoading } = useIssue(issueId ?? "")
   const updateIssue = useUpdateIssue(issueId ?? "", projectId)
   const { data: projectStatuses } = useProjectStatuses(projectId || undefined)
+  const { data: sprints } = useSprints(projectId || undefined)
+  const activeSprints = (sprints ?? []).filter((s) => s.status !== "completed")
 
   const statusOptions = projectStatuses && projectStatuses.length > 0
     ? Object.fromEntries(projectStatuses.map((s) => [s.key, s.name]))
@@ -339,6 +351,57 @@ export function IssueDetailPage() {
                   onChange={(assignee_ids) => handlePropUpdate({ assignee_ids }, "Assignees")}
                   disabled={updateIssue.isPending}
                 />
+              </PropertyRow>
+
+              <PropertyRow label="Sprint">
+                <Select
+                  value={issue.sprint_id ?? "none"}
+                  onValueChange={(v) =>
+                    handlePropUpdate({ sprint_id: v === "none" ? null : v }, "Sprint")
+                  }
+                >
+                  <SelectTrigger className="h-7 text-xs border-0 bg-transparent px-0 gap-1.5 focus:ring-0 hover:bg-accent rounded-md pl-1">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <Layers className="h-3 w-3 shrink-0 text-muted-foreground" />
+                      {issue.sprint_id ? (
+                        (() => {
+                          const s = activeSprints.find((sp) => sp.id === issue.sprint_id)
+                            ?? sprints?.find((sp) => sp.id === issue.sprint_id)
+                          if (!s) return <span className="truncate">{issue.sprint_id.slice(0, 8)}…</span>
+                          const range = sprintDateRange(s)
+                          return (
+                            <span className="truncate">
+                              {s.name}
+                              {range && <span className="text-muted-foreground ml-1">· {range}</span>}
+                            </span>
+                          )
+                        })()
+                      ) : (
+                        <span className="text-muted-foreground">No sprint</span>
+                      )}
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none" className="text-xs text-muted-foreground">
+                      No sprint
+                    </SelectItem>
+                    {activeSprints.map((s) => {
+                      const range = sprintDateRange(s)
+                      return (
+                        <SelectItem key={s.id} value={s.id} className="text-xs">
+                          <div className="flex items-baseline gap-1.5">
+                            <span>{s.name}</span>
+                            {range && (
+                              <span className="text-[10px] text-muted-foreground font-normal">
+                                {range}
+                              </span>
+                            )}
+                          </div>
+                        </SelectItem>
+                      )
+                    })}
+                  </SelectContent>
+                </Select>
               </PropertyRow>
             </div>
 

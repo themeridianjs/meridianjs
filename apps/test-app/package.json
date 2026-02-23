@@ -9,21 +9,23 @@
   },
   "dependencies": {
     "@meridian/activity": "*",
-    "@meridian/notification": "*",
     "@meridian/auth": "*",
     "@meridian/event-bus-local": "*",
-    "@meridian/job-queue-local": "*",
-    "@meridian/job-queue-redis": "*",
     "@meridian/framework": "*",
     "@meridian/framework-utils": "*",
     "@meridian/issue": "*",
+    "@meridian/job-queue-local": "*",
+    "@meridian/job-queue-redis": "*",
+    "@meridian/notification": "*",
+    "@meridian/plugin-webhook": "*",
     "@meridian/project": "*",
     "@meridian/sprint": "*",
     "@meridian/types": "*",
     "@meridian/user": "*",
-    "@meridian/plugin-webhook": "*",
     "@meridian/workflow-engine": "*",
-    "@meridian/workspace": "*"
+    "@meridian/workspace": "*",
+    "@types/multer": "2.0.0",
+    "multer": "2.0.2"
   },
   "devDependencies": {
     "ts-node": "10.9.2",
