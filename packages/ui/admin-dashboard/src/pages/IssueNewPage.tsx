@@ -18,8 +18,11 @@ import {
   ChevronLeft,
   Circle, Clock, ArrowRight, Eye, CheckCircle2, XCircle,
   Zap, ArrowUp, Minus, ArrowDown,
-  Bug, Sparkles, CheckSquare, HelpCircle,
+  Bug, Sparkles, CheckSquare, HelpCircle, Calendar as CalendarIcon, X,
 } from "lucide-react"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Calendar } from "@/components/ui/calendar"
+import { format } from "date-fns"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 
@@ -107,6 +110,7 @@ export function IssueNewPage() {
   const [priority, setPriority] = useState("medium")
   const [type, setType] = useState("task")
   const [assigneeIds, setAssigneeIds] = useState<string[]>([])
+  const [dueDate, setDueDate] = useState<Date | undefined>(undefined)
 
   const { data: project } = useProjectByKey(projectKey ?? "")
   const projectId = project?.id ?? ""
@@ -145,6 +149,7 @@ export function IssueNewPage() {
         project_id: projectId,
         workspace_id: workspaceRef!.id,
         assignee_ids: assigneeIds.length > 0 ? assigneeIds : undefined,
+        due_date: dueDate ? format(dueDate, "yyyy-MM-dd") : null,
       },
       {
         onSuccess: (data) => {
@@ -267,6 +272,39 @@ export function IssueNewPage() {
 
               <PropertyRow label="Assignees">
                 <AssigneeSelector value={assigneeIds} onChange={setAssigneeIds} />
+              </PropertyRow>
+
+              <PropertyRow label="Due Date">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      className="flex items-center gap-1.5 h-7 px-1 rounded text-xs bg-transparent hover:bg-accent transition-colors focus:outline-none w-full text-left"
+                    >
+                      <CalendarIcon className="h-3 w-3 shrink-0 text-muted-foreground" />
+                      <span className={dueDate ? "text-foreground" : "text-muted-foreground"}>
+                        {dueDate ? format(dueDate, "MMM d, yyyy") : "No due date"}
+                      </span>
+                      {dueDate && (
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); setDueDate(undefined) }}
+                          className="ml-auto text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      )}
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={dueDate}
+                      onSelect={setDueDate}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
               </PropertyRow>
             </div>
 
