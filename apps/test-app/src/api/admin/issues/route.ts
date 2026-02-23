@@ -8,8 +8,10 @@ export const GET = async (req: any, res: Response) => {
   const filters: Record<string, unknown> = {}
   if (req.query.project_id) filters.project_id = req.query.project_id
   if (req.query.status) filters.status = req.query.status
-  // assignee_ids is a JSON array; simple equality filtering is not supported here
   if (req.query.type) filters.type = req.query.type
+  // sprint_id=<id> → issues in that sprint; sprint_id=none → unscheduled issues
+  if (req.query.sprint_id === "none") filters.sprint_id = null
+  else if (req.query.sprint_id) filters.sprint_id = req.query.sprint_id as string
 
   const [issues, count] = await issueService.listAndCountIssues(filters, { limit, offset })
   res.json({ issues, count, limit, offset })

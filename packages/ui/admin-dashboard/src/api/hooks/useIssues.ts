@@ -12,6 +12,7 @@ export interface Issue {
   project_id: string
   workspace_id: string
   assignee_ids?: string[]
+  sprint_id?: string | null
   due_date?: string | null
   created_at: string
   updated_at: string
@@ -48,6 +49,7 @@ interface UpdateIssueInput {
   priority?: string
   type?: string
   assignee_ids?: string[]
+  sprint_id?: string | null
   due_date?: string | null
 }
 

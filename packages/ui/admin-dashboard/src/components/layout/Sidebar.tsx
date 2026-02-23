@@ -191,6 +191,7 @@ export function AppSidebar({ ...props }: SidebarProps) {
   const isSettingsActive = location.pathname.includes("/settings")
   const isBoardActive = projectKey ? location.pathname.endsWith("/board") : false
   const isIssuesActive = projectKey ? location.pathname.endsWith("/issues") : false
+  const isSprintsActive = projectKey ? location.pathname.endsWith("/sprints") : false
 
   return (
     <SidebarRoot collapsible="offcanvas" {...props}>
@@ -257,6 +258,13 @@ export function AppSidebar({ ...props }: SidebarProps) {
                     <SidebarMenuButton asChild isActive={isIssuesActive}>
                       <NavLink to={`/${ws}/projects/${projectKey}/issues`}>
                         Issues
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={isSprintsActive}>
+                      <NavLink to={`/${ws}/projects/${projectKey}/sprints`}>
+                        Sprints
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

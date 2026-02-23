@@ -13,6 +13,7 @@ import { ProjectIssuesPage } from "@/pages/ProjectIssuesPage"
 import { IssueDetailPage } from "@/pages/IssueDetailPage"
 import { IssueNewPage } from "@/pages/IssueNewPage"
 import { NotificationsPage } from "@/pages/NotificationsPage"
+import { SprintsPage } from "@/pages/SprintsPage"
 
 function RequireAuth({ children }: { children: ReactNode }) {
   const { isAuthenticated } = useAuth()
@@ -149,6 +150,7 @@ export function App() {
         <Route path="projects/:projectKey/issues" element={<ProjectIssuesPage />} />
         <Route path="projects/:projectKey/issues/new" element={<IssueNewPage />} />
         <Route path="projects/:projectKey/issues/:issueId" element={<IssueDetailPage />} />
+        <Route path="projects/:projectKey/sprints" element={<SprintsPage />} />
         <Route path="notifications" element={<NotificationsPage />} />
       </Route>
 

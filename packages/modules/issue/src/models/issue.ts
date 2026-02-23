@@ -19,6 +19,8 @@ const Issue = model.define("issue", {
   reporter_id: model.text().nullable(),
   /** Parent issue ID for subtasks */
   parent_id: model.text().nullable(),
+  /** Denormalized sprint reference — no FK constraint */
+  sprint_id: model.text().nullable(),
   due_date: model.date().nullable(),
   /** Story point estimate */
   estimate: model.number().nullable(),
