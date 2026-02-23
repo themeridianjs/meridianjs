@@ -45,6 +45,7 @@ interface CreateIssueInput {
   sprint_id?: string | null
   task_list_id?: string | null
   parent_id?: string | null
+  due_date?: string | null
 }
 
 interface UpdateIssueInput {
