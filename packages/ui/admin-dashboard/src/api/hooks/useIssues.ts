@@ -10,7 +10,9 @@ export interface Issue {
   priority: string
   type: string
   project_id: string
+  workspace_id: string
   assignee_ids?: string[]
+  due_date?: string | null
   created_at: string
   updated_at: string
 }
@@ -46,6 +48,7 @@ interface UpdateIssueInput {
   priority?: string
   type?: string
   assignee_ids?: string[]
+  due_date?: string | null
 }
 
 export interface Activity {
