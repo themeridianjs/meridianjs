@@ -118,7 +118,33 @@ export function useUpdateIssue(id: string, projectId: string) {
   return useMutation({
     mutationFn: (data: UpdateIssueInput) =>
       api.put<{ issue: Issue }>(`/admin/issues/${id}`, data),
-    onSuccess: () => {
+
+    // Optimistically patch the list cache so the cell updates instantly and
+    // the refetch on settle doesn't cause a visible flash or row reorder.
+    onMutate: async (newData) => {
+      await qc.cancelQueries({ queryKey: issueKeys.byProject(projectId) })
+      const previous = qc.getQueryData(issueKeys.byProject(projectId))
+      qc.setQueryData(issueKeys.byProject(projectId), (old: any) => {
+        if (!old) return old
+        return {
+          ...old,
+          issues: old.issues.map((issue: Issue) =>
+            issue.id === id ? { ...issue, ...newData } : issue
+          ),
+        }
+      })
+      return { previous }
+    },
+
+    // Roll back on error
+    onError: (_err, _vars, context: any) => {
+      if (context?.previous) {
+        qc.setQueryData(issueKeys.byProject(projectId), context.previous)
+      }
+    },
+
+    // Always reconcile with server after settle
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: issueKeys.byProject(projectId) })
       qc.invalidateQueries({ queryKey: issueKeys.detail(id) })
     },

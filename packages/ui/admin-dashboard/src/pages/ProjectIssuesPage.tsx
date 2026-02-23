@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Input } from "@/components/ui/input"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Command, CommandGroup, CommandItem, CommandList } from "@/components/ui/command"
+import { Calendar } from "@/components/ui/calendar"
 import {
   Select,
   SelectContent,
@@ -223,27 +224,25 @@ function IssueRow({
               </span>
             </button>
           </PopoverTrigger>
-          <PopoverContent className="w-56 p-3" align="start" onClick={(e) => e.stopPropagation()}>
-            <p className="text-xs font-medium mb-2">Due date</p>
-            <input
-              type="date"
-              defaultValue={issue.due_date ? issue.due_date.slice(0, 10) : ""}
-              className={cn(
-                "w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm",
-                "focus:outline-none focus:ring-1 focus:ring-ring"
-              )}
-              onChange={(e) => {
-                if (e.target.value) save({ due_date: e.target.value })
+          <PopoverContent className="w-auto p-0" align="start" onClick={(e) => e.stopPropagation()}>
+            <Calendar
+              mode="single"
+              selected={issue.due_date ? new Date(issue.due_date) : undefined}
+              onSelect={(date) => {
+                save({ due_date: date ? format(date, "yyyy-MM-dd") : null })
               }}
+              initialFocus
             />
             {issue.due_date && (
-              <button
-                onClick={() => save({ due_date: null })}
-                className="mt-2 flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors"
-              >
-                <X className="h-3 w-3" />
-                Clear date
-              </button>
+              <div className="border-t px-3 py-2">
+                <button
+                  onClick={() => save({ due_date: null })}
+                  className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors"
+                >
+                  <X className="h-3 w-3" />
+                  Clear date
+                </button>
+              </div>
             )}
           </PopoverContent>
         </Popover>
@@ -308,15 +307,23 @@ export function ProjectIssuesPage() {
 
   if (!projectKey || !workspace) return null
 
-  const filtered = (issues ?? []).filter((issue) => {
-    const matchesSearch =
-      !search ||
-      issue.title.toLowerCase().includes(search.toLowerCase()) ||
-      issue.identifier.toLowerCase().includes(search.toLowerCase())
-    const matchesStatus = statusFilter === "all" || issue.status === statusFilter
-    const matchesPriority = priorityFilter === "all" || issue.priority === priorityFilter
-    return matchesSearch && matchesStatus && matchesPriority
-  })
+  const filtered = (issues ?? [])
+    .filter((issue) => {
+      const matchesSearch =
+        !search ||
+        issue.title.toLowerCase().includes(search.toLowerCase()) ||
+        issue.identifier.toLowerCase().includes(search.toLowerCase())
+      const matchesStatus = statusFilter === "all" || issue.status === statusFilter
+      const matchesPriority = priorityFilter === "all" || issue.priority === priorityFilter
+      return matchesSearch && matchesStatus && matchesPriority
+    })
+    // Stable sort by issue number so mutations (which change updated_at)
+    // never cause rows to jump to a different position.
+    .sort((a, b) => {
+      const aNum = parseInt(a.identifier.split("-")[1] ?? "0", 10)
+      const bNum = parseInt(b.identifier.split("-")[1] ?? "0", 10)
+      return aNum - bNum
+    })
 
   const GRID = "grid-cols-[70px_1fr_150px_120px_140px_150px_110px_32px]"
 
