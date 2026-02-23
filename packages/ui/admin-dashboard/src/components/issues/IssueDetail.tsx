@@ -273,17 +273,19 @@ export function IssueDetail({ issue, projectId, open, onClose }: IssueDetailProp
               </div>
             </div>
 
-            {/* Assignees + Sprint + List — inline row */}
+            {/* Assignees */}
+            <div>
+              <p className="text-xs text-muted-foreground mb-1.5">Assignees</p>
+              <AssigneeSelector
+                value={issue.assignee_ids ?? []}
+                onChange={handleAssigneesChange}
+                disabled={updateIssue.isPending}
+              />
+            </div>
+
+            {/* Sprint + List + Due Date — inline row */}
             <div className="flex gap-3 items-start">
               <div className="flex-1 min-w-0">
-                <p className="text-xs text-muted-foreground mb-1.5">Assignees</p>
-                <AssigneeSelector
-                  value={issue.assignee_ids ?? []}
-                  onChange={handleAssigneesChange}
-                  disabled={updateIssue.isPending}
-                />
-              </div>
-              <div className="w-[130px] shrink-0">
                 <p className="text-xs text-muted-foreground mb-1.5">Sprint</p>
                 <Select
                   value={issue.sprint_id ?? "none"}
@@ -318,7 +320,7 @@ export function IssueDetail({ issue, projectId, open, onClose }: IssueDetailProp
                 </Select>
               </div>
               {(taskLists ?? []).length > 0 && (
-                <div className="w-[130px] shrink-0">
+                <div className="flex-1 min-w-0">
                   <p className="text-xs text-muted-foreground mb-1.5">List</p>
                   <Select
                     value={issue.task_list_id ?? "none"}
@@ -341,7 +343,7 @@ export function IssueDetail({ issue, projectId, open, onClose }: IssueDetailProp
                   </Select>
                 </div>
               )}
-              <div className="w-[120px] shrink-0">
+              <div className="flex-1 min-w-0">
                 <p className="text-xs text-muted-foreground mb-1.5">Due Date</p>
                 <Popover>
                   <PopoverTrigger asChild>
