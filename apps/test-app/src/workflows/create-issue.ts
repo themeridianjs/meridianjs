@@ -17,7 +17,7 @@ export interface CreateIssueInput {
   type?: string
   priority?: string
   status?: string
-  assignee_id?: string | null
+  assignee_ids?: string[] | null
   reporter_id?: string | null
   parent_id?: string | null
   due_date?: Date
@@ -39,7 +39,7 @@ const createIssueStep = createStep(
       type: input.type,
       priority: input.priority,
       status: input.status,
-      assignee_id: input.assignee_id ?? null,
+      assignee_ids: input.assignee_ids ?? null,
       reporter_id: input.reporter_id ?? null,
       parent_id: input.parent_id ?? null,
       due_date: input.due_date,
@@ -91,7 +91,7 @@ export const createIssueWorkflow = createWorkflow(
         project_id: issue.project_id,
         workspace_id: issue.workspace_id,
         actor_id: input.actor_id ?? "system",
-        assignee_id: issue.assignee_id ?? null,
+        assignee_ids: issue.assignee_ids ?? null,
         reporter_id: issue.reporter_id ?? null,
       },
     })

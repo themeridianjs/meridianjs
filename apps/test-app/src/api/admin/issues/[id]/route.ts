@@ -13,7 +13,7 @@ export const PUT = async (req: any, res: Response) => {
   const activityService = req.scope.resolve("activityModuleService") as any
 
   const allowed = ["title", "description", "status", "priority", "type",
-                   "assignee_id", "parent_id", "due_date", "estimate"]
+                   "assignee_ids", "parent_id", "due_date", "estimate"]
   const updates: Record<string, unknown> = {}
   for (const field of allowed) {
     if (req.body[field] !== undefined) updates[field] = req.body[field]
@@ -48,11 +48,11 @@ export const PUT = async (req: any, res: Response) => {
     return
   }
 
-  if ("assignee_id" in updates) {
+  if ("assignee_ids" in updates) {
     const { result: issue, errors, transaction_status } = await assignIssueWorkflow(req.scope).run({
       input: {
         issueId: req.params.id,
-        assignee_id: updates.assignee_id as string | null,
+        assignee_ids: Array.isArray(updates.assignee_ids) ? updates.assignee_ids as string[] : [],
         actor_id: req.user?.id ?? null,
       },
     })
@@ -61,7 +61,7 @@ export const PUT = async (req: any, res: Response) => {
       res.status((err as any).status ?? 500).json({ error: { message: err.message } })
       return
     }
-    delete updates.assignee_id
+    delete updates.assignee_ids
     if (Object.keys(updates).length === 0) {
       res.json({ issue })
       return

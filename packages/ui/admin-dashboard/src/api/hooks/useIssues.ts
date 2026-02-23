@@ -10,7 +10,7 @@ export interface Issue {
   priority: string
   type: string
   project_id: string
-  assignee_id?: string
+  assignee_ids?: string[]
   created_at: string
   updated_at: string
 }
@@ -35,7 +35,7 @@ interface CreateIssueInput {
   priority?: string
   type?: string
   project_id: string
-  assignee_id?: string
+  assignee_ids?: string[]
 }
 
 interface UpdateIssueInput {
@@ -44,7 +44,7 @@ interface UpdateIssueInput {
   status?: string
   priority?: string
   type?: string
-  assignee_id?: string | null
+  assignee_ids?: string[]
 }
 
 export const issueKeys = {

@@ -8,7 +8,7 @@ export const GET = async (req: any, res: Response) => {
   const filters: Record<string, unknown> = {}
   if (req.query.project_id) filters.project_id = req.query.project_id
   if (req.query.status) filters.status = req.query.status
-  if (req.query.assignee_id) filters.assignee_id = req.query.assignee_id
+  // assignee_ids is a JSON array; simple equality filtering is not supported here
   if (req.query.type) filters.type = req.query.type
 
   const [issues, count] = await issueService.listAndCountIssues(filters, { limit, offset })
@@ -19,7 +19,7 @@ export const POST = async (req: any, res: Response) => {
   const {
     title, project_id, workspace_id,
     description, type, priority, status,
-    assignee_id, reporter_id, parent_id,
+    assignee_ids, reporter_id, parent_id,
     due_date, estimate,
   } = req.body
 
@@ -37,7 +37,7 @@ export const POST = async (req: any, res: Response) => {
       type,
       priority,
       status,
-      assignee_id: assignee_id ?? null,
+      assignee_ids: Array.isArray(assignee_ids) ? assignee_ids : null,
       reporter_id: reporter_id ?? (req.user?.id ?? null),
       parent_id: parent_id ?? null,
       due_date: due_date ? new Date(due_date) : undefined,

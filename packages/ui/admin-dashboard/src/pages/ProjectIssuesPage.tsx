@@ -2,6 +2,7 @@ import { useState } from "react"
 import { useParams } from "react-router-dom"
 import { useProject } from "@/api/hooks/useProjects"
 import { useIssues, type Issue } from "@/api/hooks/useIssues"
+import { useUserMap } from "@/api/hooks/useUsers"
 import { IssueDetail } from "@/components/issues/IssueDetail"
 import { CreateIssueDialog } from "@/components/issues/CreateIssueDialog"
 import { Button } from "@/components/ui/button"
@@ -19,6 +20,7 @@ import {
   ISSUE_PRIORITY_LABELS,
   ISSUE_PRIORITY_COLORS,
 } from "@/lib/constants"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Plus, Search, ArrowUp, ArrowDown, Minus, Zap, Circle } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { format } from "date-fns"
@@ -53,6 +55,7 @@ export function ProjectIssuesPage() {
 
   useProject(projectId ?? "")
   const { data: issues, isLoading } = useIssues(projectId)
+  const { data: userMap } = useUserMap()
 
   if (!projectId) return null
 
@@ -117,11 +120,12 @@ export function ProjectIssuesPage() {
         </div>
 
         {/* Table header */}
-        <div className="grid grid-cols-[80px_1fr_130px_100px_120px] items-center px-6 py-2.5 border-b border-border">
+        <div className="grid grid-cols-[80px_1fr_130px_100px_110px_120px] items-center px-6 py-2.5 border-b border-border">
           <span className="text-xs font-medium text-[#6b7280]">ID</span>
           <span className="text-xs font-medium text-[#6b7280]">Title</span>
           <span className="text-xs font-medium text-[#6b7280]">Status</span>
           <span className="text-xs font-medium text-[#6b7280]">Priority</span>
+          <span className="text-xs font-medium text-[#6b7280]">Assignees</span>
           <span className="text-xs font-medium text-[#6b7280]">Created</span>
         </div>
 
@@ -129,10 +133,11 @@ export function ProjectIssuesPage() {
         {isLoading ? (
           <div className="divide-y divide-border">
             {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="grid grid-cols-[80px_1fr_130px_100px_120px] items-center px-6 py-3 gap-4">
+              <div key={i} className="grid grid-cols-[80px_1fr_130px_100px_110px_120px] items-center px-6 py-3 gap-4">
                 <Skeleton className="h-4 w-16" />
                 <Skeleton className="h-4 w-64" />
                 <Skeleton className="h-5 w-20" />
+                <Skeleton className="h-4 w-16" />
                 <Skeleton className="h-4 w-16" />
                 <Skeleton className="h-4 w-20" />
               </div>
@@ -163,7 +168,7 @@ export function ProjectIssuesPage() {
               <div
                 key={issue.id}
                 onClick={() => setSelectedIssue(issue)}
-                className="grid grid-cols-[80px_1fr_130px_100px_120px] items-center px-6 py-3 hover:bg-[#f9fafb] dark:hover:bg-muted/30 cursor-pointer transition-colors"
+                className="grid grid-cols-[80px_1fr_130px_100px_110px_120px] items-center px-6 py-3 hover:bg-[#f9fafb] dark:hover:bg-muted/30 cursor-pointer transition-colors"
               >
                 <span className="text-xs font-mono text-muted-foreground">
                   {issue.identifier}
@@ -182,6 +187,23 @@ export function ProjectIssuesPage() {
                   <span className="text-xs text-muted-foreground">
                     {ISSUE_PRIORITY_LABELS[issue.priority] ?? issue.priority}
                   </span>
+                </div>
+                <div className="flex -space-x-1.5">
+                  {(issue.assignee_ids ?? []).slice(0, 3).map((uid) => {
+                    const u = userMap?.get(uid)
+                    return (
+                      <Avatar key={uid} className="h-5 w-5 border border-background">
+                        <AvatarFallback className="text-[9px] bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300">
+                          {u?.initials ?? "?"}
+                        </AvatarFallback>
+                      </Avatar>
+                    )
+                  })}
+                  {(issue.assignee_ids?.length ?? 0) > 3 && (
+                    <span className="text-[10px] text-muted-foreground ml-2 self-center">
+                      +{(issue.assignee_ids?.length ?? 0) - 3}
+                    </span>
+                  )}
                 </div>
                 <span className="text-xs text-muted-foreground">
                   {format(new Date(issue.created_at), "MMM d, yyyy")}

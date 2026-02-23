@@ -1,6 +1,8 @@
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import type { Issue } from "@/api/hooks/useIssues"
+import { useUserMap } from "@/api/hooks/useUsers"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { ISSUE_PRIORITY_COLORS } from "@/lib/constants"
 import { cn } from "@/lib/utils"
 import { Circle, Zap, ArrowUp, ArrowDown, Minus } from "lucide-react"
@@ -22,6 +24,7 @@ interface IssueCardProps {
 }
 
 export function IssueCard({ issue, onClick }: IssueCardProps) {
+  const { data: userMap } = useUserMap()
   const {
     attributes,
     listeners,
@@ -56,7 +59,26 @@ export function IssueCard({ issue, onClick }: IssueCardProps) {
         <span className="text-[11px] font-mono text-muted-foreground">
           {issue.identifier}
         </span>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1.5">
+          {(issue.assignee_ids ?? []).length > 0 && (
+            <div className="flex -space-x-1">
+              {(issue.assignee_ids ?? []).slice(0, 2).map((uid) => {
+                const u = userMap?.get(uid)
+                return (
+                  <Avatar key={uid} className="h-4 w-4 border border-background">
+                    <AvatarFallback className="text-[8px] bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300">
+                      {u?.initials ?? "?"}
+                    </AvatarFallback>
+                  </Avatar>
+                )
+              })}
+              {(issue.assignee_ids?.length ?? 0) > 2 && (
+                <span className="text-[9px] text-muted-foreground ml-1.5 self-center">
+                  +{(issue.assignee_ids?.length ?? 0) - 2}
+                </span>
+              )}
+            </div>
+          )}
           <PriorityIcon priority={issue.priority} />
         </div>
       </div>

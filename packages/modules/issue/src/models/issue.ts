@@ -14,7 +14,8 @@ const Issue = model.define("issue", {
   /** Denormalized — not a FK */
   project_id: model.text(),
   workspace_id: model.text(),
-  assignee_id: model.text().nullable(),
+  /** Array of user IDs assigned to this issue */
+  assignee_ids: model.json().nullable(),
   reporter_id: model.text().nullable(),
   /** Parent issue ID for subtasks */
   parent_id: model.text().nullable(),

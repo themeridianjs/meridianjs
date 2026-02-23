@@ -11,7 +11,7 @@ export interface CreateIssueInput {
   type?: string
   priority?: string
   status?: string
-  assignee_id?: string
+  assignee_ids?: string[]
   reporter_id?: string
   parent_id?: string
   due_date?: Date
@@ -66,7 +66,7 @@ export class IssueModuleService extends MeridianService({
   /** List issues for a project with optional filters. */
   async listIssuesByProject(
     projectId: string,
-    filters: { status?: string; assignee_id?: string; type?: string } = {},
+    filters: { status?: string; type?: string } = {},
     options: { limit?: number; offset?: number } = {}
   ): Promise<any[]> {
     const repo = this.container.resolve<any>("issueRepository")

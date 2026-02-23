@@ -3,6 +3,7 @@ import { format } from "date-fns"
 import type { Issue } from "@/api/hooks/useIssues"
 import { useIssueComments, useCreateComment, useUpdateIssue } from "@/api/hooks/useIssues"
 import { useUserMap } from "@/api/hooks/useUsers"
+import { AssigneeSelector } from "@/components/issues/AssigneeSelector"
 import { useAuth } from "@/stores/auth"
 import {
   Sheet,
@@ -121,6 +122,12 @@ export function IssueDetail({ issue, projectId, open, onClose }: IssueDetailProp
     })
   }
 
+  const handleAssigneesChange = (assignee_ids: string[]) => {
+    updateIssue.mutate({ assignee_ids }, {
+      onError: () => toast.error("Failed to update assignees"),
+    })
+  }
+
   return (
     <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
       <SheetContent side="right" className="flex flex-col p-0 w-full max-w-2xl">
@@ -184,7 +191,7 @@ export function IssueDetail({ issue, projectId, open, onClose }: IssueDetailProp
         <ScrollArea className="flex-1">
           <div className="px-6 py-4 space-y-5">
             {/* Properties grid */}
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-3 gap-3 mb-1">
               <div>
                 <p className="text-xs text-muted-foreground mb-1.5">Status</p>
                 <Select value={issue.status} onValueChange={handleStatusChange}>
@@ -224,6 +231,16 @@ export function IssueDetail({ issue, projectId, open, onClose }: IssueDetailProp
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+
+            {/* Assignees */}
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Assignees</p>
+              <AssigneeSelector
+                value={issue.assignee_ids ?? []}
+                onChange={handleAssigneesChange}
+                disabled={updateIssue.isPending}
+              />
             </div>
 
             {/* Description */}

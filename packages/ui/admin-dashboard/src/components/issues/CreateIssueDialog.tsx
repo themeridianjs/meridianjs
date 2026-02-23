@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { useCreateIssue } from "@/api/hooks/useIssues"
+import { AssigneeSelector } from "@/components/issues/AssigneeSelector"
 import {
   Dialog,
   DialogContent,
@@ -28,6 +29,7 @@ export function CreateIssueDialog({ open, onClose, projectId, defaultStatus = "b
   const [status, setStatus] = useState(defaultStatus)
   const [priority, setPriority] = useState("medium")
   const [type, setType] = useState("task")
+  const [assigneeIds, setAssigneeIds] = useState<string[]>([])
   const createIssue = useCreateIssue()
 
   const handleClose = () => {
@@ -36,6 +38,7 @@ export function CreateIssueDialog({ open, onClose, projectId, defaultStatus = "b
     setStatus(defaultStatus)
     setPriority("medium")
     setType("task")
+    setAssigneeIds([])
     onClose()
   }
 
@@ -43,7 +46,7 @@ export function CreateIssueDialog({ open, onClose, projectId, defaultStatus = "b
     e.preventDefault()
     if (!title.trim()) return
     createIssue.mutate(
-      { title: title.trim(), description: description.trim() || undefined, status, priority, type, project_id: projectId },
+      { title: title.trim(), description: description.trim() || undefined, status, priority, type, project_id: projectId, assignee_ids: assigneeIds.length > 0 ? assigneeIds : undefined },
       {
         onSuccess: () => {
           toast.success("Issue created")
@@ -114,6 +117,10 @@ export function CreateIssueDialog({ open, onClose, projectId, defaultStatus = "b
                 </SelectContent>
               </Select>
             </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Assignees <span className="text-xs text-muted-foreground font-normal">Optional</span></Label>
+            <AssigneeSelector value={assigneeIds} onChange={setAssigneeIds} />
           </div>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={handleClose}>Cancel</Button>

@@ -11,7 +11,8 @@ import { emitEventStep } from "./emit-event.js"
 
 export interface AssignIssueInput {
   issueId: string
-  assignee_id: string | null
+  /** Full replacement list of assignee user IDs. Pass [] to unassign everyone. */
+  assignee_ids: string[]
   actor_id?: string | null
 }
 
@@ -22,51 +23,52 @@ const fetchIssueForAssignStep = createStep(
   async (input: AssignIssueInput, { container }) => {
     const svc = container.resolve("issueModuleService") as any
     const issue = await svc.retrieveIssue(input.issueId)
-    return { issue, newAssignee: input.assignee_id, actor_id: input.actor_id }
+    return { issue, newAssignees: input.assignee_ids, actor_id: input.actor_id }
   }
 )
 
-const setAssigneeStep = createStep(
-  "set-issue-assignee",
+const setAssigneesStep = createStep(
+  "set-issue-assignees",
   async (
-    input: { issue: any; newAssignee: string | null; actor_id?: string | null },
+    input: { issue: any; newAssignees: string[]; actor_id?: string | null },
     { container }
   ) => {
     const svc = container.resolve("issueModuleService") as any
     const updated = await svc.updateIssue(input.issue.id, {
-      assignee_id: input.newAssignee,
+      assignee_ids: input.newAssignees,
     })
     return new StepResponse(updated, {
       issueId: input.issue.id,
-      previousAssignee: input.issue.assignee_id,
+      previousAssignees: input.issue.assignee_ids ?? [],
     })
   },
-  // Compensate: restore the previous assignee
-  async ({ issueId, previousAssignee }, { container }) => {
+  // Compensate: restore the previous assignees
+  async ({ issueId, previousAssignees }, { container }) => {
     const svc = container.resolve("issueModuleService") as any
-    await svc.updateIssue(issueId, { assignee_id: previousAssignee })
+    await svc.updateIssue(issueId, { assignee_ids: previousAssignees })
   }
 )
 
-const logAssignedStep = createStep(
-  "log-issue-assigned",
+const logAssigneesStep = createStep(
+  "log-issue-assignees",
   async (
     input: {
       entity_id: string
       actor_id: string
       workspace_id: string
-      assignee_id: string | null
+      assignee_ids: string[]
     },
     { container }
   ) => {
     const svc = container.resolve("activityModuleService") as any
+    const action = input.assignee_ids.length > 0 ? "assigned" : "unassigned"
     await svc.recordActivity({
       entity_type: "issue",
       entity_id: input.entity_id,
       actor_id: input.actor_id,
-      action: input.assignee_id ? "assigned" : "unassigned",
+      action,
       workspace_id: input.workspace_id,
-      changes: { assignee_id: { to: input.assignee_id } },
+      changes: { assignee_ids: { to: input.assignee_ids } },
     })
   }
 )
@@ -76,16 +78,16 @@ const logAssignedStep = createStep(
 export const assignIssueWorkflow = createWorkflow(
   "assign-issue",
   async (input: AssignIssueInput) => {
-    const { issue, newAssignee, actor_id } = await fetchIssueForAssignStep(input)
-    const updated = await setAssigneeStep({ issue, newAssignee, actor_id })
+    const { issue, newAssignees, actor_id } = await fetchIssueForAssignStep(input)
+    const updated = await setAssigneesStep({ issue, newAssignees, actor_id })
 
     const activityInput = transform(updated, (u) => ({
       entity_id: u.id,
       actor_id: actor_id ?? "system",
       workspace_id: u.workspace_id,
-      assignee_id: newAssignee,
+      assignee_ids: newAssignees,
     }))
-    await logAssignedStep(activityInput)
+    await logAssigneesStep(activityInput)
 
     await emitEventStep({
       name: "issue.assigned",
@@ -93,7 +95,7 @@ export const assignIssueWorkflow = createWorkflow(
         issue_id: updated.id,
         workspace_id: updated.workspace_id,
         actor_id: actor_id ?? "system",
-        assignee_id: newAssignee,
+        assignee_ids: newAssignees,
       },
     })
 
