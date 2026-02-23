@@ -1,0 +1,111 @@
+#!/usr/bin/env node
+/**
+ * meridian CLI
+ *
+ * Sub-commands:
+ *   meridian dev                      — Start the development server
+ *   meridian build                    — Type-check the project
+ *   meridian db:migrate               — Synchronize database schema
+ *   meridian db:generate <name>       — Generate a migration file
+ *   meridian generate module <name>   — Scaffold a new module
+ *   meridian generate workflow <name> — Scaffold a new workflow
+ *   meridian new [project-name]       — Create a new project (same as npx create-meridian-app)
+ */
+
+import { Command } from "commander"
+import { runNew } from "./commands/new.js"
+import { runDev } from "./commands/dev.js"
+import { runBuild } from "./commands/build.js"
+import { runDbMigrate } from "./commands/db-migrate.js"
+import { runDbGenerate } from "./commands/db-generate.js"
+import { generateModule, generateWorkflow } from "./commands/generate/index.js"
+
+const program = new Command()
+
+program
+  .name("meridian")
+  .description("Meridian project management framework CLI")
+  .version("0.1.0")
+
+// ── new ───────────────────────────────────────────────────────────────────
+program
+  .command("new [project-name]")
+  .description("Create a new Meridian project")
+  .action((projectName?: string) => {
+    runNew(projectName).catch((err: unknown) => {
+      console.error(err)
+      process.exit(1)
+    })
+  })
+
+// ── dev ───────────────────────────────────────────────────────────────────
+program
+  .command("dev")
+  .description("Start the development server")
+  .action(() => {
+    runDev().catch((err: unknown) => {
+      console.error(err)
+      process.exit(1)
+    })
+  })
+
+// ── build ─────────────────────────────────────────────────────────────────
+program
+  .command("build")
+  .description("Type-check the project")
+  .action(() => {
+    runBuild().catch((err: unknown) => {
+      console.error(err)
+      process.exit(1)
+    })
+  })
+
+// ── db:migrate ────────────────────────────────────────────────────────────
+program
+  .command("db:migrate")
+  .description("Synchronize the database schema (runs updateSchema on all modules)")
+  .action(() => {
+    runDbMigrate().catch((err: unknown) => {
+      console.error(err)
+      process.exit(1)
+    })
+  })
+
+// ── db:generate ───────────────────────────────────────────────────────────
+program
+  .command("db:generate <name>")
+  .description("Generate a new migration file")
+  .action((name: string) => {
+    runDbGenerate(name).catch((err: unknown) => {
+      console.error(err)
+      process.exit(1)
+    })
+  })
+
+// ── generate ──────────────────────────────────────────────────────────────
+const generateCmd = program
+  .command("generate")
+  .alias("g")
+  .description("Generate boilerplate files")
+
+generateCmd
+  .command("module <name>")
+  .description("Scaffold a new module in src/modules/")
+  .action((name: string) => {
+    generateModule(name).catch((err: unknown) => {
+      console.error(err)
+      process.exit(1)
+    })
+  })
+
+generateCmd
+  .command("workflow <name>")
+  .description("Scaffold a new workflow in src/workflows/")
+  .action((name: string) => {
+    generateWorkflow(name).catch((err: unknown) => {
+      console.error(err)
+      process.exit(1)
+    })
+  })
+
+program.parse(process.argv)

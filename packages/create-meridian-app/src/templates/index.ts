@@ -1,0 +1,330 @@
+/**
+ * All scaffold templates are embedded as strings so the CLI bundle is
+ * self-contained (no extra file-copy step needed after npm install).
+ */
+
+export interface ProjectTemplateVars {
+  name: string          // e.g. "my-app"
+  databaseUrl: string   // e.g. "postgresql://..."
+  httpPort: number
+}
+
+// ─── Project-level files ───────────────────────────────────────────────────
+
+export function renderPackageJson(vars: ProjectTemplateVars): string {
+  return JSON.stringify(
+    {
+      name: vars.name,
+      version: "0.1.0",
+      private: true,
+      type: "module",
+      scripts: {
+        dev: "meridian dev",
+        build: "meridian build",
+        start: "node --import tsx/esm src/main.ts",
+        "db:migrate": "meridian db:migrate",
+        "db:generate": "meridian db:generate",
+      },
+      dependencies: {
+        "@meridian/framework": "latest",
+        "@meridian/framework-utils": "latest",
+        "@meridian/types": "latest",
+        "@meridian/event-bus-local": "latest",
+        "@meridian/user": "latest",
+        "@meridian/workspace": "latest",
+        "@meridian/auth": "latest",
+        "@meridian/project": "latest",
+        "@meridian/issue": "latest",
+      },
+      devDependencies: {
+        "create-meridian-app": "latest",
+        typescript: "^5.4.0",
+        tsx: "^4.0.0",
+        "@types/node": "^22.0.0",
+      },
+    },
+    null,
+    2
+  )
+}
+
+export function renderTsConfig(): string {
+  return JSON.stringify(
+    {
+      compilerOptions: {
+        target: "ES2022",
+        module: "NodeNext",
+        moduleResolution: "NodeNext",
+        lib: ["ES2022"],
+        outDir: "dist",
+        rootDir: "src",
+        strict: true,
+        esModuleInterop: true,
+        skipLibCheck: true,
+        resolveJsonModule: true,
+        declaration: true,
+        declarationMap: true,
+        sourceMap: true,
+      },
+      include: ["src/**/*"],
+      exclude: ["node_modules", "dist"],
+    },
+    null,
+    2
+  )
+}
+
+export function renderMeridianConfig(vars: ProjectTemplateVars): string {
+  return `import { defineConfig } from "@meridian/framework"
+import dotenv from "dotenv"
+dotenv.config()
+
+export default defineConfig({
+  projectConfig: {
+    databaseUrl: process.env.DATABASE_URL ?? "${vars.databaseUrl}",
+    httpPort: Number(process.env.PORT) || ${vars.httpPort},
+    jwtSecret: process.env.JWT_SECRET ?? "changeme-replace-in-production",
+  },
+  modules: [
+    { resolve: "@meridian/event-bus-local" },
+    { resolve: "@meridian/user" },
+    { resolve: "@meridian/workspace" },
+    { resolve: "@meridian/auth" },
+    { resolve: "@meridian/project" },
+    { resolve: "@meridian/issue" },
+  ],
+})
+`
+}
+
+export function renderMainTs(): string {
+  return `import { bootstrap } from "@meridian/framework"
+import { fileURLToPath } from "node:url"
+import path from "node:path"
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const rootDir = path.resolve(__dirname, "..")
+
+const app = await bootstrap({ rootDir })
+await app.start()
+
+process.on("SIGTERM", async () => {
+  await app.stop()
+  process.exit(0)
+})
+
+process.on("SIGINT", async () => {
+  await app.stop()
+  process.exit(0)
+})
+`
+}
+
+export function renderMiddlewares(): string {
+  return `import { authenticateJWT } from "@meridian/auth"
+
+export default {
+  routes: [
+    { matcher: "/admin", middlewares: [authenticateJWT] },
+  ],
+}
+`
+}
+
+export function renderHelloRoute(): string {
+  return `import type { Request, Response } from "express"
+
+export const GET = async (_req: Request, res: Response) => {
+  res.json({ message: "Hello from Meridian!", timestamp: new Date().toISOString() })
+}
+`
+}
+
+export function renderGitIgnore(): string {
+  return `# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+`
+}
+
+export function renderEnvExample(vars: ProjectTemplateVars): string {
+  return `# Copy this file to .env and fill in your values
+DATABASE_URL=${vars.databaseUrl}
+PORT=${vars.httpPort}
+JWT_SECRET=changeme-replace-in-production
+`
+}
+
+export function renderReadme(vars: ProjectTemplateVars): string {
+  return `# ${vars.name}
+
+A Meridian application.
+
+## Getting started
+
+\`\`\`bash
+# Install dependencies
+npm install
+
+# Set up your database
+cp .env.example .env
+# Edit .env with your database URL
+
+# Sync database schema
+npm run db:migrate
+
+# Start the development server
+npm run dev
+\`\`\`
+
+## Commands
+
+| Command | Description |
+|---|---|
+| \`npm run dev\` | Start development server with hot reload |
+| \`npm run build\` | Type-check the project |
+| \`npm run db:migrate\` | Synchronize the database schema |
+| \`npm run db:generate <name>\` | Generate a new migration file |
+
+## Project structure
+
+\`\`\`
+src/
+  main.ts              Entry point
+  api/
+    middlewares.ts     Route-level middleware configuration
+    admin/             File-based API routes
+  modules/             Custom domain modules
+  workflows/           DAG workflows with compensation
+  subscribers/         Event subscribers
+  jobs/                Scheduled background jobs
+  links/               Cross-module link definitions
+\`\`\`
+
+## Extending Meridian
+
+See the [Meridian documentation](https://github.com/meridian/meridian) for guides on:
+- Creating custom modules
+- Building workflows
+- Writing event subscribers
+- Scheduling background jobs
+- Building plugins
+`
+}
+
+// ─── Module template ───────────────────────────────────────────────────────
+
+export function renderModuleIndex(name: string, pascalName: string): string {
+  return `import { Module } from "@meridian/framework-utils"
+import { ${pascalName}ModuleService } from "./service.js"
+import { ${pascalName} } from "./models/${name}.js"
+import { defaultLoader } from "@meridian/framework-utils"
+
+export default Module("${name}ModuleService", {
+  service: ${pascalName}ModuleService,
+  models: [${pascalName}],
+  loaders: [defaultLoader],
+  linkable: {
+    ${name}: { tableName: "${name}", primaryKey: "id" },
+  },
+})
+`
+}
+
+export function renderModuleModel(name: string, pascalName: string): string {
+  return `import { model } from "@meridian/framework-utils"
+
+export const ${pascalName} = model("${name}", {
+  id: model.id(),
+  name: model.text(),
+  created_at: model.dateTime(),
+  updated_at: model.dateTime(),
+})
+`
+}
+
+export function renderModuleService(name: string, pascalName: string): string {
+  return `import { MeridianService } from "@meridian/framework-utils"
+import type { MeridianContainer } from "@meridian/types"
+import { ${pascalName} } from "./models/${name}.js"
+
+export class ${pascalName}ModuleService extends MeridianService({ ${pascalName} }) {
+  constructor(container: MeridianContainer) {
+    super(container)
+  }
+
+  // Add custom service methods here
+}
+`
+}
+
+// ─── Workflow template ─────────────────────────────────────────────────────
+
+export function renderWorkflow(name: string, pascalName: string): string {
+  // camelCase for the exported identifier, e.g. "sendNotificationWorkflow"
+  const camelName = pascalName.charAt(0).toLowerCase() + pascalName.slice(1)
+  return `import { createStep, createWorkflow, WorkflowResponse } from "@meridian/workflow-engine"
+import type { MeridianContainer } from "@meridian/types"
+
+interface ${pascalName}WorkflowInput {
+  // Define your input shape here
+}
+
+const ${camelName}Step = createStep(
+  "${name}-step",
+  async (input: ${pascalName}WorkflowInput, { container }: { container: MeridianContainer }) => {
+    // Forward logic: implement your step here
+    return { result: null }
+  },
+  async (_input: ${pascalName}WorkflowInput, _context: { container: MeridianContainer }) => {
+    // Compensation logic: runs if a later step fails
+  }
+)
+
+export const ${camelName}Workflow = createWorkflow(
+  "${name}",
+  (input: ${pascalName}WorkflowInput) => {
+    const result = ${camelName}Step(input)
+    return new WorkflowResponse(result)
+  }
+)
+`
+}
+
+// ─── Subscriber template ───────────────────────────────────────────────────
+
+export function renderSubscriber(eventName: string): string {
+  return `import type { SubscriberArgs, SubscriberConfig } from "@meridian/types"
+
+export default async function handler({ event, container }: SubscriberArgs) {
+  const logger = container.resolve("logger") as any
+  logger.info(\`Received event: \${event.name}\`, event.data)
+
+  // Handle the event here
+}
+
+export const config: SubscriberConfig = {
+  event: "${eventName}",
+}
+`
+}
