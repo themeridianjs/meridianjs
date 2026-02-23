@@ -28,7 +28,9 @@ import {
   ISSUE_TYPE_LABELS,
 } from "@/lib/constants"
 import { RichTextContent } from "@/components/ui/rich-text-editor"
-import { Pencil, X, Check, ExternalLink, Layers, FolderOpen, CornerDownRight, Plus, ChevronUp } from "lucide-react"
+import { Pencil, X, Check, ExternalLink, Layers, FolderOpen, CornerDownRight, Plus, ChevronUp, Calendar as CalendarIcon } from "lucide-react"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Calendar } from "@/components/ui/calendar"
 import { toast } from "sonner"
 
 function sprintDateRange(sprint: Sprint): string | null {
@@ -140,6 +142,16 @@ export function IssueDetail({ issue, projectId, open, onClose }: IssueDetailProp
       onSuccess: () => toast.success(task_list_id ? "Moved to list" : "Removed from list"),
       onError: () => toast.error("Failed to update list"),
     })
+  }
+
+  const handleDueDateChange = (date: Date | undefined) => {
+    updateIssue.mutate(
+      { due_date: date ? format(date, "yyyy-MM-dd") : null },
+      {
+        onSuccess: () => toast.success(date ? "Due date set" : "Due date cleared"),
+        onError: () => toast.error("Failed to update due date"),
+      }
+    )
   }
 
   return (
@@ -329,6 +341,38 @@ export function IssueDetail({ issue, projectId, open, onClose }: IssueDetailProp
                   </Select>
                 </div>
               )}
+              <div className="w-[120px] shrink-0">
+                <p className="text-xs text-muted-foreground mb-1.5">Due Date</p>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button className="flex items-center gap-1 h-8 w-full px-2 rounded border border-input text-xs bg-transparent hover:bg-accent transition-colors">
+                      <CalendarIcon className="h-3 w-3 shrink-0 text-muted-foreground" />
+                      <span className={issue.due_date ? "text-foreground" : "text-muted-foreground"}>
+                        {issue.due_date ? format(new Date(issue.due_date), "MMM d, yyyy") : "No date"}
+                      </span>
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={issue.due_date ? new Date(issue.due_date) : undefined}
+                      onSelect={handleDueDateChange}
+                      initialFocus
+                    />
+                    {issue.due_date && (
+                      <div className="border-t px-3 py-2">
+                        <button
+                          onClick={() => handleDueDateChange(undefined)}
+                          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors"
+                        >
+                          <X className="h-3 w-3" />
+                          Clear date
+                        </button>
+                      </div>
+                    )}
+                  </PopoverContent>
+                </Popover>
+              </div>
             </div>
 
             {/* Child Issues — only on top-level issues */}

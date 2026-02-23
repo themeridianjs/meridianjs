@@ -29,8 +29,10 @@ import {
   Circle, Clock, ArrowRight, Eye, CheckCircle2, XCircle,
   Zap, ArrowUp, Minus, ArrowDown,
   Bug, Sparkles, CheckSquare, HelpCircle, Layers, FolderOpen,
-  CornerDownRight, ChevronUp,
+  CornerDownRight, ChevronUp, Calendar as CalendarIcon, X,
 } from "lucide-react"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Calendar } from "@/components/ui/calendar"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 
@@ -493,6 +495,43 @@ export function IssueDetailPage() {
                     </Select>
                   </PropertyRow>
                 )}
+
+                <PropertyRow label="Due Date">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button className="flex items-center gap-1.5 h-7 px-1 rounded text-xs bg-transparent hover:bg-accent transition-colors focus:outline-none w-full text-left">
+                        <CalendarIcon className="h-3 w-3 shrink-0 text-muted-foreground" />
+                        <span className={issue.due_date ? "text-foreground" : "text-muted-foreground"}>
+                          {issue.due_date ? format(new Date(issue.due_date), "MMM d, yyyy") : "No due date"}
+                        </span>
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={issue.due_date ? new Date(issue.due_date) : undefined}
+                        onSelect={(date) =>
+                          handlePropUpdate(
+                            { due_date: date ? format(date, "yyyy-MM-dd") : null },
+                            "Due date"
+                          )
+                        }
+                        initialFocus
+                      />
+                      {issue.due_date && (
+                        <div className="border-t px-3 py-2">
+                          <button
+                            onClick={() => handlePropUpdate({ due_date: null }, "Due date")}
+                            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors"
+                          >
+                            <X className="h-3 w-3" />
+                            Clear date
+                          </button>
+                        </div>
+                      )}
+                    </PopoverContent>
+                  </Popover>
+                </PropertyRow>
 
                 {parentIssue && (
                   <PropertyRow label="Parent">
