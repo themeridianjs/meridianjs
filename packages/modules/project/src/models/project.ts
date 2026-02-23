@@ -13,6 +13,9 @@ const Project = model.define("project", {
   /** Denormalized workspace reference — no FK constraint */
   workspace_id: model.text(),
   owner_id: model.text().nullable(),
-})
+}, [
+  { columns: ["workspace_id"] },
+  { columns: ["identifier"], unique: true },
+])
 
 export default Project

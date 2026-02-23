@@ -1,18 +1,23 @@
+import { z } from "zod"
 import type { Response } from "express"
 
+const registerSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+  first_name: z.string().optional(),
+  last_name: z.string().optional(),
+})
+
 export const POST = async (req: any, res: Response) => {
+  const result = registerSchema.safeParse(req.body)
+  if (!result.success) {
+    res.status(400).json({
+      error: { message: "Validation error", details: result.error.flatten().fieldErrors },
+    })
+    return
+  }
+
   const authService = req.scope.resolve("authModuleService") as any
-  const { email, password, first_name, last_name } = req.body
-
-  if (!email || typeof email !== "string") {
-    res.status(400).json({ error: { message: "email is required" } })
-    return
-  }
-  if (!password || typeof password !== "string" || password.length < 8) {
-    res.status(400).json({ error: { message: "password must be at least 8 characters" } })
-    return
-  }
-
-  const result = await authService.register({ email, password, first_name, last_name })
-  res.status(201).json(result)
+  const response = await authService.register(result.data)
+  res.status(201).json(response)
 }

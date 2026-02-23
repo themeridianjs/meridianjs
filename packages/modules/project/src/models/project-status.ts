@@ -14,6 +14,8 @@ const ProjectStatus = model.define("project_status", {
   category: model.enum(["backlog", "unstarted", "started", "completed", "cancelled"]),
   /** Zero-indexed column order */
   position: model.number(),
-})
+}, [
+  { columns: ["project_id"] },
+])
 
 export default ProjectStatus

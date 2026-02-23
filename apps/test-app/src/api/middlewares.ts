@@ -1,13 +1,15 @@
-import { authenticateJWT } from "@meridian/auth"
+import { authenticateJWT, requireWorkspace } from "@meridian/auth"
+import { authRateLimit, apiRateLimit } from "@meridian/framework"
 
 /**
  * Route-level middleware configuration.
  *
- * Every request matching /admin/* must carry a valid Bearer JWT.
- * Public routes (/auth/*, /health, /ready) are not covered.
+ * /auth/* — rate-limited to 10 req/min (brute-force protection)
+ * /admin/* — rate-limited + JWT required + workspace isolation
  */
 export default {
   routes: [
-    { matcher: "/admin", middlewares: [authenticateJWT] },
+    { matcher: "/auth",  middlewares: [authRateLimit] },
+    { matcher: "/admin", middlewares: [apiRateLimit, authenticateJWT, requireWorkspace] },
   ],
 }

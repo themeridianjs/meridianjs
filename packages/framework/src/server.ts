@@ -5,6 +5,7 @@ import express, {
   type NextFunction,
 } from "express"
 import cors from "cors"
+import helmet from "helmet"
 import type { MeridianConfig, MeridianContainer, ILogger } from "@meridian/types"
 
 export function createServer(
@@ -20,14 +21,37 @@ export function createServer(
   app.use(express.json({ limit: "10mb" }))
   app.use(express.urlencoded({ extended: true, limit: "10mb" }))
 
+  // Security headers
+  app.use(helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", "data:", "blob:"],
+        connectSrc: ["'self'"],
+      },
+    },
+    crossOriginEmbedderPolicy: false,
+  }))
+
   // CORS
   const corsOrigin = config.projectConfig.cors?.origin ?? "*"
+
+  if (corsOrigin === "*" && process.env.NODE_ENV === "production") {
+    logger.warn(
+      "CORS origin is set to '*' in production. " +
+      "Set projectConfig.cors.origin to a specific domain to restrict cross-origin access."
+    )
+  }
+
   app.use(
     cors({
       origin: corsOrigin,
       credentials: config.projectConfig.cors?.credentials ?? false,
       methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
       allowedHeaders: ["Content-Type", "Authorization"],
+      exposedHeaders: ["X-RateLimit-Limit", "X-RateLimit-Remaining", "X-RateLimit-Reset"],
     })
   )
 

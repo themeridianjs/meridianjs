@@ -123,10 +123,20 @@ export type PropertyType =
 
 export type ModelSchema = Record<string, PropertyType>
 
+export interface IndexDefinition {
+  /** Column names that form the index. */
+  columns: string[]
+  /** Whether this is a unique index. Defaults to false. */
+  unique?: boolean
+  /** Optional explicit index name. MikroORM will auto-generate one if omitted. */
+  name?: string
+}
+
 export class ModelDefinition<Schema extends ModelSchema = ModelSchema> {
   constructor(
     public readonly tableName: string,
-    public readonly schema: Schema
+    public readonly schema: Schema,
+    public readonly indexes: IndexDefinition[] = []
   ) {}
 }
 
@@ -137,12 +147,14 @@ export class ModelDefinition<Schema extends ModelSchema = ModelSchema> {
 export const model = {
   /**
    * Define a new data model. The table name should be snake_case singular.
+   * Optionally pass index definitions as the third argument.
    */
   define<Schema extends ModelSchema>(
     tableName: string,
-    schema: Schema
+    schema: Schema,
+    indexes?: IndexDefinition[]
   ): ModelDefinition<Schema> {
-    return new ModelDefinition(tableName, schema)
+    return new ModelDefinition(tableName, schema, indexes ?? [])
   },
 
   /** UUID primary key field */

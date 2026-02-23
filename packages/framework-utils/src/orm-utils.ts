@@ -84,10 +84,17 @@ export function dmlToEntitySchema(def: ModelDefinition): EntitySchema {
     nullable: true,
   }
 
+  const indexes = (def.indexes ?? []).map((idx) => ({
+    ...(idx.name ? { name: idx.name } : {}),
+    properties: idx.columns as any,
+    unique: idx.unique ?? false,
+  }))
+
   return new EntitySchema({
     name: def.tableName,
     tableName: def.tableName,
     properties,
+    ...(indexes.length > 0 ? { indexes } : {}),
   })
 }
 

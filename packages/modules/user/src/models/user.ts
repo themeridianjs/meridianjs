@@ -10,6 +10,8 @@ const User = model.define("user", {
   is_active: model.boolean().default(true),
   last_login_at: model.date().nullable(),
   metadata: model.json().nullable(),
-})
+}, [
+  { columns: ["email"], unique: true },
+])
 
 export default User

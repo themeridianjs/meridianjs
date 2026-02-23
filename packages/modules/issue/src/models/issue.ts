@@ -22,6 +22,10 @@ const Issue = model.define("issue", {
   due_date: model.date().nullable(),
   /** Story point estimate */
   estimate: model.number().nullable(),
-})
+}, [
+  { columns: ["project_id"] },
+  { columns: ["workspace_id"] },
+  { columns: ["project_id", "status"] },
+])
 
 export default Issue

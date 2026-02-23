@@ -1,6 +1,6 @@
 export { Module } from "./define-module.js"
 export { defineLink } from "./define-link.js"
-export { model, ModelDefinition, type ModelSchema, type InferModel } from "./dml.js"
+export { model, ModelDefinition, type ModelSchema, type InferModel, type IndexDefinition } from "./dml.js"
 export {
   IdProperty,
   TextProperty,
