@@ -329,7 +329,7 @@ function IssueRow({
         </div>
 
         {/* External link + add child */}
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
           {!isChild && onAddChild && (
             <button
               onClick={() => onAddChild(issue.id)}
@@ -455,7 +455,7 @@ function TaskListGroup({
 
         <span className="text-[11px] text-muted-foreground/60 font-mono">{totalCount}</span>
 
-        <div className="flex items-center gap-1 ml-auto opacity-0 group-hover/header:opacity-100 transition-opacity">
+        <div className="flex items-center gap-1 ml-auto">
           <button
             onClick={() => onAddIssue(taskList?.id ?? null)}
             className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors px-1.5 py-0.5 rounded hover:bg-muted"
