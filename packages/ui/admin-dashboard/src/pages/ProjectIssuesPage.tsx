@@ -32,7 +32,7 @@ import {
   ISSUE_PRIORITY_LABELS,
   ISSUE_PRIORITY_COLORS,
 } from "@/lib/constants"
-import { TooltipProvider } from "@/components/ui/tooltip"
+import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
 import {
   Plus,
   Search,
@@ -134,14 +134,19 @@ function IssueRow({
         {/* Title — with expand/collapse for children */}
         <div className="flex items-center gap-1 min-w-0 pr-3">
           {!isChild && hasChildren && (
-            <button
-              onClick={(e) => { e.stopPropagation(); setExpanded(!expanded) }}
-              className="shrink-0 text-muted-foreground hover:text-foreground transition-colors p-0.5 rounded"
-            >
-              {expanded
-                ? <ChevronDown className="h-3.5 w-3.5" />
-                : <ChevronRight className="h-3.5 w-3.5" />}
-            </button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setExpanded(!expanded) }}
+                  className="shrink-0 text-muted-foreground hover:text-foreground transition-colors p-0.5 rounded"
+                >
+                  {expanded
+                    ? <ChevronDown className="h-3.5 w-3.5" />
+                    : <ChevronRight className="h-3.5 w-3.5" />}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top">{expanded ? "Collapse" : "Expand"}</TooltipContent>
+            </Tooltip>
           )}
           {!isChild && !hasChildren && <span className="w-4 shrink-0" />}
           {isChild && <span className="text-muted-foreground/40 shrink-0 text-xs">↳</span>}
@@ -331,21 +336,29 @@ function IssueRow({
         {/* External link + add child */}
         <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
           {!isChild && onAddChild && (
-            <button
-              onClick={() => onAddChild(issue.id)}
-              className="p-1 rounded hover:bg-border text-muted-foreground hover:text-foreground"
-              title="Add child issue"
-            >
-              <ListTree className="h-3.5 w-3.5" />
-            </button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => onAddChild(issue.id)}
+                  className="p-1 rounded hover:bg-border text-muted-foreground hover:text-foreground"
+                >
+                  <ListTree className="h-3.5 w-3.5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top">Add child issue</TooltipContent>
+            </Tooltip>
           )}
-          <button
-            onClick={() => navigate(`/${workspace}/projects/${projectKey}/issues/${issue.id}`)}
-            className="p-1 rounded hover:bg-border text-muted-foreground hover:text-foreground"
-            title="Open full page"
-          >
-            <ExternalLink className="h-3.5 w-3.5" />
-          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={() => navigate(`/${workspace}/projects/${projectKey}/issues/${issue.id}`)}
+                className="p-1 rounded hover:bg-border text-muted-foreground hover:text-foreground"
+              >
+                <ExternalLink className="h-3.5 w-3.5" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="top">Open full page</TooltipContent>
+          </Tooltip>
         </div>
       </div>
 
@@ -424,14 +437,19 @@ function TaskListGroup({
     <div>
       {/* Group header */}
       <div className="flex items-center gap-2 px-6 py-2 bg-muted/20 border-b border-border group/header">
-        <button
-          onClick={() => setCollapsed(!collapsed)}
-          className="text-muted-foreground hover:text-foreground transition-colors"
-        >
-          {collapsed
-            ? <ChevronRight className="h-3.5 w-3.5" />
-            : <ChevronDown className="h-3.5 w-3.5" />}
-        </button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={() => setCollapsed(!collapsed)}
+              className="text-muted-foreground hover:text-foreground transition-colors"
+            >
+              {collapsed
+                ? <ChevronRight className="h-3.5 w-3.5" />
+                : <ChevronDown className="h-3.5 w-3.5" />}
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="right">{collapsed ? "Expand" : "Collapse"}</TooltipContent>
+        </Tooltip>
 
         {taskList ? (
           isRenaming ? (
@@ -466,11 +484,16 @@ function TaskListGroup({
 
           {taskList && (
             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors">
-                  <MoreHorizontal className="h-3.5 w-3.5" />
-                </button>
-              </DropdownMenuTrigger>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <DropdownMenuTrigger asChild>
+                    <button className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors">
+                      <MoreHorizontal className="h-3.5 w-3.5" />
+                    </button>
+                  </DropdownMenuTrigger>
+                </TooltipTrigger>
+                <TooltipContent side="top">More options</TooltipContent>
+              </Tooltip>
               <DropdownMenuContent align="end" className="w-36">
                 <DropdownMenuItem
                   className="text-xs gap-2 cursor-pointer"
@@ -602,13 +625,17 @@ export function ProjectIssuesPage() {
   const totalCount = allFiltered.length
 
   // ── Group top-level issues by task_list_id ────────────────────────────────
+  const knownListIds = new Set((taskLists ?? []).map((tl) => tl.id))
   const groupedByList: Record<string, Issue[]> = { __none__: [] }
   for (const tl of taskLists ?? []) {
     groupedByList[tl.id] = []
   }
   for (const issue of topLevel) {
-    const key = issue.task_list_id ?? "__none__"
-    if (!groupedByList[key]) groupedByList[key] = []
+    // If the issue's task_list_id no longer matches a known list (e.g. cache
+    // is momentarily stale after a list deletion), fall back to "No List".
+    const key = (issue.task_list_id && knownListIds.has(issue.task_list_id))
+      ? issue.task_list_id
+      : "__none__"
     groupedByList[key].push(issue)
   }
 

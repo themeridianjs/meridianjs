@@ -4,6 +4,8 @@ import { useCreateIssue } from "@/api/hooks/useIssues"
 import { useProjectByKey } from "@/api/hooks/useProjects"
 import { useAuth } from "@/stores/auth"
 import { useProjectStatuses } from "@/api/hooks/useProjectStatuses"
+import { useSprints, type Sprint } from "@/api/hooks/useSprints"
+import { useTaskLists } from "@/api/hooks/useTaskLists"
 import { AssigneeSelector } from "@/components/issues/AssigneeSelector"
 import { RichTextEditor } from "@/components/ui/rich-text-editor"
 import { Button } from "@/components/ui/button"
@@ -12,6 +14,7 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select"
 import { ISSUE_STATUS_LABELS, ISSUE_PRIORITY_LABELS, ISSUE_TYPE_LABELS } from "@/lib/constants"
 import {
@@ -19,6 +22,7 @@ import {
   Circle, Clock, ArrowRight, Eye, CheckCircle2, XCircle,
   Zap, ArrowUp, Minus, ArrowDown,
   Bug, Sparkles, CheckSquare, HelpCircle, Calendar as CalendarIcon, X,
+  Layers, FolderOpen,
 } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
@@ -97,6 +101,13 @@ function IconSelect({
   )
 }
 
+function sprintDateRange(sprint: Sprint): string | null {
+  if (!sprint.start_date && !sprint.end_date) return null
+  const start = sprint.start_date ? format(new Date(sprint.start_date), "MMM d") : "—"
+  const end = sprint.end_date ? format(new Date(sprint.end_date), "MMM d") : "—"
+  return `${start} – ${end}`
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export function IssueNewPage() {
@@ -110,12 +121,17 @@ export function IssueNewPage() {
   const [priority, setPriority] = useState("medium")
   const [type, setType] = useState("task")
   const [assigneeIds, setAssigneeIds] = useState<string[]>([])
+  const [sprintId, setSprintId] = useState("")
+  const [taskListId, setTaskListId] = useState("")
   const [dueDate, setDueDate] = useState<Date | undefined>(undefined)
 
   const { data: project } = useProjectByKey(projectKey ?? "")
   const projectId = project?.id ?? ""
   const createIssue = useCreateIssue()
   const { data: projectStatuses } = useProjectStatuses(projectId || undefined)
+  const { data: sprints } = useSprints(projectId || undefined)
+  const { data: taskLists } = useTaskLists(projectId || undefined)
+  const activeSprints = (sprints ?? []).filter((s) => s.status !== "completed")
 
   const statusOptions = projectStatuses && projectStatuses.length > 0
     ? Object.fromEntries(projectStatuses.map((s) => [s.key, s.name]))
@@ -149,6 +165,8 @@ export function IssueNewPage() {
         project_id: projectId,
         workspace_id: workspaceRef!.id,
         assignee_ids: assigneeIds.length > 0 ? assigneeIds : undefined,
+        sprint_id: sprintId || null,
+        task_list_id: taskListId || null,
         due_date: dueDate ? format(dueDate, "yyyy-MM-dd") : null,
       },
       {
@@ -273,6 +291,52 @@ export function IssueNewPage() {
               <PropertyRow label="Assignees">
                 <AssigneeSelector value={assigneeIds} onChange={setAssigneeIds} />
               </PropertyRow>
+
+              {activeSprints.length > 0 && (
+                <PropertyRow label="Sprint">
+                  <Select value={sprintId || "none"} onValueChange={(v) => setSprintId(v === "none" ? "" : v)}>
+                    <SelectTrigger className="h-7 text-xs border-0 bg-transparent px-0 gap-1.5 focus:ring-0 hover:bg-accent rounded-md pl-1">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <Layers className="h-3 w-3 shrink-0 text-muted-foreground" />
+                        <SelectValue placeholder="No sprint" />
+                      </div>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none" className="text-xs text-muted-foreground">No sprint</SelectItem>
+                      {activeSprints.map((s) => {
+                        const range = sprintDateRange(s)
+                        return (
+                          <SelectItem key={s.id} value={s.id} className="text-xs">
+                            <div className="flex items-baseline gap-1.5">
+                              <span>{s.name}</span>
+                              {range && <span className="text-[10px] text-muted-foreground font-normal">{range}</span>}
+                            </div>
+                          </SelectItem>
+                        )
+                      })}
+                    </SelectContent>
+                  </Select>
+                </PropertyRow>
+              )}
+
+              {(taskLists ?? []).length > 0 && (
+                <PropertyRow label="List">
+                  <Select value={taskListId || "none"} onValueChange={(v) => setTaskListId(v === "none" ? "" : v)}>
+                    <SelectTrigger className="h-7 text-xs border-0 bg-transparent px-0 gap-1.5 focus:ring-0 hover:bg-accent rounded-md pl-1">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <FolderOpen className="h-3 w-3 shrink-0 text-muted-foreground" />
+                        <SelectValue placeholder="No list" />
+                      </div>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none" className="text-xs text-muted-foreground">No list</SelectItem>
+                      {(taskLists ?? []).map((tl) => (
+                        <SelectItem key={tl.id} value={tl.id} className="text-xs">{tl.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </PropertyRow>
+              )}
 
               <PropertyRow label="Due Date">
                 <Popover>

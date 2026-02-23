@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { api } from "../client"
+import { issueKeys } from "./useIssues"
 
 export interface TaskList {
   id: string
@@ -53,6 +54,9 @@ export function useDeleteTaskList(projectId: string) {
     mutationFn: (id: string) => api.delete<void>(`/admin/task-lists/${id}`),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: taskListKeys.byProject(projectId) })
+      // Issues have their task_list_id nulled on the server; refresh so the
+      // frontend grouping reflects the updated values immediately.
+      qc.invalidateQueries({ queryKey: issueKeys.byProject(projectId) })
     },
   })
 }

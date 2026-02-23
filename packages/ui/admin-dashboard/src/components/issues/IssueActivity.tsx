@@ -20,6 +20,17 @@ import { IssueAttachments } from "@/components/issues/IssueAttachments"
 import { IssueTimeLog } from "@/components/issues/IssueTimeLog"
 import { CommentInput } from "@/components/issues/CommentInput"
 import { InlineAttachment } from "@/components/issues/AttachmentViewer"
+import { RichTextContent } from "@/components/ui/rich-text-editor"
+
+// Render HTML from the WYSIWYG editor, or fall back to plain text for older
+// comments that were saved before the editor was introduced.
+function CommentBody({ body }: { body: string }) {
+  const trimmed = body.trim()
+  if (!trimmed) return null
+  const isHtml = /^<[a-z][\s\S]*>/i.test(trimmed)
+  if (isHtml) return <RichTextContent html={trimmed} className="text-xs" />
+  return <p className="text-xs text-foreground leading-relaxed whitespace-pre-wrap">{trimmed}</p>
+}
 
 // ── Activity helpers ───────────────────────────────────────────────────────────
 
@@ -215,12 +226,8 @@ export function IssueActivity({
                           {format(new Date(c.created_at), "MMM d, h:mm a")}
                         </span>
                       </div>
-                      {/* Comment body — trim the placeholder space used for file-only comments */}
-                      {c.body.trim() && (
-                        <p className="text-xs text-foreground leading-relaxed whitespace-pre-wrap">
-                          {c.body}
-                        </p>
-                      )}
+                      {/* Comment body — plain text fallback for pre-editor comments */}
+                      <CommentBody body={c.body} />
                       {/* Inline attachments */}
                       {commentAttachments.length > 0 && (
                         <div className="mt-2 flex flex-wrap gap-2">
