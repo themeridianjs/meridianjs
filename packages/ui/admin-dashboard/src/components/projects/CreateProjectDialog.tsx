@@ -1,6 +1,11 @@
-import { useState } from "react"
-import { useCreateProject } from "@/api/hooks/useProjects"
+import { useState, useEffect } from "react"
+import {
+  useCreateProject,
+  useSuggestProjectIdentifier,
+  useCheckProjectIdentifier,
+} from "@/api/hooks/useProjects"
 import { useAuth } from "@/stores/auth"
+import { ApiError } from "@/api/client"
 import {
   DndContext,
   PointerSensor,
@@ -90,6 +95,8 @@ interface CreateProjectDialogProps {
   onClose: () => void
 }
 
+const MIN_IDENTIFIER_LENGTH = 3
+
 export function CreateProjectDialog({ open, onClose }: CreateProjectDialogProps) {
   const [name, setName] = useState("")
   const [identifier, setIdentifier] = useState("")
@@ -102,20 +109,33 @@ export function CreateProjectDialog({ open, onClose }: CreateProjectDialogProps)
   const { workspace } = useAuth()
   const createProject = useCreateProject()
 
+  const suggestQuery = useSuggestProjectIdentifier(name, { enabled: open })
+  const checkIdentifier = useCheckProjectIdentifier(identifier, { enabled: open })
+
+  // When suggestion returns and user hasn't edited identifier, sync it
+  useEffect(() => {
+    if (open && suggestQuery.data && !identifierTouched) {
+      setIdentifier(suggestQuery.data)
+    }
+  }, [open, suggestQuery.data, identifierTouched])
+
+  const keyTaken =
+    checkIdentifier.available === false ||
+    (createProject.isError && (createProject.error as ApiError)?.status === 409)
+  const identifierValid =
+    identifier.trim().length >= MIN_IDENTIFIER_LENGTH &&
+    /^[A-Z0-9]+$/i.test(identifier.trim())
+
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
 
   const handleNameChange = (v: string) => {
     setName(v)
-    if (!identifierTouched) {
-      const auto = v
-        .split(/\s+/)
-        .filter(Boolean)
-        .map((w) => w[0])
-        .join("")
-        .toUpperCase()
-        .slice(0, 5)
-      setIdentifier(auto)
-    }
+    // Identifier is driven by useSuggestProjectIdentifier when !identifierTouched
+  }
+
+  // When user leaves the name field, ensure we have a suggestion (refetch so identifier auto-fills immediately)
+  const handleNameBlur = () => {
+    if (name.trim() && !identifierTouched) suggestQuery.refetch()
   }
 
   const handleClose = () => {
@@ -127,6 +147,7 @@ export function CreateProjectDialog({ open, onClose }: CreateProjectDialogProps)
     setStatuses(DEFAULT_STATUSES)
     setNewStatusName("")
     setNewStatusColor(PRESET_COLORS[2])
+    createProject.reset()
     onClose()
   }
 
@@ -156,7 +177,7 @@ export function CreateProjectDialog({ open, onClose }: CreateProjectDialogProps)
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!name.trim() || !identifier.trim()) return
+    if (!name.trim() || !identifier.trim() || !identifierValid || keyTaken) return
     createProject.mutate(
       {
         name: name.trim(),
@@ -171,7 +192,9 @@ export function CreateProjectDialog({ open, onClose }: CreateProjectDialogProps)
           handleClose()
         },
         onError: (err) => {
-          toast.error(err.message ?? "Failed to create project")
+          const is409 = (err as ApiError)?.status === 409
+          if (is409) toast.error("This project key is already in use.")
+          else toast.error(err.message ?? "Failed to create project")
         },
       }
     )
@@ -191,8 +214,12 @@ export function CreateProjectDialog({ open, onClose }: CreateProjectDialogProps)
               placeholder="My Project"
               value={name}
               onChange={(e) => handleNameChange(e.target.value)}
+              onBlur={handleNameBlur}
               autoFocus
             />
+            <p className="text-xs text-muted-foreground">
+              Project key below will auto-fill when you finish typing; you can change it.
+            </p>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="project-id">
@@ -210,8 +237,12 @@ export function CreateProjectDialog({ open, onClose }: CreateProjectDialogProps)
                 setIdentifierTouched(true)
               }}
               maxLength={5}
-              className="font-mono"
+              className={cn("font-mono", keyTaken && "border-destructive")}
+              aria-invalid={keyTaken}
             />
+            {keyTaken && (
+              <p className="text-xs text-destructive">This project key is already in use.</p>
+            )}
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="project-desc">
@@ -306,7 +337,13 @@ export function CreateProjectDialog({ open, onClose }: CreateProjectDialogProps)
             </Button>
             <Button
               type="submit"
-              disabled={!name.trim() || !identifier.trim() || createProject.isPending}
+              disabled={
+                !name.trim() ||
+                !identifier.trim() ||
+                !identifierValid ||
+                keyTaken ||
+                createProject.isPending
+              }
             >
               {createProject.isPending ? "Creating..." : "Create project"}
             </Button>

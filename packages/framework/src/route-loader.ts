@@ -40,6 +40,18 @@ export async function loadRoutes(
   app.use("/", router)
 }
 
+/**
+ * Parametric segments like [id] must be registered after literal segments
+ * so that e.g. /admin/projects/suggest-identifier matches before /admin/projects/:id.
+ */
+function sortEntriesForRouteOrder(entries: string[]): string[] {
+  return [...entries].sort((a, b) => {
+    const aParam = a.startsWith("[") ? 1 : 0
+    const bParam = b.startsWith("[") ? 1 : 0
+    return aParam - bParam
+  })
+}
+
 async function scanApiDir(
   router: Router,
   dir: string,
@@ -54,7 +66,9 @@ async function scanApiDir(
     return
   }
 
-  for (const entry of entries) {
+  const sorted = sortEntriesForRouteOrder(entries)
+
+  for (const entry of sorted) {
     const fullPath = path.join(dir, entry)
     const stat = await fs.stat(fullPath)
 

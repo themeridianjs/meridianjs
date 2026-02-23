@@ -29,7 +29,7 @@ interface CreateIssueDialogProps {
 
 export function CreateIssueDialog({ open, onClose, projectId, defaultStatus = "backlog" }: CreateIssueDialogProps) {
   const navigate = useNavigate()
-  const { workspace } = useParams<{ workspace: string }>()
+  const { workspace, projectKey } = useParams<{ workspace: string; projectKey: string }>()
   const { workspace: workspaceRef } = useAuth()
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
@@ -143,7 +143,7 @@ export function CreateIssueDialog({ open, onClose, projectId, defaultStatus = "b
               className="text-muted-foreground gap-1.5 justify-start sm:justify-center"
               onClick={() => {
                 handleClose()
-                navigate(`/${workspace}/projects/${projectId}/issues/new`)
+                navigate(`/${workspace}/projects/${projectKey}/issues/new`)
               }}
             >
               <ExternalLink className="h-3.5 w-3.5" />

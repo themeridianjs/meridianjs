@@ -2,7 +2,7 @@ import { useState, useEffect } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { format } from "date-fns"
 import { useIssue, useUpdateIssue } from "@/api/hooks/useIssues"
-import { useProject } from "@/api/hooks/useProjects"
+import { useProjectByKey } from "@/api/hooks/useProjects"
 import { useProjectStatuses } from "@/api/hooks/useProjectStatuses"
 import { AssigneeSelector } from "@/components/issues/AssigneeSelector"
 import { IssueActivity } from "@/components/issues/IssueActivity"
@@ -44,26 +44,26 @@ function PropertyRow({ label, children }: { label: string; children: React.React
 // ── Status / Priority / Type icon helpers ─────────────────────────────────────
 
 const STATUS_ICONS: Record<string, React.ReactNode> = {
-  backlog:     <Circle className="h-3 w-3 text-zinc-400" />,
-  todo:        <Circle className="h-3 w-3 text-zinc-500" strokeWidth={2.5} />,
+  backlog: <Circle className="h-3 w-3 text-zinc-400" />,
+  todo: <Circle className="h-3 w-3 text-zinc-500" strokeWidth={2.5} />,
   in_progress: <Clock className="h-3 w-3 text-indigo-500" />,
-  in_review:   <Eye className="h-3 w-3 text-amber-500" />,
-  done:        <CheckCircle2 className="h-3 w-3 text-emerald-500" />,
-  cancelled:   <XCircle className="h-3 w-3 text-zinc-400" />,
+  in_review: <Eye className="h-3 w-3 text-amber-500" />,
+  done: <CheckCircle2 className="h-3 w-3 text-emerald-500" />,
+  cancelled: <XCircle className="h-3 w-3 text-zinc-400" />,
 }
 
 const PRIORITY_ICONS: Record<string, React.ReactNode> = {
   urgent: <Zap className="h-3 w-3 text-red-500" />,
-  high:   <ArrowUp className="h-3 w-3 text-orange-500" />,
+  high: <ArrowUp className="h-3 w-3 text-orange-500" />,
   medium: <Minus className="h-3 w-3 text-yellow-500" />,
-  low:    <ArrowDown className="h-3 w-3 text-blue-400" />,
+  low: <ArrowDown className="h-3 w-3 text-blue-400" />,
 }
 
 const TYPE_ICONS: Record<string, React.ReactNode> = {
-  bug:     <Bug className="h-3 w-3 text-red-500" />,
+  bug: <Bug className="h-3 w-3 text-red-500" />,
   feature: <Sparkles className="h-3 w-3 text-purple-500" />,
-  task:    <CheckSquare className="h-3 w-3 text-blue-500" />,
-  chore:   <ArrowRight className="h-3 w-3 text-zinc-500" />,
+  task: <CheckSquare className="h-3 w-3 text-blue-500" />,
+  chore: <ArrowRight className="h-3 w-3 text-zinc-500" />,
 }
 
 function IconSelect({
@@ -104,17 +104,18 @@ function IconSelect({
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export function IssueDetailPage() {
-  const { workspace, projectId, issueId } = useParams<{ workspace: string; projectId: string; issueId: string }>()
+  const { workspace, projectKey, issueId } = useParams<{ workspace: string; projectKey: string; issueId: string }>()
   const navigate = useNavigate()
 
   const [isEditing, setIsEditing] = useState(false)
   const [editTitle, setEditTitle] = useState("")
   const [editDescription, setEditDescription] = useState("")
 
-  const { data: project } = useProject(projectId ?? "")
+  const { data: project } = useProjectByKey(projectKey ?? "")
+  const projectId = project?.id ?? ""
   const { data: issue, isLoading } = useIssue(issueId ?? "")
-  const updateIssue = useUpdateIssue(issueId ?? "", projectId ?? "")
-  const { data: projectStatuses } = useProjectStatuses(projectId)
+  const updateIssue = useUpdateIssue(issueId ?? "", projectId)
+  const { data: projectStatuses } = useProjectStatuses(projectId || undefined)
 
   const statusOptions = projectStatuses && projectStatuses.length > 0
     ? Object.fromEntries(projectStatuses.map((s) => [s.key, s.name]))
@@ -122,13 +123,13 @@ export function IssueDetailPage() {
 
   const statusIcons: Record<string, React.ReactNode> = projectStatuses && projectStatuses.length > 0
     ? Object.fromEntries(projectStatuses.map((s) => [
-        s.key,
-        s.category === "completed"
-          ? <CheckCircle2 className="h-3 w-3" style={{ color: s.color }} />
-          : s.category === "started"
+      s.key,
+      s.category === "completed"
+        ? <CheckCircle2 className="h-3 w-3" style={{ color: s.color }} />
+        : s.category === "started"
           ? <Clock className="h-3 w-3" style={{ color: s.color }} />
           : <Circle className="h-3 w-3" style={{ color: s.color }} />,
-      ]))
+    ]))
     : STATUS_ICONS
 
   useEffect(() => {
@@ -139,7 +140,7 @@ export function IssueDetailPage() {
     setIsEditing(false)
   }, [issue?.id])
 
-  if (!projectId || !issueId) return null
+  if (!projectKey || !issueId) return null
 
   const handleSaveEdit = () => {
     if (!editTitle.trim()) return
@@ -163,7 +164,7 @@ export function IssueDetailPage() {
     setIsEditing(false)
   }
 
-  const handlePropUpdate =(data: Parameters<typeof updateIssue.mutate>[0], label: string) => {
+  const handlePropUpdate = (data: Parameters<typeof updateIssue.mutate>[0], label: string) => {
     updateIssue.mutate(data, {
       onSuccess: () => toast.success(`${label} updated`),
       onError: () => toast.error(`Failed to update ${label.toLowerCase()}`),
@@ -198,7 +199,7 @@ export function IssueDetailPage() {
             variant="ghost"
             size="sm"
             className="h-7 gap-1 text-muted-foreground hover:text-foreground px-2"
-            onClick={() => navigate(`/${workspace}/projects/${projectId}/issues`)}
+            onClick={() => navigate(`/${workspace}/projects/${projectKey}/issues`)}
           >
             <ChevronLeft className="h-3.5 w-3.5" />
             {project?.name ?? "Issues"}

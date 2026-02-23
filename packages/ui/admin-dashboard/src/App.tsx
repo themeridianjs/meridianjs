@@ -145,10 +145,10 @@ export function App() {
       >
         <Route index element={<Navigate to="projects" replace />} />
         <Route path="projects" element={<ProjectsPage />} />
-        <Route path="projects/:projectId/board" element={<ProjectBoardPage />} />
-        <Route path="projects/:projectId/issues" element={<ProjectIssuesPage />} />
-        <Route path="projects/:projectId/issues/new" element={<IssueNewPage />} />
-        <Route path="projects/:projectId/issues/:issueId" element={<IssueDetailPage />} />
+        <Route path="projects/:projectKey/board" element={<ProjectBoardPage />} />
+        <Route path="projects/:projectKey/issues" element={<ProjectIssuesPage />} />
+        <Route path="projects/:projectKey/issues/new" element={<IssueNewPage />} />
+        <Route path="projects/:projectKey/issues/:issueId" element={<IssueDetailPage />} />
         <Route path="notifications" element={<NotificationsPage />} />
       </Route>
 

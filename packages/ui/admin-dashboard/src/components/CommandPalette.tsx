@@ -62,7 +62,7 @@ export function CommandPalette() {
                 <CommandItem
                   key={`${project.id}-board`}
                   value={`${project.name} board`}
-                  onSelect={() => runCommand(() => navigate(`/${ws}/projects/${project.id}/board`))}
+                  onSelect={() => runCommand(() => navigate(`/${ws}/projects/${project.identifier}/board`))}
                 >
                   <Layers className="text-muted-foreground" />
                   <div className="flex items-center gap-2 min-w-0">
@@ -78,7 +78,7 @@ export function CommandPalette() {
                 <CommandItem
                   key={`${project.id}-issues`}
                   value={`${project.name} issues`}
-                  onSelect={() => runCommand(() => navigate(`/${ws}/projects/${project.id}/issues`))}
+                  onSelect={() => runCommand(() => navigate(`/${ws}/projects/${project.identifier}/issues`))}
                 >
                   <GitBranch className="text-muted-foreground" />
                   <div className="flex items-center gap-2 min-w-0">

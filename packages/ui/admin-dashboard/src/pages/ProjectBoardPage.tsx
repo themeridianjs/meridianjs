@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { useParams } from "react-router-dom"
-import { useProject } from "@/api/hooks/useProjects"
+import { useProjectByKey } from "@/api/hooks/useProjects"
 import { useIssues } from "@/api/hooks/useIssues"
 import type { Issue } from "@/api/hooks/useIssues"
 import { useProjectStatuses, useReorderProjectStatuses } from "@/api/hooks/useProjectStatuses"
@@ -12,18 +12,19 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Plus } from "lucide-react"
 
 export function ProjectBoardPage() {
-  const { projectId } = useParams<{ projectId: string }>()
+  const { projectKey } = useParams<{ projectKey: string }>()
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null)
   const [createOpen, setCreateOpen] = useState(false)
 
-  const { data: project } = useProject(projectId ?? "")
-  const { data: issues, isLoading: issuesLoading } = useIssues(projectId)
-  const { data: statuses, isLoading: statusesLoading } = useProjectStatuses(projectId)
-  const reorderStatuses = useReorderProjectStatuses(projectId ?? "")
+  const { data: project } = useProjectByKey(projectKey ?? "")
+  const projectId = project?.id ?? ""
+  const { data: issues, isLoading: issuesLoading } = useIssues(projectId || undefined)
+  const { data: statuses, isLoading: statusesLoading } = useProjectStatuses(projectId || undefined)
+  const reorderStatuses = useReorderProjectStatuses(projectId)
 
-  if (!projectId) return null
+  if (!projectKey) return null
 
-  const isLoading = issuesLoading || statusesLoading
+  const isLoading = issuesLoading || statusesLoading || !project
 
   const handleColumnsReorder = (orderedIds: string[]) => {
     reorderStatuses.mutate(orderedIds)
@@ -87,3 +88,4 @@ export function ProjectBoardPage() {
     </div>
   )
 }
+

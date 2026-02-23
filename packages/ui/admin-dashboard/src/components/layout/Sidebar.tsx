@@ -178,19 +178,19 @@ function NavUser() {
 // ── Main sidebar ──────────────────────────────────────────────────────────────
 
 export function AppSidebar({ ...props }: SidebarProps) {
-  const { workspace: workspaceSlug, projectId } = useParams<{ workspace: string; projectId: string }>()
+  const { workspace: workspaceSlug, projectKey } = useParams<{ workspace: string; projectKey: string }>()
   const { data: projects } = useProjects()
   const { toggle: openCommandPalette } = useCommandPalette()
   const location = useLocation()
   const ws = workspaceSlug ?? ""
 
-  const currentProject = projects?.find((p) => p.id === projectId)
+  const currentProject = projects?.find((p) => p.identifier === projectKey)
 
   const isProjectsActive = location.pathname === `/${ws}/projects`
   const isNotificationsActive = location.pathname.includes("/notifications")
   const isSettingsActive = location.pathname.includes("/settings")
-  const isBoardActive = projectId ? location.pathname.endsWith("/board") : false
-  const isIssuesActive = projectId ? location.pathname.endsWith("/issues") : false
+  const isBoardActive = projectKey ? location.pathname.endsWith("/board") : false
+  const isIssuesActive = projectKey ? location.pathname.endsWith("/issues") : false
 
   return (
     <SidebarRoot collapsible="offcanvas" {...props}>
@@ -239,7 +239,7 @@ export function AppSidebar({ ...props }: SidebarProps) {
         </SidebarGroup>
 
         {/* Current project sub-nav */}
-        {projectId && (
+        {projectKey && (
           <>
             <SidebarSeparator />
             <SidebarGroup>
@@ -248,14 +248,14 @@ export function AppSidebar({ ...props }: SidebarProps) {
                 <SidebarMenu>
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild isActive={isBoardActive}>
-                      <NavLink to={`/${ws}/projects/${projectId}/board`}>
+                      <NavLink to={`/${ws}/projects/${projectKey}/board`}>
                         Board
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild isActive={isIssuesActive}>
-                      <NavLink to={`/${ws}/projects/${projectId}/issues`}>
+                      <NavLink to={`/${ws}/projects/${projectKey}/issues`}>
                         Issues
                       </NavLink>
                     </SidebarMenuButton>
@@ -276,8 +276,8 @@ export function AppSidebar({ ...props }: SidebarProps) {
                 <SidebarMenu>
                   {projects.slice(0, 5).map((p) => (
                     <SidebarMenuItem key={p.id}>
-                      <SidebarMenuButton asChild isActive={p.id === projectId} tooltip={p.name}>
-                        <NavLink to={`/${ws}/projects/${p.id}/board`}>
+                      <SidebarMenuButton asChild isActive={p.identifier === projectKey} tooltip={p.name}>
+                        <NavLink to={`/${ws}/projects/${p.identifier}/board`}>
                           <span className="font-mono text-[11px] text-sidebar-foreground/50 shrink-0">
                             {p.identifier}
                           </span>

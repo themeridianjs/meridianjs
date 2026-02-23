@@ -10,9 +10,9 @@ import { useAuth } from "@/stores/auth"
 
 function useBreadcrumb() {
   const location = useLocation()
-  const { projectId } = useParams<{ projectId: string }>()
+  const { projectKey } = useParams<{ projectKey: string }>()
   const { data: projects } = useProjects()
-  const project = projects?.find((p) => p.id === projectId)
+  const project = projects?.find((p) => p.identifier === projectKey)
 
   const path = location.pathname
   if (path.includes("/board"))

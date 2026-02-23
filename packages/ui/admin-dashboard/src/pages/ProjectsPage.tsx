@@ -108,7 +108,7 @@ export function ProjectsPage() {
               <div
                 key={project.id}
                 className="grid grid-cols-[2fr_1fr_1fr_1fr_40px] items-center px-6 py-3 hover:bg-[#f9fafb] dark:hover:bg-muted/30 cursor-pointer transition-colors group"
-                onClick={() => navigate(`/${workspace}/projects/${project.id}/board`)}
+                onClick={() => navigate(`/${workspace}/projects/${project.identifier}/board`)}
               >
                 {/* Name */}
                 <div className="flex items-center gap-3 min-w-0">
@@ -164,13 +164,13 @@ export function ProjectsPage() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem
-                        onClick={() => navigate(`/${workspace}/projects/${project.id}/board`)}
+                        onClick={() => navigate(`/${workspace}/projects/${project.identifier}/board`)}
                       >
                         <Layers className="h-4 w-4" />
                         Open board
                       </DropdownMenuItem>
                       <DropdownMenuItem
-                        onClick={() => navigate(`/${workspace}/projects/${project.id}/issues`)}
+                        onClick={() => navigate(`/${workspace}/projects/${project.identifier}/issues`)}
                       >
                         <GitBranch className="h-4 w-4" />
                         View issues

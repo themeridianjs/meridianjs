@@ -29,15 +29,49 @@ export class ProjectModuleService extends MeridianService({
   }
 
   /**
-   * Generate a 2-4 character uppercase identifier from a project name.
-   * e.g. "My Project" → "MYPR", "Backend" → "BACK"
+   * Generate a 3–5 character uppercase alphanumeric identifier from a project name.
+   * - Prefer at least 4 chars; if the name is only 3 letters, use those (e.g. "API" → "API").
+   * - Multiple words: acronym (first letter of each); if < 4 chars, extend with subsequent letters.
+   * - Single word 4+: first 4 (e.g. "Backend" → "BACK"). Single word 1–2: pad to 4 with "X".
+   * Examples: "My Project" → "MPYR", "API" → "API", "Backend" → "BACK", "Alpha Beta" → "ABLP".
    */
   generateIdentifier(name: string): string {
-    const base = name
-      .toUpperCase()
-      .replace(/[^A-Z0-9]/g, "")
-      .substring(0, 4)
-    return base.padEnd(2, "X")
+    const words = name
+      .trim()
+      .split(/\s+/)
+      .map((w) => w.replace(/[^A-Za-z0-9]/g, "").toUpperCase())
+      .filter(Boolean)
+
+    if (words.length === 0) return "PROJ"
+
+    const maxLen = 5
+
+    if (words.length === 1) {
+      const word = words[0]
+      if (word.length >= 4) return word.substring(0, maxLen)
+      if (word.length === 3) return word
+      return word.padEnd(4, "X").substring(0, maxLen)
+    }
+
+    // Multiple words: acronym then extend with subsequent letters until length >= 4
+    let acronym = words.map((w) => w[0]).join("")
+    if (acronym.length >= 4) return acronym.substring(0, maxLen)
+
+    let result = acronym
+    let wi = 0
+    let ci = 1
+    while (result.length < 4 && wi < words.length) {
+      const word = words[wi]
+      if (ci < word.length) {
+        result += word[ci]
+        ci++
+      } else {
+        wi++
+        ci = 1
+      }
+    }
+    result = result.substring(0, maxLen)
+    return result.length >= 4 ? result : result.padEnd(4, "X").substring(0, maxLen)
   }
 
   /** List all labels for a given project. */

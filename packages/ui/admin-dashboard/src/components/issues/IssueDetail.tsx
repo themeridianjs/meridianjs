@@ -37,7 +37,7 @@ interface IssueDetailProps {
 
 export function IssueDetail({ issue, projectId, open, onClose }: IssueDetailProps) {
   const navigate = useNavigate()
-  const { workspace } = useParams<{ workspace: string }>()
+  const { workspace, projectKey } = useParams<{ workspace: string; projectKey: string }>()
   const [isEditing, setIsEditing] = useState(false)
   const [editTitle, setEditTitle] = useState("")
   const [editDescription, setEditDescription] = useState("")
@@ -141,7 +141,7 @@ export function IssueDetail({ issue, projectId, open, onClose }: IssueDetailProp
                 className="h-7 text-xs text-muted-foreground hover:text-foreground gap-1.5"
                 onClick={() => {
                   onClose()
-                  navigate(`/${workspace}/projects/${projectId}/issues/${issue.id}`)
+                  navigate(`/${workspace}/projects/${projectKey}/issues/${issue.id}`)
                 }}
               >
                 <ExternalLink className="h-3.5 w-3.5" />
@@ -159,27 +159,27 @@ export function IssueDetail({ issue, projectId, open, onClose }: IssueDetailProp
                   Edit
                 </Button>
               ) : (
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 text-xs text-muted-foreground"
-                  onClick={handleCancelEdit}
-                >
-                  <X className="h-3.5 w-3.5" />
-                  Cancel
-                </Button>
-                <Button
-                  size="sm"
-                  className="h-7 text-xs gap-1.5"
-                  onClick={handleSaveEdit}
-                  disabled={!editTitle.trim() || updateIssue.isPending}
-                >
-                  <Check className="h-3.5 w-3.5" />
-                  Save
-                </Button>
-              </div>
-            )}
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs text-muted-foreground"
+                    onClick={handleCancelEdit}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                    Cancel
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="h-7 text-xs gap-1.5"
+                    onClick={handleSaveEdit}
+                    disabled={!editTitle.trim() || updateIssue.isPending}
+                  >
+                    <Check className="h-3.5 w-3.5" />
+                    Save
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
 
@@ -279,7 +279,7 @@ export function IssueDetail({ issue, projectId, open, onClose }: IssueDetailProp
             onTabChange={setActiveActivityTab}
             onViewMore={() => {
               onClose()
-              navigate(`/${workspace}/projects/${projectId}/issues/${issue.id}`)
+              navigate(`/${workspace}/projects/${projectKey}/issues/${issue.id}`)
             }}
           />
         </ScrollArea>

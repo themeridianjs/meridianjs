@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { useParams, useNavigate } from "react-router-dom"
-import { useProject } from "@/api/hooks/useProjects"
+import { useProjectByKey } from "@/api/hooks/useProjects"
 import { useIssues, type Issue } from "@/api/hooks/useIssues"
 import { useUserMap } from "@/api/hooks/useUsers"
 import { useProjectStatuses } from "@/api/hooks/useProjectStatuses"
@@ -48,7 +48,7 @@ const STATUS_DOT: Record<string, string> = {
 }
 
 export function ProjectIssuesPage() {
-  const { workspace, projectId } = useParams<{ workspace: string; projectId: string }>()
+  const { workspace, projectKey } = useParams<{ workspace: string; projectKey: string }>()
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null)
   const [createOpen, setCreateOpen] = useState(false)
   const [search, setSearch] = useState("")
@@ -56,10 +56,11 @@ export function ProjectIssuesPage() {
   const [priorityFilter, setPriorityFilter] = useState("all")
 
   const navigate = useNavigate()
-  useProject(projectId ?? "")
-  const { data: issues, isLoading } = useIssues(projectId)
+  const { data: project } = useProjectByKey(projectKey ?? "")
+  const projectId = project?.id ?? ""
+  const { data: issues, isLoading } = useIssues(projectId || undefined)
   const { data: userMap } = useUserMap()
-  const { data: projectStatuses } = useProjectStatuses(projectId)
+  const { data: projectStatuses } = useProjectStatuses(projectId || undefined)
 
   const statusLabels = projectStatuses && projectStatuses.length > 0
     ? Object.fromEntries(projectStatuses.map((s) => [s.key, s.name]))
@@ -70,7 +71,7 @@ export function ProjectIssuesPage() {
     ? Object.fromEntries(projectStatuses.map((s) => [s.key, s.color]))
     : null
 
-  if (!projectId) return null
+  if (!projectKey) return null
 
   const filtered = (issues ?? []).filter((issue) => {
     const matchesSearch =
@@ -250,7 +251,7 @@ export function ProjectIssuesPage() {
                 <button
                   onClick={(e) => {
                     e.stopPropagation()
-                    navigate(`/${workspace}/projects/${projectId}/issues/${issue.id}`)
+                    navigate(`/${workspace}/projects/${projectKey}/issues/${issue.id}`)
                   }}
                   className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-border text-muted-foreground hover:text-foreground"
                   title="Open full page"
