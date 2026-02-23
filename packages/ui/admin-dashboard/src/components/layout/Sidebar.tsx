@@ -9,6 +9,7 @@ import {
 import { cn } from "@/lib/utils"
 import { useProjects } from "@/api/hooks/useProjects"
 import { useAuth } from "@/stores/auth"
+import { useCommandPalette } from "@/stores/command-palette"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import {
@@ -78,6 +79,7 @@ export function Sidebar() {
   const { projectId } = useParams<{ projectId: string }>()
   const { data: projects } = useProjects()
   const { user, logout } = useAuth()
+  const { toggle: openCommandPalette } = useCommandPalette()
 
   const currentProject = projects?.find((p) => p.id === projectId)
 
@@ -109,7 +111,7 @@ export function Sidebar() {
       <ScrollArea className="flex-1">
         <div className="px-3 py-3 space-y-0.5">
           {/* Search */}
-          <button className="w-full flex items-center justify-between px-3 py-1.5 rounded-md text-sm text-[#6b7280] dark:text-muted-foreground hover:text-foreground hover:bg-[#f3f4f6] dark:hover:bg-muted transition-colors">
+          <button onClick={openCommandPalette} className="w-full flex items-center justify-between px-3 py-1.5 rounded-md text-sm text-[#6b7280] dark:text-muted-foreground hover:text-foreground hover:bg-[#f3f4f6] dark:hover:bg-muted transition-colors">
             <div className="flex items-center gap-2.5">
               <Search className="h-[18px] w-[18px] shrink-0" strokeWidth={1.5} />
               <span>Search</span>

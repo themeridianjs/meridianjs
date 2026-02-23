@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from "react-router-dom"
 import { useAuth } from "@/stores/auth"
 import { AppShell } from "@/components/layout/AppShell"
+import { CommandPalette } from "@/components/CommandPalette"
 import { LoginPage } from "@/pages/LoginPage"
 import { RegisterPage } from "@/pages/RegisterPage"
 import { ProjectsPage } from "@/pages/ProjectsPage"
@@ -47,6 +48,7 @@ export function App() {
         element={
           <RequireAuth>
             <AppShell />
+            <CommandPalette />
           </RequireAuth>
         }
       >

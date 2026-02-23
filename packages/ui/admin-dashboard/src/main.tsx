@@ -6,6 +6,7 @@ import { ReactQueryDevtools } from "@tanstack/react-query-devtools"
 import { Toaster } from "sonner"
 import { ThemeProvider } from "@/components/theme/ThemeProvider"
 import { AuthProvider } from "@/stores/auth"
+import { CommandPaletteProvider } from "@/stores/command-palette"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { App } from "./App"
 import "./index.css"
@@ -13,7 +14,7 @@ import "./index.css"
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 30, // 30 seconds
+      staleTime: 1000 * 30,
       retry: 1,
     },
   },
@@ -24,23 +25,23 @@ createRoot(document.getElementById("root")!).render(
     <ThemeProvider>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
-          <BrowserRouter>
-            <TooltipProvider delayDuration={300}>
-              <App />
-              <Toaster
-                position="bottom-right"
-                toastOptions={{
-                  classNames: {
-                    toast:
-                      "bg-background border border-border text-foreground text-sm rounded-md shadow-none",
-                    description: "text-muted-foreground",
-                    actionButton: "bg-primary text-primary-foreground",
-                    cancelButton: "bg-muted text-muted-foreground",
-                  },
-                }}
-              />
-            </TooltipProvider>
-          </BrowserRouter>
+          <CommandPaletteProvider>
+            <BrowserRouter>
+              <TooltipProvider delayDuration={300}>
+                <App />
+                <Toaster
+                  position="bottom-right"
+                  toastOptions={{
+                    classNames: {
+                      toast:
+                        "bg-white dark:bg-card border border-border text-foreground text-sm rounded-lg shadow-sm",
+                      description: "text-muted-foreground",
+                    },
+                  }}
+                />
+              </TooltipProvider>
+            </BrowserRouter>
+          </CommandPaletteProvider>
         </AuthProvider>
         <ReactQueryDevtools initialIsOpen={false} />
       </QueryClientProvider>
