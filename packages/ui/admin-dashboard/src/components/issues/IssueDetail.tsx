@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react"
+import { useNavigate } from "react-router-dom"
 import { format } from "date-fns"
 import type { Issue } from "@/api/hooks/useIssues"
 import { useIssueComments, useCreateComment, useUpdateIssue } from "@/api/hooks/useIssues"
@@ -25,7 +26,7 @@ import {
   ISSUE_PRIORITY_LABELS,
   ISSUE_TYPE_LABELS,
 } from "@/lib/constants"
-import { Send, Pencil, X, Check } from "lucide-react"
+import { Send, Pencil, X, Check, ExternalLink } from "lucide-react"
 import { toast } from "sonner"
 
 interface IssueDetailProps {
@@ -36,6 +37,7 @@ interface IssueDetailProps {
 }
 
 export function IssueDetail({ issue, projectId, open, onClose }: IssueDetailProps) {
+  const navigate = useNavigate()
   const [comment, setComment] = useState("")
   const [isEditing, setIsEditing] = useState(false)
   const [editTitle, setEditTitle] = useState("")
@@ -139,18 +141,31 @@ export function IssueDetail({ issue, projectId, open, onClose }: IssueDetailProp
                 {ISSUE_TYPE_LABELS[issue.type] ?? issue.type}
               </Badge>
             </div>
-            {/* Edit / Save / Cancel toggle */}
-            {!isEditing ? (
+            <div className="flex items-center gap-1">
               <Button
                 variant="ghost"
                 size="sm"
                 className="h-7 text-xs text-muted-foreground hover:text-foreground gap-1.5"
-                onClick={() => setIsEditing(true)}
+                onClick={() => {
+                  onClose()
+                  navigate(`/projects/${projectId}/issues/${issue.id}`)
+                }}
               >
-                <Pencil className="h-3.5 w-3.5" />
-                Edit
+                <ExternalLink className="h-3.5 w-3.5" />
+                Open
               </Button>
-            ) : (
+              {/* Edit / Save / Cancel toggle */}
+              {!isEditing ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs text-muted-foreground hover:text-foreground gap-1.5"
+                  onClick={() => setIsEditing(true)}
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                  Edit
+                </Button>
+              ) : (
               <div className="flex items-center gap-1">
                 <Button
                   variant="ghost"
@@ -172,6 +187,7 @@ export function IssueDetail({ issue, projectId, open, onClose }: IssueDetailProp
                 </Button>
               </div>
             )}
+            </div>
           </div>
 
           {isEditing ? (

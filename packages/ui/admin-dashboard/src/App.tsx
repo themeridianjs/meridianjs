@@ -7,6 +7,8 @@ import { RegisterPage } from "@/pages/RegisterPage"
 import { ProjectsPage } from "@/pages/ProjectsPage"
 import { ProjectBoardPage } from "@/pages/ProjectBoardPage"
 import { ProjectIssuesPage } from "@/pages/ProjectIssuesPage"
+import { IssueDetailPage } from "@/pages/IssueDetailPage"
+import { IssueNewPage } from "@/pages/IssueNewPage"
 import { NotificationsPage } from "@/pages/NotificationsPage"
 import type { ReactNode } from "react"
 
@@ -56,6 +58,8 @@ export function App() {
         <Route path="/projects" element={<ProjectsPage />} />
         <Route path="/projects/:projectId/board" element={<ProjectBoardPage />} />
         <Route path="/projects/:projectId/issues" element={<ProjectIssuesPage />} />
+        <Route path="/projects/:projectId/issues/new" element={<IssueNewPage />} />
+        <Route path="/projects/:projectId/issues/:issueId" element={<IssueDetailPage />} />
         <Route path="/notifications" element={<NotificationsPage />} />
       </Route>
 

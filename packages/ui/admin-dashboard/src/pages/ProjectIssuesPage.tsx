@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { useParams } from "react-router-dom"
+import { useParams, useNavigate } from "react-router-dom"
 import { useProject } from "@/api/hooks/useProjects"
 import { useIssues, type Issue } from "@/api/hooks/useIssues"
 import { useUserMap } from "@/api/hooks/useUsers"
@@ -21,7 +21,7 @@ import {
   ISSUE_PRIORITY_COLORS,
 } from "@/lib/constants"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Plus, Search, ArrowUp, ArrowDown, Minus, Zap, Circle } from "lucide-react"
+import { Plus, Search, ArrowUp, ArrowDown, Minus, Zap, Circle, ExternalLink } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { format } from "date-fns"
 
@@ -53,6 +53,7 @@ export function ProjectIssuesPage() {
   const [statusFilter, setStatusFilter] = useState("all")
   const [priorityFilter, setPriorityFilter] = useState("all")
 
+  const navigate = useNavigate()
   useProject(projectId ?? "")
   const { data: issues, isLoading } = useIssues(projectId)
   const { data: userMap } = useUserMap()
@@ -120,26 +121,28 @@ export function ProjectIssuesPage() {
         </div>
 
         {/* Table header */}
-        <div className="grid grid-cols-[80px_1fr_130px_100px_110px_120px] items-center px-6 py-2.5 border-b border-border">
+        <div className="grid grid-cols-[80px_1fr_130px_100px_110px_120px_32px] items-center px-6 py-2.5 border-b border-border">
           <span className="text-xs font-medium text-[#6b7280]">ID</span>
           <span className="text-xs font-medium text-[#6b7280]">Title</span>
           <span className="text-xs font-medium text-[#6b7280]">Status</span>
           <span className="text-xs font-medium text-[#6b7280]">Priority</span>
           <span className="text-xs font-medium text-[#6b7280]">Assignees</span>
           <span className="text-xs font-medium text-[#6b7280]">Created</span>
+          <span />
         </div>
 
         {/* Rows */}
         {isLoading ? (
           <div className="divide-y divide-border">
             {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="grid grid-cols-[80px_1fr_130px_100px_110px_120px] items-center px-6 py-3 gap-4">
+              <div key={i} className="grid grid-cols-[80px_1fr_130px_100px_110px_120px_32px] items-center px-6 py-3 gap-4">
                 <Skeleton className="h-4 w-16" />
                 <Skeleton className="h-4 w-64" />
                 <Skeleton className="h-5 w-20" />
                 <Skeleton className="h-4 w-16" />
                 <Skeleton className="h-4 w-16" />
                 <Skeleton className="h-4 w-20" />
+                <span />
               </div>
             ))}
           </div>
@@ -168,7 +171,7 @@ export function ProjectIssuesPage() {
               <div
                 key={issue.id}
                 onClick={() => setSelectedIssue(issue)}
-                className="grid grid-cols-[80px_1fr_130px_100px_110px_120px] items-center px-6 py-3 hover:bg-[#f9fafb] dark:hover:bg-muted/30 cursor-pointer transition-colors"
+                className="group grid grid-cols-[80px_1fr_130px_100px_110px_120px_32px] items-center px-6 py-3 hover:bg-[#f9fafb] dark:hover:bg-muted/30 cursor-pointer transition-colors"
               >
                 <span className="text-xs font-mono text-muted-foreground">
                   {issue.identifier}
@@ -208,6 +211,16 @@ export function ProjectIssuesPage() {
                 <span className="text-xs text-muted-foreground">
                   {format(new Date(issue.created_at), "MMM d, yyyy")}
                 </span>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    navigate(`/projects/${projectId}/issues/${issue.id}`)
+                  }}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-border text-muted-foreground hover:text-foreground"
+                  title="Open full page"
+                >
+                  <ExternalLink className="h-3.5 w-3.5" />
+                </button>
               </div>
             ))}
           </div>

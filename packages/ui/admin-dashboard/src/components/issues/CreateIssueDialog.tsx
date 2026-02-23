@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { useNavigate } from "react-router-dom"
 import { useCreateIssue } from "@/api/hooks/useIssues"
 import { AssigneeSelector } from "@/components/issues/AssigneeSelector"
 import {
@@ -13,6 +14,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { ExternalLink } from "lucide-react"
 import { toast } from "sonner"
 import { ISSUE_STATUS_LABELS, ISSUE_PRIORITY_LABELS, ISSUE_TYPE_LABELS } from "@/lib/constants"
 
@@ -24,6 +26,7 @@ interface CreateIssueDialogProps {
 }
 
 export function CreateIssueDialog({ open, onClose, projectId, defaultStatus = "backlog" }: CreateIssueDialogProps) {
+  const navigate = useNavigate()
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
   const [status, setStatus] = useState(defaultStatus)
@@ -122,11 +125,26 @@ export function CreateIssueDialog({ open, onClose, projectId, defaultStatus = "b
             <Label>Assignees <span className="text-xs text-muted-foreground font-normal">Optional</span></Label>
             <AssigneeSelector value={assigneeIds} onChange={setAssigneeIds} />
           </div>
-          <DialogFooter>
-            <Button type="button" variant="ghost" onClick={handleClose}>Cancel</Button>
-            <Button type="submit" disabled={!title.trim() || createIssue.isPending}>
-              {createIssue.isPending ? "Creating..." : "Create issue"}
+          <DialogFooter className="flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground gap-1.5 justify-start sm:justify-center"
+              onClick={() => {
+                handleClose()
+                navigate(`/projects/${projectId}/issues/new`)
+              }}
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+              Open full form
             </Button>
+            <div className="flex items-center gap-2 justify-end">
+              <Button type="button" variant="ghost" onClick={handleClose}>Cancel</Button>
+              <Button type="submit" disabled={!title.trim() || createIssue.isPending}>
+                {createIssue.isPending ? "Creating..." : "Create issue"}
+              </Button>
+            </div>
           </DialogFooter>
         </form>
       </DialogContent>
