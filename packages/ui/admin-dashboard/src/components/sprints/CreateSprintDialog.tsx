@@ -9,12 +9,13 @@ import { Textarea } from "@/components/ui/textarea"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerBody,
+  DrawerFooter,
+} from "@/components/ui/drawer"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 
@@ -64,13 +65,14 @@ export function CreateSprintDialog({ open, onClose, projectId }: CreateSprintDia
   }
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && handleClose()}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>New Sprint</DialogTitle>
-        </DialogHeader>
+    <Drawer open={open} onOpenChange={(o) => !o && handleClose()}>
+      <DrawerContent className="sm:max-w-md">
+        <DrawerHeader>
+          <DrawerTitle>New Sprint</DrawerTitle>
+        </DrawerHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4 py-1">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+          <DrawerBody className="space-y-4 py-1">
           {/* Name */}
           <div className="space-y-1.5">
             <Label htmlFor="sprint-name">Name <span className="text-destructive">*</span></Label>
@@ -154,17 +156,18 @@ export function CreateSprintDialog({ open, onClose, projectId }: CreateSprintDia
               </Popover>
             </div>
           </div>
+          </DrawerBody>
 
-          <DialogFooter>
+          <DrawerFooter>
             <Button type="button" variant="ghost" onClick={handleClose}>
               Cancel
             </Button>
             <Button type="submit" disabled={!name.trim() || create.isPending}>
               {create.isPending ? "Creating…" : "Create Sprint"}
             </Button>
-          </DialogFooter>
+          </DrawerFooter>
         </form>
-      </DialogContent>
-    </Dialog>
+      </DrawerContent>
+    </Drawer>
   )
 }

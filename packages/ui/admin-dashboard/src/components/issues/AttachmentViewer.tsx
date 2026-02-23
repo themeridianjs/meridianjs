@@ -7,11 +7,12 @@ import { format } from "date-fns"
 import type { Attachment } from "@/api/hooks/useAttachments"
 import { Button } from "@/components/ui/button"
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerBody,
+} from "@/components/ui/drawer"
 import {
   FileText, FileImage, FileArchive, FileCode, File, Download, Play,
 } from "lucide-react"
@@ -64,12 +65,12 @@ export function ViewerModal({ attachment, onClose }: ViewerModalProps) {
   if (!attachment) return null
 
   return (
-    <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-4xl w-full p-0 overflow-hidden">
-        <DialogHeader className="flex-row items-center justify-between px-4 py-3 border-b border-border shrink-0 pr-10">
-          <DialogTitle className="text-sm font-medium truncate">
+    <Drawer open onOpenChange={(open) => !open && onClose()}>
+      <DrawerContent className="max-w-2xl w-full p-0 overflow-hidden">
+        <DrawerHeader className="flex-row items-center justify-between px-4 py-3 border-b border-border shrink-0 pr-10">
+          <DrawerTitle className="text-sm font-medium truncate">
             {attachment.original_name}
-          </DialogTitle>
+          </DrawerTitle>
           <Button
             variant="ghost"
             size="sm"
@@ -79,9 +80,9 @@ export function ViewerModal({ attachment, onClose }: ViewerModalProps) {
             <Download className="h-3.5 w-3.5" />
             Download
           </Button>
-        </DialogHeader>
+        </DrawerHeader>
 
-        <div className="flex items-center justify-center bg-black/5 dark:bg-black/30 min-h-[320px] max-h-[75vh] overflow-auto">
+        <DrawerBody className="flex items-center justify-center bg-black/5 dark:bg-black/30 min-h-[320px] max-h-[75vh] overflow-auto p-0">
           {isImage(attachment.mime_type) && (
             <img
               src={attachment.url}
@@ -96,17 +97,17 @@ export function ViewerModal({ attachment, onClose }: ViewerModalProps) {
               className="max-w-full max-h-[75vh]"
             />
           )}
-        </div>
+        </DrawerBody>
 
-        <div className="px-4 py-2 border-t border-border text-[11px] text-muted-foreground flex items-center gap-3">
+        <div className="px-4 py-2 border-t border-border text-[11px] text-muted-foreground flex items-center gap-3 shrink-0">
           <span>{formatBytes(attachment.size)}</span>
           <span>·</span>
           <span>{attachment.mime_type}</span>
           <span>·</span>
           <span>Uploaded {format(new Date(attachment.created_at), "MMM d, yyyy")}</span>
         </div>
-      </DialogContent>
-    </Dialog>
+      </DrawerContent>
+    </Drawer>
   )
 }
 

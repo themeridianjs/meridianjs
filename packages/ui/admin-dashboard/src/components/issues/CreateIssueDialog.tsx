@@ -8,12 +8,13 @@ import { useTaskLists } from "@/api/hooks/useTaskLists"
 import { useAuth } from "@/stores/auth"
 import { AssigneeSelector } from "@/components/issues/AssigneeSelector"
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog"
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerBody,
+  DrawerFooter,
+} from "@/components/ui/drawer"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -94,12 +95,13 @@ export function CreateIssueDialog({ open, onClose, projectId, defaultStatus = "b
   }
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && handleClose()}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>New issue</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
+    <Drawer open={open} onOpenChange={(o) => !o && handleClose()}>
+      <DrawerContent className="max-w-md">
+        <DrawerHeader>
+          <DrawerTitle>New issue</DrawerTitle>
+        </DrawerHeader>
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+          <DrawerBody className="space-y-4">
           <div className="space-y-1.5">
             <Label htmlFor="issue-title">Title</Label>
             <Input
@@ -244,7 +246,8 @@ export function CreateIssueDialog({ open, onClose, projectId, defaultStatus = "b
               </PopoverContent>
             </Popover>
           </div>
-          <DialogFooter className="flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-2">
+          </DrawerBody>
+          <DrawerFooter className="flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-2">
             <Button
               type="button"
               variant="ghost"
@@ -264,9 +267,9 @@ export function CreateIssueDialog({ open, onClose, projectId, defaultStatus = "b
                 {createIssue.isPending ? "Creating..." : "Create issue"}
               </Button>
             </div>
-          </DialogFooter>
+          </DrawerFooter>
         </form>
-      </DialogContent>
-    </Dialog>
+      </DrawerContent>
+    </Drawer>
   )
 }

@@ -11,15 +11,14 @@ import { AssigneeSelector } from "@/components/issues/AssigneeSelector"
 import { IssueActivity, type ActivityTab } from "@/components/issues/IssueActivity"
 import { CommentInput } from "@/components/issues/CommentInput"
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet"
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
@@ -27,7 +26,7 @@ import {
   ISSUE_PRIORITY_LABELS,
   ISSUE_TYPE_LABELS,
 } from "@/lib/constants"
-import { RichTextContent } from "@/components/ui/rich-text-editor"
+import { RichTextEditor, RichTextContent } from "@/components/ui/rich-text-editor"
 import { Pencil, X, Check, ExternalLink, Layers, FolderOpen, CornerDownRight, Plus, ChevronUp, Calendar as CalendarIcon } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
@@ -156,9 +155,9 @@ export function IssueDetail({ issue, projectId, open, onClose }: IssueDetailProp
 
   return (
     <>
-    <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
-      <SheetContent side="right" className="flex flex-col p-0 w-full max-w-2xl">
-        <SheetHeader className="pr-10">
+    <Drawer open={open} onOpenChange={(o) => !o && onClose()}>
+      <DrawerContent className="flex flex-col p-0 w-full max-w-2xl overflow-hidden [&>button]:right-4">
+        <DrawerHeader className="pr-10">
           <div className="flex items-center justify-between gap-2 mb-1">
             <div className="flex items-center gap-2">
               <span className="text-xs font-mono text-muted-foreground">{issue.identifier}</span>
@@ -222,20 +221,20 @@ export function IssueDetail({ issue, projectId, open, onClose }: IssueDetailProp
               autoFocus
             />
           ) : (
-            <SheetTitle className="text-base font-medium leading-snug text-left">
+            <DrawerTitle className="text-base font-medium leading-snug text-left">
               {issue.title}
-            </SheetTitle>
+            </DrawerTitle>
           )}
-        </SheetHeader>
+        </DrawerHeader>
 
-        <ScrollArea className="flex-1">
-          <div className="px-6 py-4 space-y-5">
+        <ScrollArea className="flex-1 min-w-0">
+          <div className="px-6 py-4 space-y-5 min-w-0">
             {/* Status / Priority / Type */}
             <div className="grid grid-cols-3 gap-3 mb-1">
-              <div>
+              <div className="min-w-0">
                 <p className="text-xs text-muted-foreground mb-1.5">Status</p>
                 <Select value={issue.status} onValueChange={handleStatusChange}>
-                  <SelectTrigger className="h-8 text-xs bg-transparent">
+                  <SelectTrigger className="h-8 text-xs bg-transparent min-w-0">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -245,10 +244,10 @@ export function IssueDetail({ issue, projectId, open, onClose }: IssueDetailProp
                   </SelectContent>
                 </Select>
               </div>
-              <div>
+              <div className="min-w-0">
                 <p className="text-xs text-muted-foreground mb-1.5">Priority</p>
                 <Select value={issue.priority} onValueChange={handlePriorityChange}>
-                  <SelectTrigger className="h-8 text-xs bg-transparent">
+                  <SelectTrigger className="h-8 text-xs bg-transparent min-w-0">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -258,10 +257,10 @@ export function IssueDetail({ issue, projectId, open, onClose }: IssueDetailProp
                   </SelectContent>
                 </Select>
               </div>
-              <div>
+              <div className="min-w-0">
                 <p className="text-xs text-muted-foreground mb-1.5">Type</p>
                 <Select value={issue.type} onValueChange={handleTypeChange}>
-                  <SelectTrigger className="h-8 text-xs bg-transparent">
+                  <SelectTrigger className="h-8 text-xs bg-transparent min-w-0">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -284,17 +283,17 @@ export function IssueDetail({ issue, projectId, open, onClose }: IssueDetailProp
             </div>
 
             {/* Sprint + List + Due Date — inline row */}
-            <div className="flex gap-3 items-start">
+            <div className="flex gap-3 items-start min-w-0">
               <div className="flex-1 min-w-0">
                 <p className="text-xs text-muted-foreground mb-1.5">Sprint</p>
                 <Select
                   value={issue.sprint_id ?? "none"}
                   onValueChange={(v) => handleSprintChange(v === "none" ? null : v)}
                 >
-                  <SelectTrigger className="h-8 text-xs bg-transparent">
-                    <div className="flex items-center gap-1 min-w-0">
-                      <Layers className="h-3 w-3 shrink-0 text-muted-foreground" />
-                      <SelectValue placeholder="No sprint" />
+                  <SelectTrigger className="h-8 text-xs bg-transparent min-w-0">
+                      <div className="flex items-center gap-1 min-w-0 overflow-hidden">
+                        <Layers className="h-3 w-3 shrink-0 text-muted-foreground" />
+                        <SelectValue placeholder="No sprint" />
                     </div>
                   </SelectTrigger>
                   <SelectContent>
@@ -326,8 +325,8 @@ export function IssueDetail({ issue, projectId, open, onClose }: IssueDetailProp
                     value={issue.task_list_id ?? "none"}
                     onValueChange={(v) => handleTaskListChange(v === "none" ? null : v)}
                   >
-                    <SelectTrigger className="h-8 text-xs bg-transparent">
-                      <div className="flex items-center gap-1 min-w-0">
+                    <SelectTrigger className="h-8 text-xs bg-transparent min-w-0">
+                      <div className="flex items-center gap-1 min-w-0 overflow-hidden">
                         <FolderOpen className="h-3 w-3 shrink-0 text-muted-foreground" />
                         <SelectValue placeholder="No list">
                           {currentTaskList ? currentTaskList.name : "No list"}
@@ -347,9 +346,9 @@ export function IssueDetail({ issue, projectId, open, onClose }: IssueDetailProp
                 <p className="text-xs text-muted-foreground mb-1.5">Due Date</p>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <button className="flex items-center gap-1 h-8 w-full px-2 rounded border border-input text-xs bg-transparent hover:bg-accent transition-colors">
+                    <button className="flex items-center gap-1 h-8 w-full min-w-0 px-2 rounded border border-input text-xs bg-transparent hover:bg-accent transition-colors overflow-hidden">
                       <CalendarIcon className="h-3 w-3 shrink-0 text-muted-foreground" />
-                      <span className={issue.due_date ? "text-foreground" : "text-muted-foreground"}>
+                      <span className={`truncate ${issue.due_date ? "text-foreground" : "text-muted-foreground"}`}>
                         {issue.due_date ? format(new Date(issue.due_date), "MMM d, yyyy") : "No date"}
                       </span>
                     </button>
@@ -434,11 +433,12 @@ export function IssueDetail({ issue, projectId, open, onClose }: IssueDetailProp
             <div>
               <p className="text-xs text-muted-foreground mb-1.5">Description</p>
               {isEditing ? (
-                <Textarea
-                  value={editDescription}
-                  onChange={(e) => setEditDescription(e.target.value)}
-                  placeholder="Add a description..."
-                  className="text-sm min-h-[100px] bg-transparent"
+                <RichTextEditor
+                  key={`${issue.id}-edit`}
+                  content={editDescription}
+                  onChange={setEditDescription}
+                  placeholder="Add a description…"
+                  className="min-h-[160px] rounded-md border border-input"
                 />
               ) : issue.description ? (
                 <RichTextContent html={issue.description} className="text-sm" />
@@ -468,8 +468,8 @@ export function IssueDetail({ issue, projectId, open, onClose }: IssueDetailProp
             <CommentInput issueId={issue.id} compact />
           </div>
         )}
-      </SheetContent>
-    </Sheet>
+      </DrawerContent>
+    </Drawer>
 
     <CreateIssueDialog
       open={createChildOpen}

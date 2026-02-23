@@ -16,12 +16,13 @@ import {
 import { SortableContext, arrayMove, horizontalListSortingStrategy, useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog"
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerBody,
+  DrawerFooter,
+} from "@/components/ui/drawer"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -202,12 +203,13 @@ export function CreateProjectDialog({ open, onClose }: CreateProjectDialogProps)
   }
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && handleClose()}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>New project</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
+    <Drawer open={open} onOpenChange={(o) => !o && handleClose()}>
+      <DrawerContent className="max-w-md">
+        <DrawerHeader>
+          <DrawerTitle>New project</DrawerTitle>
+        </DrawerHeader>
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+          <DrawerBody className="space-y-4">
           <div className="space-y-1.5">
             <Label htmlFor="project-name">Name</Label>
             <Input
@@ -331,8 +333,9 @@ export function CreateProjectDialog({ open, onClose }: CreateProjectDialogProps)
               </div>
             )}
           </div>
+          </DrawerBody>
 
-          <DialogFooter>
+          <DrawerFooter>
             <Button type="button" variant="ghost" onClick={handleClose}>
               Cancel
             </Button>
@@ -348,9 +351,9 @@ export function CreateProjectDialog({ open, onClose }: CreateProjectDialogProps)
             >
               {createProject.isPending ? "Creating..." : "Create project"}
             </Button>
-          </DialogFooter>
+          </DrawerFooter>
         </form>
-      </DialogContent>
-    </Dialog>
+      </DrawerContent>
+    </Drawer>
   )
 }

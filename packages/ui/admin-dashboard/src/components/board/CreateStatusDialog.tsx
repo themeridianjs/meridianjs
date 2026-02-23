@@ -2,12 +2,13 @@ import { useState } from "react"
 import { useCreateProjectStatus } from "@/api/hooks/useProjectStatuses"
 import type { ProjectStatus } from "@/api/hooks/useProjectStatuses"
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog"
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerBody,
+  DrawerFooter,
+} from "@/components/ui/drawer"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -74,12 +75,13 @@ export function CreateStatusDialog({ open, onClose, projectId }: CreateStatusDia
   }
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-sm">
-        <DialogHeader>
-          <DialogTitle className="text-sm font-medium">New Status</DialogTitle>
-        </DialogHeader>
+    <Drawer open={open} onOpenChange={(o) => !o && onClose()}>
+      <DrawerContent className="sm:max-w-sm">
+        <DrawerHeader>
+          <DrawerTitle className="text-sm font-medium">New Status</DrawerTitle>
+        </DrawerHeader>
 
+        <DrawerBody>
         <div className="space-y-4">
           {/* Name */}
           <div>
@@ -141,11 +143,12 @@ export function CreateStatusDialog({ open, onClose, projectId }: CreateStatusDia
                   </SelectItem>
                 ))}
               </SelectContent>
-            </Select>
-          </div>
+          </Select>
         </div>
+        </div>
+        </DrawerBody>
 
-        <DialogFooter className="mt-2">
+        <DrawerFooter className="mt-2">
           <Button variant="ghost" size="sm" onClick={onClose} className="text-xs">
             Cancel
           </Button>
@@ -157,8 +160,8 @@ export function CreateStatusDialog({ open, onClose, projectId }: CreateStatusDia
           >
             Create
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </DrawerFooter>
+      </DrawerContent>
+    </Drawer>
   )
 }
