@@ -21,6 +21,7 @@
     "@meridian/sprint": "*",
     "@meridian/types": "*",
     "@meridian/user": "*",
+    "@meridian/plugin-webhook": "*",
     "@meridian/workflow-engine": "*",
     "@meridian/workspace": "*"
   },

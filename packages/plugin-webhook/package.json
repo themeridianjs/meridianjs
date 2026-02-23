@@ -1,0 +1,32 @@
+{
+  "name": "@meridian/plugin-webhook",
+  "version": "0.1.0",
+  "description": "Meridian plugin: receive and store incoming webhooks from external services",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@meridian/framework-utils": "*",
+    "@meridian/types": "*"
+  },
+  "devDependencies": {
+    "tsup": "^8.3.5",
+    "tsx": "4.21.0",
+    "typescript": "*"
+  },
+  "files": [
+    "dist"
+  ]
+}

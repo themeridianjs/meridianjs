@@ -3,6 +3,7 @@ import { existsSync } from "node:fs"
 import chalk from "chalk"
 import {
   renderModuleIndex,
+  renderModuleLoader,
   renderModuleModel,
   renderModuleService,
 } from "../../templates/index.js"
@@ -32,6 +33,7 @@ export async function generateModule(name: string): Promise<void> {
 
   await writeFile(path.join(moduleDir, "index.ts"), renderModuleIndex(kebab, pascal))
   await writeFile(path.join(moduleDir, `models/${kebab}.ts`), renderModuleModel(kebab, pascal))
+  await writeFile(path.join(moduleDir, `loaders/default.ts`), renderModuleLoader(kebab, pascal))
   await writeFile(path.join(moduleDir, "service.ts"), renderModuleService(kebab, pascal))
 
   console.log(chalk.green(`  ✓ Generated module: src/modules/${kebab}/`))
@@ -39,6 +41,7 @@ export async function generateModule(name: string): Promise<void> {
   console.log("  Files created:")
   console.log(chalk.dim(`    src/modules/${kebab}/index.ts`))
   console.log(chalk.dim(`    src/modules/${kebab}/models/${kebab}.ts`))
+  console.log(chalk.dim(`    src/modules/${kebab}/loaders/default.ts`))
   console.log(chalk.dim(`    src/modules/${kebab}/service.ts`))
   console.log()
   console.log("  Next steps:")

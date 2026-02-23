@@ -18,7 +18,7 @@ import { runDev } from "./commands/dev.js"
 import { runBuild } from "./commands/build.js"
 import { runDbMigrate } from "./commands/db-migrate.js"
 import { runDbGenerate } from "./commands/db-generate.js"
-import { generateModule, generateWorkflow } from "./commands/generate/index.js"
+import { generateModule, generateWorkflow, generatePlugin } from "./commands/generate/index.js"
 
 const program = new Command()
 
@@ -103,6 +103,16 @@ generateCmd
   .description("Scaffold a new workflow in src/workflows/")
   .action((name: string) => {
     generateWorkflow(name).catch((err: unknown) => {
+      console.error(err)
+      process.exit(1)
+    })
+  })
+
+generateCmd
+  .command("plugin <name>")
+  .description("Scaffold a local plugin in src/plugins/")
+  .action((name: string) => {
+    generatePlugin(name).catch((err: unknown) => {
       console.error(err)
       process.exit(1)
     })

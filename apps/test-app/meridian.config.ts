@@ -22,4 +22,8 @@ export default defineConfig({
     // Local test module (Phase 1 smoke test)
     { resolve: "./src/modules/hello-module/index.ts" },
   ],
+  plugins: [
+    // Phase 9 reference plugin: webhook receiver
+    { resolve: "@meridian/plugin-webhook" },
+  ],
 })

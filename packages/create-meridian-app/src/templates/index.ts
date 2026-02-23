@@ -238,7 +238,7 @@ export function renderModuleIndex(name: string, pascalName: string): string {
   return `import { Module } from "@meridian/framework-utils"
 import { ${pascalName}ModuleService } from "./service.js"
 import { ${pascalName} } from "./models/${name}.js"
-import { defaultLoader } from "@meridian/framework-utils"
+import defaultLoader from "./loaders/default.js"
 
 export default Module("${name}ModuleService", {
   service: ${pascalName}ModuleService,
@@ -248,6 +248,28 @@ export default Module("${name}ModuleService", {
     ${name}: { tableName: "${name}", primaryKey: "id" },
   },
 })
+`
+}
+
+export function renderModuleLoader(name: string, pascalName: string): string {
+  return `import { createModuleOrm, createRepository, dmlToEntitySchema } from "@meridian/framework-utils"
+import type { LoaderOptions } from "@meridian/types"
+import { ${pascalName} } from "../models/${name}.js"
+
+const ${pascalName}Schema = dmlToEntitySchema(${pascalName})
+
+export default async function defaultLoader({ container }: LoaderOptions): Promise<void> {
+  const config = container.resolve("config") as any
+  const orm = await createModuleOrm(
+    [${pascalName}Schema],
+    config.projectConfig.databaseUrl
+  )
+  const em = orm.em.fork()
+  container.register({
+    ${name}Repository: createRepository(em, "${name}"),
+    ${name}Orm: orm,
+  })
+}
 `
 }
 
