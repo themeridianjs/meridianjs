@@ -200,9 +200,13 @@ export function IssueDetailPage() {
         <div className="sticky top-0 z-10 h-[57px] bg-white dark:bg-card border-b border-border" />
         <div className="px-2 py-2">
           <div className="grid grid-cols-[1fr_256px] gap-5">
-            <div className="bg-white dark:bg-card border border-border rounded-xl p-6 space-y-4 shadow-sm">
-              <Skeleton className="h-7 w-3/4" />
-              <Skeleton className="h-32 w-full" />
+            <div className="space-y-4">
+              <div className="bg-white dark:bg-card border border-border rounded-xl p-6 space-y-4 shadow-sm">
+                <Skeleton className="h-7 w-3/4" />
+                <Skeleton className="h-32 w-full" />
+              </div>
+              <Skeleton className="h-24 w-full rounded-xl" />
+              <Skeleton className="h-48 w-full rounded-xl" />
             </div>
             <Skeleton className="h-[280px] w-full rounded-xl" />
           </div>
@@ -268,245 +272,263 @@ export function IssueDetailPage() {
       <div className="px-2 py-2">
         <div className="grid grid-cols-[1fr_256px] gap-5 items-start">
 
-          {/* ── Left — title + description + activity ─────────────────────── */}
-          <div className="bg-white dark:bg-card border border-border rounded-xl overflow-hidden shadow-sm">
-            {/* Title */}
-            <div className="px-6 pt-6 pb-3">
+          {/* ── Left column ───────────────────────────────────────────────── */}
+          <div className="space-y-4">
+
+            {/* Card 1: Title + Description */}
+            <div className="bg-white dark:bg-card border border-border rounded-xl overflow-hidden shadow-sm">
+              {/* Title */}
+              <div className="px-6 pt-6 pb-3">
+                {isEditing ? (
+                  <input
+                    autoFocus
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") e.preventDefault() }}
+                    className={cn(
+                      "w-full text-xl font-semibold leading-snug text-foreground",
+                      "bg-transparent border-0 outline-none resize-none",
+                      "placeholder:text-muted-foreground/40"
+                    )}
+                  />
+                ) : (
+                  <h1 className="text-xl font-semibold text-foreground leading-snug">
+                    {issue.title}
+                  </h1>
+                )}
+              </div>
+
+              {/* Description label */}
+              <div className="flex items-center gap-2 px-6 pb-2">
+                <span className="text-[11px] font-medium text-muted-foreground/60 uppercase tracking-widest">
+                  Description
+                </span>
+              </div>
+
+              {/* Description content */}
               {isEditing ? (
-                <input
-                  autoFocus
-                  value={editTitle}
-                  onChange={(e) => setEditTitle(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") e.preventDefault() }}
-                  className={cn(
-                    "w-full text-xl font-semibold leading-snug text-foreground",
-                    "bg-transparent border-0 outline-none resize-none",
-                    "placeholder:text-muted-foreground/40"
-                  )}
+                <RichTextEditor
+                  content={editDescription}
+                  onChange={setEditDescription}
+                  placeholder="Add a description…"
+                  className="border-t border-border/50 min-h-[280px]"
                 />
+              ) : issue.description ? (
+                <div className="border-t border-border/50">
+                  <RichTextContent html={issue.description} className="px-5 py-4" />
+                </div>
               ) : (
-                <h1 className="text-xl font-semibold text-foreground leading-snug">
-                  {issue.title}
-                </h1>
+                <div className="border-t border-border/50 px-6 py-4">
+                  <p className="text-sm text-muted-foreground/50 italic">No description</p>
+                </div>
               )}
             </div>
 
-            {/* Description label */}
-            <div className="flex items-center gap-2 px-6 pb-2">
-              <span className="text-[11px] font-medium text-muted-foreground/60 uppercase tracking-widest">
-                Description
-              </span>
+            {/* Card 2: Child Issues */}
+            <div className="bg-white dark:bg-card border border-border rounded-xl overflow-hidden shadow-sm">
+              <div className="px-5 py-3 border-b border-border/60 flex items-center justify-between">
+                <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest">
+                  Child Issues
+                </p>
+                <button
+                  onClick={() => setCreateChildOpen(true)}
+                  className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Add child issue
+                </button>
+              </div>
+              {childIssues.length === 0 ? (
+                <div className="px-5 py-4 text-xs text-muted-foreground/50 italic">
+                  No child issues yet
+                </div>
+              ) : (
+                <div className="px-5 py-2 divide-y divide-border/40">
+                  {childIssues.map((child) => (
+                    <div key={child.id} className="flex items-center gap-2 py-2 text-xs">
+                      <CornerDownRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                      <button
+                        onClick={() => navigate(`/${workspace}/projects/${projectKey}/issues/${child.id}`)}
+                        className="font-mono text-muted-foreground hover:text-foreground transition-colors shrink-0"
+                      >
+                        {child.identifier}
+                      </button>
+                      <button
+                        onClick={() => navigate(`/${workspace}/projects/${projectKey}/issues/${child.id}`)}
+                        className="text-foreground hover:text-foreground/70 truncate text-left transition-colors"
+                      >
+                        {child.title}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
-            {/* Description content */}
-            {isEditing ? (
-              <RichTextEditor
-                content={editDescription}
-                onChange={setEditDescription}
-                placeholder="Add a description…"
-                className="border-t border-border/50 min-h-[280px]"
-              />
-            ) : issue.description ? (
-              <div className="border-t border-border/50">
-                <RichTextContent html={issue.description} className="px-5 py-4" />
-              </div>
-            ) : (
-              <div className="border-t border-border/50 px-6 py-4">
-                <p className="text-sm text-muted-foreground/50 italic">No description</p>
-              </div>
-            )}
+            {/* Card 3: Comments + Activity */}
+            <div className="bg-white dark:bg-card border border-border rounded-xl overflow-hidden shadow-sm">
+              <IssueActivity issueId={issueId} />
+            </div>
 
-            {/* ── Comments + Activity ──────────────────────────────────── */}
-            <IssueActivity issueId={issueId} className="border-t border-border" />
           </div>
 
           {/* ── Right — properties ──────────────────────────────────────────── */}
-          <div className="bg-white dark:bg-card border border-border rounded-xl shadow-sm overflow-hidden">
-            <div className="px-4 py-3 border-b border-border/60">
-              <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest">
-                Properties
-              </p>
-            </div>
+          <div className="space-y-4">
+            <div className="bg-white dark:bg-card border border-border rounded-xl shadow-sm overflow-hidden">
+              <div className="px-4 py-3 border-b border-border/60">
+                <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest">
+                  Properties
+                </p>
+              </div>
 
-            <div className="px-4 py-1">
-              <PropertyRow label="Status">
-                <IconSelect
-                  value={issue.status}
-                  onValueChange={(v) => handlePropUpdate({ status: v }, "Status")}
-                  options={statusOptions}
-                  icons={statusIcons}
-                />
-              </PropertyRow>
+              <div className="px-4 py-1">
+                <PropertyRow label="Status">
+                  <IconSelect
+                    value={issue.status}
+                    onValueChange={(v) => handlePropUpdate({ status: v }, "Status")}
+                    options={statusOptions}
+                    icons={statusIcons}
+                  />
+                </PropertyRow>
 
-              <PropertyRow label="Priority">
-                <IconSelect
-                  value={issue.priority}
-                  onValueChange={(v) => handlePropUpdate({ priority: v }, "Priority")}
-                  options={ISSUE_PRIORITY_LABELS}
-                  icons={PRIORITY_ICONS}
-                />
-              </PropertyRow>
+                <PropertyRow label="Priority">
+                  <IconSelect
+                    value={issue.priority}
+                    onValueChange={(v) => handlePropUpdate({ priority: v }, "Priority")}
+                    options={ISSUE_PRIORITY_LABELS}
+                    icons={PRIORITY_ICONS}
+                  />
+                </PropertyRow>
 
-              <PropertyRow label="Type">
-                <IconSelect
-                  value={issue.type}
-                  onValueChange={(v) => handlePropUpdate({ type: v }, "Type")}
-                  options={ISSUE_TYPE_LABELS}
-                  icons={TYPE_ICONS}
-                />
-              </PropertyRow>
+                <PropertyRow label="Type">
+                  <IconSelect
+                    value={issue.type}
+                    onValueChange={(v) => handlePropUpdate({ type: v }, "Type")}
+                    options={ISSUE_TYPE_LABELS}
+                    icons={TYPE_ICONS}
+                  />
+                </PropertyRow>
 
-              <PropertyRow label="Assignees">
-                <AssigneeSelector
-                  value={issue.assignee_ids ?? []}
-                  onChange={(assignee_ids) => handlePropUpdate({ assignee_ids }, "Assignees")}
-                  disabled={updateIssue.isPending}
-                />
-              </PropertyRow>
+                <PropertyRow label="Assignees">
+                  <AssigneeSelector
+                    value={issue.assignee_ids ?? []}
+                    onChange={(assignee_ids) => handlePropUpdate({ assignee_ids }, "Assignees")}
+                    disabled={updateIssue.isPending}
+                  />
+                </PropertyRow>
 
-              <PropertyRow label="Sprint">
-                <Select
-                  value={issue.sprint_id ?? "none"}
-                  onValueChange={(v) =>
-                    handlePropUpdate({ sprint_id: v === "none" ? null : v }, "Sprint")
-                  }
-                >
-                  <SelectTrigger className="h-7 text-xs border-0 bg-transparent px-0 gap-1.5 focus:ring-0 hover:bg-accent rounded-md pl-1">
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <Layers className="h-3 w-3 shrink-0 text-muted-foreground" />
-                      {issue.sprint_id ? (
-                        (() => {
-                          const s = activeSprints.find((sp) => sp.id === issue.sprint_id)
-                            ?? sprints?.find((sp) => sp.id === issue.sprint_id)
-                          if (!s) return <span className="truncate">{issue.sprint_id.slice(0, 8)}…</span>
-                          const range = sprintDateRange(s)
-                          return (
-                            <span className="truncate">
-                              {s.name}
-                              {range && <span className="text-muted-foreground ml-1">· {range}</span>}
-                            </span>
-                          )
-                        })()
-                      ) : (
-                        <span className="text-muted-foreground">No sprint</span>
-                      )}
-                    </div>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none" className="text-xs text-muted-foreground">
-                      No sprint
-                    </SelectItem>
-                    {activeSprints.map((s) => {
-                      const range = sprintDateRange(s)
-                      return (
-                        <SelectItem key={s.id} value={s.id} className="text-xs">
-                          <div className="flex items-baseline gap-1.5">
-                            <span>{s.name}</span>
-                            {range && (
-                              <span className="text-[10px] text-muted-foreground font-normal">
-                                {range}
-                              </span>
-                            )}
-                          </div>
-                        </SelectItem>
-                      )
-                    })}
-                  </SelectContent>
-                </Select>
-              </PropertyRow>
-
-              {(taskLists ?? []).length > 0 && (
-                <PropertyRow label="List">
+                <PropertyRow label="Sprint">
                   <Select
-                    value={issue.task_list_id ?? "none"}
+                    value={issue.sprint_id ?? "none"}
                     onValueChange={(v) =>
-                      handlePropUpdate({ task_list_id: v === "none" ? null : v }, "List")
+                      handlePropUpdate({ sprint_id: v === "none" ? null : v }, "Sprint")
                     }
                   >
                     <SelectTrigger className="h-7 text-xs border-0 bg-transparent px-0 gap-1.5 focus:ring-0 hover:bg-accent rounded-md pl-1">
                       <div className="flex items-center gap-1.5 min-w-0">
-                        <FolderOpen className="h-3 w-3 shrink-0 text-muted-foreground" />
-                        <span className={currentTaskList ? "truncate" : "text-muted-foreground"}>
-                          {currentTaskList?.name ?? "No list"}
-                        </span>
+                        <Layers className="h-3 w-3 shrink-0 text-muted-foreground" />
+                        {issue.sprint_id ? (
+                          (() => {
+                            const s = activeSprints.find((sp) => sp.id === issue.sprint_id)
+                              ?? sprints?.find((sp) => sp.id === issue.sprint_id)
+                            if (!s) return <span className="truncate">{issue.sprint_id.slice(0, 8)}…</span>
+                            const range = sprintDateRange(s)
+                            return (
+                              <span className="truncate">
+                                {s.name}
+                                {range && <span className="text-muted-foreground ml-1">· {range}</span>}
+                              </span>
+                            )
+                          })()
+                        ) : (
+                          <span className="text-muted-foreground">No sprint</span>
+                        )}
                       </div>
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none" className="text-xs text-muted-foreground">No list</SelectItem>
-                      {(taskLists ?? []).map((tl) => (
-                        <SelectItem key={tl.id} value={tl.id} className="text-xs">{tl.name}</SelectItem>
-                      ))}
+                      <SelectItem value="none" className="text-xs text-muted-foreground">
+                        No sprint
+                      </SelectItem>
+                      {activeSprints.map((s) => {
+                        const range = sprintDateRange(s)
+                        return (
+                          <SelectItem key={s.id} value={s.id} className="text-xs">
+                            <div className="flex items-baseline gap-1.5">
+                              <span>{s.name}</span>
+                              {range && (
+                                <span className="text-[10px] text-muted-foreground font-normal">
+                                  {range}
+                                </span>
+                              )}
+                            </div>
+                          </SelectItem>
+                        )
+                      })}
                     </SelectContent>
                   </Select>
                 </PropertyRow>
-              )}
-            </div>
 
-            {/* Relationships */}
-            {(parentIssue || childIssues.length > 0) && (
-              <div className="px-4 py-3 border-t border-border/60 space-y-2">
-                <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest">
-                  Relationships
-                </p>
+                {(taskLists ?? []).length > 0 && (
+                  <PropertyRow label="List">
+                    <Select
+                      value={issue.task_list_id ?? "none"}
+                      onValueChange={(v) =>
+                        handlePropUpdate({ task_list_id: v === "none" ? null : v }, "List")
+                      }
+                    >
+                      <SelectTrigger className="h-7 text-xs border-0 bg-transparent px-0 gap-1.5 focus:ring-0 hover:bg-accent rounded-md pl-1">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <FolderOpen className="h-3 w-3 shrink-0 text-muted-foreground" />
+                          <span className={currentTaskList ? "truncate" : "text-muted-foreground"}>
+                            {currentTaskList?.name ?? "No list"}
+                          </span>
+                        </div>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none" className="text-xs text-muted-foreground">No list</SelectItem>
+                        {(taskLists ?? []).map((tl) => (
+                          <SelectItem key={tl.id} value={tl.id} className="text-xs">{tl.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </PropertyRow>
+                )}
+
                 {parentIssue && (
-                  <div className="flex items-center gap-2 text-xs">
-                    <ChevronUp className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                    <span className="text-muted-foreground shrink-0">Parent</span>
+                  <PropertyRow label="Parent">
                     <button
                       onClick={() => navigate(`/${workspace}/projects/${projectKey}/issues/${parentIssue.id}`)}
-                      className="font-mono text-muted-foreground hover:text-foreground transition-colors shrink-0"
+                      className="flex items-center gap-1.5 text-xs hover:text-foreground transition-colors text-left w-full min-w-0"
                     >
-                      {parentIssue.identifier}
+                      <ChevronUp className="h-3 w-3 text-muted-foreground shrink-0" />
+                      <span className="font-mono text-muted-foreground shrink-0">{parentIssue.identifier}</span>
+                      <span className="text-foreground truncate">{parentIssue.title}</span>
                     </button>
-                    <span className="text-foreground truncate">{parentIssue.title}</span>
-                  </div>
+                  </PropertyRow>
                 )}
-                {childIssues.map((child) => (
-                  <div key={child.id} className="flex items-center gap-2 text-xs pl-1">
-                    <CornerDownRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                    <button
-                      onClick={() => navigate(`/${workspace}/projects/${projectKey}/issues/${child.id}`)}
-                      className="font-mono text-muted-foreground hover:text-foreground transition-colors shrink-0"
-                    >
-                      {child.identifier}
-                    </button>
-                    <button
-                      onClick={() => navigate(`/${workspace}/projects/${projectKey}/issues/${child.id}`)}
-                      className="text-muted-foreground hover:text-foreground truncate transition-colors text-left"
-                    >
-                      {child.title}
-                    </button>
-                  </div>
-                ))}
               </div>
-            )}
-
-            <div className="px-4 py-2 border-t border-border/60">
-              <button
-                onClick={() => setCreateChildOpen(true)}
-                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <Plus className="h-3.5 w-3.5" />
-                Add child issue
-              </button>
             </div>
 
             {/* Details */}
-            <div className="px-4 pt-3 pb-4 border-t border-border/60 space-y-2.5">
-              <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest mb-2">
-                Details
-              </p>
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-muted-foreground">Created</span>
-                <span className="text-foreground">
-                  {format(new Date(issue.created_at), "MMM d, yyyy")}
-                </span>
+            <div className="bg-white dark:bg-card border border-border rounded-xl shadow-sm overflow-hidden">
+              <div className="px-4 py-3 border-b border-border/60">
+                <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest">
+                  Details
+                </p>
               </div>
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-muted-foreground">Updated</span>
-                <span className="text-foreground">
-                  {format(new Date(issue.updated_at), "MMM d, yyyy")}
-                </span>
+              <div className="px-4 pt-3 pb-4 space-y-2.5">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">Created</span>
+                  <span className="text-foreground">
+                    {format(new Date(issue.created_at), "MMM d, yyyy")}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">Updated</span>
+                  <span className="text-foreground">
+                    {format(new Date(issue.updated_at), "MMM d, yyyy")}
+                  </span>
+                </div>
               </div>
             </div>
           </div>

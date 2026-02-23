@@ -167,7 +167,6 @@ export function IssueDetail({ issue, projectId, open, onClose }: IssueDetailProp
                 <ExternalLink className="h-3.5 w-3.5" />
                 Open
               </Button>
-              {/* Edit / Save / Cancel toggle */}
               {!isEditing ? (
                 <Button
                   variant="ghost"
@@ -219,7 +218,7 @@ export function IssueDetail({ issue, projectId, open, onClose }: IssueDetailProp
 
         <ScrollArea className="flex-1">
           <div className="px-6 py-4 space-y-5">
-            {/* Properties grid */}
+            {/* Status / Priority / Type */}
             <div className="grid grid-cols-3 gap-3 mb-1">
               <div>
                 <p className="text-xs text-muted-foreground mb-1.5">Status</p>
@@ -262,127 +261,128 @@ export function IssueDetail({ issue, projectId, open, onClose }: IssueDetailProp
               </div>
             </div>
 
-            {/* Assignees */}
-            <div>
-              <p className="text-xs text-muted-foreground mb-1">Assignees</p>
-              <AssigneeSelector
-                value={issue.assignee_ids ?? []}
-                onChange={handleAssigneesChange}
-                disabled={updateIssue.isPending}
-              />
-            </div>
-
-            {/* Sprint */}
-            <div>
-              <p className="text-xs text-muted-foreground mb-1.5">Sprint</p>
-              <Select
-                value={issue.sprint_id ?? "none"}
-                onValueChange={(v) => handleSprintChange(v === "none" ? null : v)}
-              >
-                <SelectTrigger className="h-8 text-xs bg-transparent">
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <Layers className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                    <SelectValue placeholder="No sprint" />
-                  </div>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none" className="text-xs text-muted-foreground">
-                    No sprint
-                  </SelectItem>
-                  {activeSprints.map((s) => {
-                    const range = sprintDateRange(s)
-                    return (
-                      <SelectItem key={s.id} value={s.id} className="text-xs">
-                        <div className="flex items-baseline gap-1.5">
-                          <span>{s.name}</span>
-                          {range && (
-                            <span className="text-[10px] text-muted-foreground font-normal">
-                              {range}
-                            </span>
-                          )}
-                        </div>
-                      </SelectItem>
-                    )
-                  })}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Task List */}
-            {(taskLists ?? []).length > 0 && (
-              <div>
-                <p className="text-xs text-muted-foreground mb-1.5">List</p>
+            {/* Assignees + Sprint + List — inline row */}
+            <div className="flex gap-3 items-start">
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-muted-foreground mb-1.5">Assignees</p>
+                <AssigneeSelector
+                  value={issue.assignee_ids ?? []}
+                  onChange={handleAssigneesChange}
+                  disabled={updateIssue.isPending}
+                />
+              </div>
+              <div className="w-[130px] shrink-0">
+                <p className="text-xs text-muted-foreground mb-1.5">Sprint</p>
                 <Select
-                  value={issue.task_list_id ?? "none"}
-                  onValueChange={(v) => handleTaskListChange(v === "none" ? null : v)}
+                  value={issue.sprint_id ?? "none"}
+                  onValueChange={(v) => handleSprintChange(v === "none" ? null : v)}
                 >
                   <SelectTrigger className="h-8 text-xs bg-transparent">
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <FolderOpen className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                      <SelectValue placeholder="No list">
-                        {currentTaskList ? currentTaskList.name : "No list"}
-                      </SelectValue>
+                    <div className="flex items-center gap-1 min-w-0">
+                      <Layers className="h-3 w-3 shrink-0 text-muted-foreground" />
+                      <SelectValue placeholder="No sprint" />
                     </div>
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none" className="text-xs text-muted-foreground">No list</SelectItem>
-                    {(taskLists ?? []).map((tl) => (
-                      <SelectItem key={tl.id} value={tl.id} className="text-xs">{tl.name}</SelectItem>
-                    ))}
+                    <SelectItem value="none" className="text-xs text-muted-foreground">
+                      No sprint
+                    </SelectItem>
+                    {activeSprints.map((s) => {
+                      const range = sprintDateRange(s)
+                      return (
+                        <SelectItem key={s.id} value={s.id} className="text-xs">
+                          <div className="flex items-baseline gap-1.5">
+                            <span>{s.name}</span>
+                            {range && (
+                              <span className="text-[10px] text-muted-foreground font-normal">
+                                {range}
+                              </span>
+                            )}
+                          </div>
+                        </SelectItem>
+                      )
+                    })}
                   </SelectContent>
                 </Select>
               </div>
-            )}
-
-            {/* Relationships */}
-            {(parentIssue || childIssues.length > 0) && (
-              <div className="space-y-2">
-                <p className="text-xs text-muted-foreground">Relationships</p>
-                {parentIssue && (
-                  <div className="flex items-center gap-2 text-xs">
-                    <ChevronUp className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                    <span className="text-muted-foreground">Parent:</span>
-                    <button
-                      onClick={() => navigate(`/${workspace}/projects/${projectKey}/issues/${parentIssue.id}`)}
-                      className="font-mono text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      {parentIssue.identifier}
-                    </button>
-                    <span className="text-foreground truncate">{parentIssue.title}</span>
-                  </div>
-                )}
-                {childIssues.length > 0 && (
-                  <div className="space-y-1">
-                    {childIssues.map((child) => (
-                      <div key={child.id} className="flex items-center gap-2 text-xs pl-1">
-                        <CornerDownRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                        <button
-                          onClick={() => {
-                            onClose()
-                            navigate(`/${workspace}/projects/${projectKey}/issues/${child.id}`)
-                          }}
-                          className="font-mono text-muted-foreground hover:text-foreground transition-colors shrink-0"
-                        >
-                          {child.identifier}
-                        </button>
-                        <span className="text-muted-foreground truncate hover:text-foreground cursor-pointer" onClick={() => { onClose(); navigate(`/${workspace}/projects/${projectKey}/issues/${child.id}`) }}>
-                          {child.title}
-                        </span>
+              {(taskLists ?? []).length > 0 && (
+                <div className="w-[130px] shrink-0">
+                  <p className="text-xs text-muted-foreground mb-1.5">List</p>
+                  <Select
+                    value={issue.task_list_id ?? "none"}
+                    onValueChange={(v) => handleTaskListChange(v === "none" ? null : v)}
+                  >
+                    <SelectTrigger className="h-8 text-xs bg-transparent">
+                      <div className="flex items-center gap-1 min-w-0">
+                        <FolderOpen className="h-3 w-3 shrink-0 text-muted-foreground" />
+                        <SelectValue placeholder="No list">
+                          {currentTaskList ? currentTaskList.name : "No list"}
+                        </SelectValue>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none" className="text-xs text-muted-foreground">No list</SelectItem>
+                      {(taskLists ?? []).map((tl) => (
+                        <SelectItem key={tl.id} value={tl.id} className="text-xs">{tl.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
 
-            {/* Add child issue */}
-            <button
-              onClick={() => setCreateChildOpen(true)}
-              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              Add child issue
-            </button>
+            {/* Child Issues */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-muted-foreground">Child Issues</p>
+                <button
+                  onClick={() => setCreateChildOpen(true)}
+                  className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <Plus className="h-3 w-3" />
+                  Add
+                </button>
+              </div>
+              {parentIssue && (
+                <div className="flex items-center gap-2 text-xs">
+                  <ChevronUp className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                  <span className="text-muted-foreground shrink-0">Parent:</span>
+                  <button
+                    onClick={() => navigate(`/${workspace}/projects/${projectKey}/issues/${parentIssue.id}`)}
+                    className="font-mono text-muted-foreground hover:text-foreground transition-colors shrink-0"
+                  >
+                    {parentIssue.identifier}
+                  </button>
+                  <span className="text-foreground truncate">{parentIssue.title}</span>
+                </div>
+              )}
+              {childIssues.length === 0 && !parentIssue ? (
+                <p className="text-xs text-muted-foreground/40 italic">No child issues yet</p>
+              ) : (
+                <div className="space-y-1">
+                  {childIssues.map((child) => (
+                    <div key={child.id} className="flex items-center gap-2 text-xs">
+                      <CornerDownRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                      <button
+                        onClick={() => {
+                          onClose()
+                          navigate(`/${workspace}/projects/${projectKey}/issues/${child.id}`)
+                        }}
+                        className="font-mono text-muted-foreground hover:text-foreground transition-colors shrink-0"
+                      >
+                        {child.identifier}
+                      </button>
+                      <button
+                        onClick={() => { onClose(); navigate(`/${workspace}/projects/${projectKey}/issues/${child.id}`) }}
+                        className="text-muted-foreground truncate hover:text-foreground transition-colors text-left"
+                      >
+                        {child.title}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
 
             {/* Description */}
             <div>
