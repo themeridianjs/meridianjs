@@ -324,8 +324,8 @@ export function IssueDetailPage() {
               )}
             </div>
 
-            {/* Card 2: Child Issues */}
-            <div className="bg-white dark:bg-card border border-border rounded-xl overflow-hidden shadow-sm">
+            {/* Card 2: Child Issues — only on top-level issues */}
+            {!issue.parent_id && <div className="bg-white dark:bg-card border border-border rounded-xl overflow-hidden shadow-sm">
               <div className="px-5 py-3 border-b border-border/60 flex items-center justify-between">
                 <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest">
                   Child Issues
@@ -363,7 +363,7 @@ export function IssueDetailPage() {
                   ))}
                 </div>
               )}
-            </div>
+            </div>}
 
             {/* Card 3: Comments + Activity */}
             <div className="bg-white dark:bg-card border border-border rounded-xl overflow-hidden shadow-sm">

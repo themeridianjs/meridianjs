@@ -331,8 +331,8 @@ export function IssueDetail({ issue, projectId, open, onClose }: IssueDetailProp
               )}
             </div>
 
-            {/* Child Issues */}
-            <div className="space-y-1.5">
+            {/* Child Issues — only on top-level issues */}
+            {!issue.parent_id && <div className="space-y-1.5">
               <div className="flex items-center justify-between">
                 <p className="text-xs text-muted-foreground">Child Issues</p>
                 <button
@@ -382,7 +382,7 @@ export function IssueDetail({ issue, projectId, open, onClose }: IssueDetailProp
                   ))}
                 </div>
               )}
-            </div>
+            </div>}
 
             {/* Description */}
             <div>
