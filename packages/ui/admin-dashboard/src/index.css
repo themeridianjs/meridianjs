@@ -89,3 +89,69 @@
     @apply bg-border rounded-full;
   }
 }
+
+/* ── Rich text editor (TipTap / ProseMirror) ─────────────────────────────── */
+.meridian-editor {
+  @apply outline-none min-h-[280px] px-5 py-4 text-sm leading-relaxed text-foreground cursor-text;
+}
+
+.meridian-editor > * + * { @apply mt-2; }
+.meridian-editor p { @apply leading-relaxed; }
+
+.meridian-editor h1 { @apply text-xl font-semibold tracking-tight text-foreground; }
+.meridian-editor h2 { @apply text-lg font-semibold tracking-tight text-foreground; }
+.meridian-editor h3 { @apply text-base font-semibold text-foreground; }
+
+.meridian-editor ul  { @apply pl-5 list-disc space-y-0.5; }
+.meridian-editor ol  { @apply pl-5 list-decimal space-y-0.5; }
+.meridian-editor li  { @apply text-foreground; }
+
+.meridian-editor code {
+  @apply bg-muted font-mono text-xs px-1.5 py-0.5 rounded text-foreground;
+}
+.meridian-editor pre {
+  @apply bg-muted rounded-lg p-4 overflow-x-auto font-mono text-xs text-foreground;
+}
+.meridian-editor pre code { @apply bg-transparent p-0 text-inherit; }
+
+.meridian-editor blockquote {
+  @apply border-l-[3px] border-indigo-300 dark:border-indigo-700 pl-4
+         text-muted-foreground italic;
+}
+
+.meridian-editor hr { @apply border-border; }
+.meridian-editor strong { @apply font-semibold; }
+.meridian-editor u    { @apply underline underline-offset-2; }
+.meridian-editor s    { @apply line-through text-muted-foreground; }
+.meridian-editor a    { @apply text-blue-600 dark:text-blue-400 underline underline-offset-2; }
+
+/* Task list */
+.meridian-editor ul[data-type="taskList"] {
+  @apply pl-0 list-none space-y-1;
+}
+.meridian-editor ul[data-type="taskList"] li {
+  @apply flex items-start gap-2;
+}
+.meridian-editor ul[data-type="taskList"] li > label {
+  @apply flex items-center mt-[3px] shrink-0;
+}
+.meridian-editor ul[data-type="taskList"] li > label input[type="checkbox"] {
+  @apply w-3.5 h-3.5 rounded-sm cursor-pointer accent-indigo-500;
+}
+.meridian-editor ul[data-type="taskList"] li > div { @apply flex-1 min-w-0; }
+.meridian-editor ul[data-type="taskList"] li[data-checked="true"] > div {
+  @apply text-muted-foreground line-through;
+}
+
+/* Placeholder */
+.meridian-editor .is-editor-empty:first-child::before {
+  color: hsl(var(--muted-foreground) / 0.5);
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+/* Selection */
+.meridian-editor .ProseMirror-selectednode { @apply ring-2 ring-ring rounded; }
+

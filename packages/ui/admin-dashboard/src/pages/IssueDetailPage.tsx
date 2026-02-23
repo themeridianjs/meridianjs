@@ -6,6 +6,7 @@ import { useUserMap } from "@/api/hooks/useUsers"
 import { useProject } from "@/api/hooks/useProjects"
 import { useAuth } from "@/stores/auth"
 import { AssigneeSelector } from "@/components/issues/AssigneeSelector"
+import { RichTextEditor, RichTextContent } from "@/components/ui/rich-text-editor"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -193,16 +194,16 @@ export function IssueDetailPage() {
               Description
             </p>
             {isEditing ? (
-              <Textarea
-                value={editDescription}
-                onChange={(e) => setEditDescription(e.target.value)}
-                placeholder="Add a description..."
-                className="text-sm min-h-[120px] bg-transparent"
-              />
+              <div className="border border-border rounded-lg overflow-hidden">
+                <RichTextEditor
+                  content={editDescription}
+                  onChange={setEditDescription}
+                  placeholder="Add a description…"
+                  className="min-h-[200px]"
+                />
+              </div>
             ) : issue.description ? (
-              <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
-                {issue.description}
-              </p>
+              <RichTextContent html={issue.description} />
             ) : (
               <p className="text-sm text-muted-foreground/50 italic">No description</p>
             )}
