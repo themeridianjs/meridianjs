@@ -1,17 +1,18 @@
 import { Outlet } from "react-router-dom"
-import { Sidebar } from "./Sidebar"
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
+import { AppSidebar } from "./Sidebar"
 import { Header } from "./Header"
 
 export function AppShell() {
   return (
-    <div className="flex h-screen overflow-hidden bg-[hsl(60_5%_96%)] dark:bg-background">
-      <Sidebar />
-      <div className="flex flex-col flex-1 min-w-0">
+    <SidebarProvider>
+      <AppSidebar variant="inset" />
+      <SidebarInset className="flex flex-col min-w-0">
         <Header />
-        <main className="flex-1 overflow-auto">
+        <div className="flex flex-1 flex-col min-h-0 overflow-y-auto overflow-x-hidden">
           <Outlet />
-        </main>
-      </div>
-    </div>
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
   )
 }

@@ -40,6 +40,14 @@
     --indigo: 239 84% 67%;
     --indigo-foreground: 0 0% 100%;
     --indigo-subtle: 224 76% 97%;
+
+    /* Sidebar */
+    --sidebar: 0 0% 100%;
+    --sidebar-foreground: 240 10% 3.9%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 240 5.9% 90%;
+    --sidebar-ring: 239 84% 67%;
   }
 
   .dark {
@@ -65,6 +73,14 @@
     --indigo: 239 84% 67%;
     --indigo-foreground: 0 0% 100%;
     --indigo-subtle: 224 30% 13%;
+
+    /* Sidebar */
+    --sidebar: 240 6% 10%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 239 84% 67%;
   }
 }
 
@@ -92,7 +108,7 @@
 
 /* ── Rich text editor (TipTap / ProseMirror) ─────────────────────────────── */
 .meridian-editor {
-  @apply outline-none min-h-[280px] px-5 py-4 text-sm leading-relaxed text-foreground cursor-text;
+  @apply outline-none text-sm leading-relaxed text-foreground cursor-text;
 }
 
 .meridian-editor > * + * { @apply mt-2; }

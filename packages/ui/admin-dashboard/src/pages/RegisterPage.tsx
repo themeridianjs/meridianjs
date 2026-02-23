@@ -20,7 +20,7 @@ export function RegisterPage() {
     register.mutate(
       { email, password, first_name: firstName, last_name: lastName },
       {
-        onSuccess: () => navigate("/projects"),
+        onSuccess: () => navigate("/"),
         onError: (err) => toast.error(err.message ?? "Registration failed"),
       }
     )

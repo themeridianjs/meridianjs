@@ -35,6 +35,7 @@ interface CreateIssueInput {
   priority?: string
   type?: string
   project_id: string
+  workspace_id: string
   assignee_ids?: string[]
 }
 
@@ -47,11 +48,23 @@ interface UpdateIssueInput {
   assignee_ids?: string[]
 }
 
+export interface Activity {
+  id: string
+  entity_type: string
+  entity_id: string
+  actor_id: string
+  action: string
+  changes: Record<string, { from: unknown; to: unknown }> | null
+  workspace_id: string
+  created_at: string
+}
+
 export const issueKeys = {
   all: ["issues"] as const,
   byProject: (projectId: string) => [...issueKeys.all, "project", projectId] as const,
   detail: (id: string) => [...issueKeys.all, id] as const,
   comments: (issueId: string) => [...issueKeys.all, issueId, "comments"] as const,
+  activities: (issueId: string) => [...issueKeys.all, issueId, "activities"] as const,
 }
 
 export function useIssues(projectId?: string) {
@@ -106,6 +119,15 @@ export function useUpdateIssue(id: string, projectId: string) {
       qc.invalidateQueries({ queryKey: issueKeys.byProject(projectId) })
       qc.invalidateQueries({ queryKey: issueKeys.detail(id) })
     },
+  })
+}
+
+export function useIssueActivities(issueId: string) {
+  return useQuery({
+    queryKey: issueKeys.activities(issueId),
+    queryFn: () => api.get<{ activities: Activity[] }>(`/admin/issues/${issueId}/activities`),
+    select: (data) => data.activities,
+    enabled: !!issueId,
   })
 }
 

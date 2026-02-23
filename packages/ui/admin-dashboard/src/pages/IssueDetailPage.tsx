@@ -1,50 +1,135 @@
 import { useState, useEffect } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { format } from "date-fns"
-import { useIssue, useIssueComments, useCreateComment, useUpdateIssue } from "@/api/hooks/useIssues"
-import { useUserMap } from "@/api/hooks/useUsers"
+import { useIssue, useUpdateIssue } from "@/api/hooks/useIssues"
 import { useProject } from "@/api/hooks/useProjects"
-import { useAuth } from "@/stores/auth"
+import { useProjectStatuses } from "@/api/hooks/useProjectStatuses"
 import { AssigneeSelector } from "@/components/issues/AssigneeSelector"
+import { IssueActivity } from "@/components/issues/IssueActivity"
 import { RichTextEditor, RichTextContent } from "@/components/ui/rich-text-editor"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select"
 import {
   ISSUE_STATUS_LABELS,
   ISSUE_PRIORITY_LABELS,
   ISSUE_TYPE_LABELS,
 } from "@/lib/constants"
-import { ChevronLeft, Send, Pencil, X, Check } from "lucide-react"
+import {
+  ChevronLeft, Pencil,
+  Circle, Clock, ArrowRight, Eye, CheckCircle2, XCircle,
+  Zap, ArrowUp, Minus, ArrowDown,
+  Bug, Sparkles, CheckSquare, HelpCircle,
+} from "lucide-react"
 import { toast } from "sonner"
+import { cn } from "@/lib/utils"
+
+// ── Property row ──────────────────────────────────────────────────────────────
+
+function PropertyRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between gap-3 py-2.5 border-b border-border/60 last:border-0">
+      <span className="text-xs text-muted-foreground shrink-0 w-20">{label}</span>
+      <div className="flex-1 min-w-0">{children}</div>
+    </div>
+  )
+}
+
+// ── Status / Priority / Type icon helpers ─────────────────────────────────────
+
+const STATUS_ICONS: Record<string, React.ReactNode> = {
+  backlog:     <Circle className="h-3 w-3 text-zinc-400" />,
+  todo:        <Circle className="h-3 w-3 text-zinc-500" strokeWidth={2.5} />,
+  in_progress: <Clock className="h-3 w-3 text-indigo-500" />,
+  in_review:   <Eye className="h-3 w-3 text-amber-500" />,
+  done:        <CheckCircle2 className="h-3 w-3 text-emerald-500" />,
+  cancelled:   <XCircle className="h-3 w-3 text-zinc-400" />,
+}
+
+const PRIORITY_ICONS: Record<string, React.ReactNode> = {
+  urgent: <Zap className="h-3 w-3 text-red-500" />,
+  high:   <ArrowUp className="h-3 w-3 text-orange-500" />,
+  medium: <Minus className="h-3 w-3 text-yellow-500" />,
+  low:    <ArrowDown className="h-3 w-3 text-blue-400" />,
+}
+
+const TYPE_ICONS: Record<string, React.ReactNode> = {
+  bug:     <Bug className="h-3 w-3 text-red-500" />,
+  feature: <Sparkles className="h-3 w-3 text-purple-500" />,
+  task:    <CheckSquare className="h-3 w-3 text-blue-500" />,
+  chore:   <ArrowRight className="h-3 w-3 text-zinc-500" />,
+}
+
+function IconSelect({
+  value,
+  onValueChange,
+  options,
+  icons,
+  placeholder,
+}: {
+  value: string
+  onValueChange: (v: string) => void
+  options: Record<string, string>
+  icons: Record<string, React.ReactNode>
+  placeholder?: string
+}) {
+  return (
+    <Select value={value} onValueChange={onValueChange}>
+      <SelectTrigger className="h-7 text-xs border-0 bg-transparent px-0 gap-1.5 focus:ring-0 hover:bg-accent rounded-md pl-1">
+        <div className="flex items-center gap-1.5">
+          {icons[value] ?? <HelpCircle className="h-3 w-3 text-muted-foreground" />}
+          <span>{options[value] ?? placeholder ?? ""}</span>
+        </div>
+      </SelectTrigger>
+      <SelectContent>
+        {Object.entries(options).map(([v, l]) => (
+          <SelectItem key={v} value={v} className="text-xs">
+            <div className="flex items-center gap-2">
+              {icons[v]}
+              {l}
+            </div>
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  )
+}
+
+// ── Page ──────────────────────────────────────────────────────────────────────
 
 export function IssueDetailPage() {
-  const { projectId, issueId } = useParams<{ projectId: string; issueId: string }>()
+  const { workspace, projectId, issueId } = useParams<{ workspace: string; projectId: string; issueId: string }>()
   const navigate = useNavigate()
 
   const [isEditing, setIsEditing] = useState(false)
   const [editTitle, setEditTitle] = useState("")
   const [editDescription, setEditDescription] = useState("")
-  const [comment, setComment] = useState("")
 
-  const { user: currentUser } = useAuth()
-  const { data: userMap } = useUserMap()
   const { data: project } = useProject(projectId ?? "")
   const { data: issue, isLoading } = useIssue(issueId ?? "")
-  const { data: comments, isLoading: loadingComments } = useIssueComments(issueId ?? "")
-  const createComment = useCreateComment(issueId ?? "")
   const updateIssue = useUpdateIssue(issueId ?? "", projectId ?? "")
+  const { data: projectStatuses } = useProjectStatuses(projectId)
+
+  const statusOptions = projectStatuses && projectStatuses.length > 0
+    ? Object.fromEntries(projectStatuses.map((s) => [s.key, s.name]))
+    : ISSUE_STATUS_LABELS
+
+  const statusIcons: Record<string, React.ReactNode> = projectStatuses && projectStatuses.length > 0
+    ? Object.fromEntries(projectStatuses.map((s) => [
+        s.key,
+        s.category === "completed"
+          ? <CheckCircle2 className="h-3 w-3" style={{ color: s.color }} />
+          : s.category === "started"
+          ? <Clock className="h-3 w-3" style={{ color: s.color }} />
+          : <Circle className="h-3 w-3" style={{ color: s.color }} />,
+      ]))
+    : STATUS_ICONS
 
   useEffect(() => {
     if (issue) {
@@ -55,19 +140,6 @@ export function IssueDetailPage() {
   }, [issue?.id])
 
   if (!projectId || !issueId) return null
-
-  const getCommentAuthor = (authorId: string) => {
-    if (currentUser && authorId === currentUser.id) {
-      const first = currentUser.first_name ?? ""
-      const last = currentUser.last_name ?? ""
-      const name = `${first} ${last}`.trim() || currentUser.email
-      const initials = (first[0] ?? last[0] ?? currentUser.email?.[0] ?? "U").toUpperCase()
-      return { name, initials }
-    }
-    const mapped = userMap?.get(authorId)
-    if (mapped) return mapped
-    return { name: "Unknown", initials: "?" }
-  }
 
   const handleSaveEdit = () => {
     if (!editTitle.trim()) return
@@ -91,26 +163,25 @@ export function IssueDetailPage() {
     setIsEditing(false)
   }
 
-  const handleSubmitComment = () => {
-    if (!comment.trim()) return
-    createComment.mutate(comment.trim(), {
-      onSuccess: () => setComment(""),
-      onError: () => toast.error("Failed to add comment"),
+  const handlePropUpdate =(data: Parameters<typeof updateIssue.mutate>[0], label: string) => {
+    updateIssue.mutate(data, {
+      onSuccess: () => toast.success(`${label} updated`),
+      onError: () => toast.error(`Failed to update ${label.toLowerCase()}`),
     })
   }
 
   // ── Loading skeleton ─────────────────────────────────────────────────────────
   if (isLoading || !issue) {
     return (
-      <div className="p-8 max-w-[1100px] mx-auto">
-        <Skeleton className="h-5 w-32 mb-8" />
-        <div className="grid grid-cols-[1fr_280px] gap-8">
-          <div className="space-y-4">
-            <Skeleton className="h-8 w-3/4" />
-            <Skeleton className="h-24 w-full" />
-          </div>
-          <div className="space-y-3">
-            <Skeleton className="h-[200px] w-full rounded-xl" />
+      <div className="min-h-full bg-[hsl(60_5%_96%)] dark:bg-background">
+        <div className="sticky top-0 z-10 h-[57px] bg-white dark:bg-card border-b border-border" />
+        <div className="px-2 py-2">
+          <div className="grid grid-cols-[1fr_256px] gap-5">
+            <div className="bg-white dark:bg-card border border-border rounded-xl p-6 space-y-4 shadow-sm">
+              <Skeleton className="h-7 w-3/4" />
+              <Skeleton className="h-32 w-full" />
+            </div>
+            <Skeleton className="h-[280px] w-full rounded-xl" />
           </div>
         </div>
       </div>
@@ -118,289 +189,179 @@ export function IssueDetailPage() {
   }
 
   return (
-    <div className="p-6 max-w-[1100px] mx-auto">
-      {/* ── Breadcrumb ─────────────────────────────────────────────────────── */}
-      <div className="flex items-center gap-1.5 text-sm text-muted-foreground mb-6">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-7 gap-1 text-muted-foreground hover:text-foreground px-2"
-          onClick={() => navigate(`/projects/${projectId}/issues`)}
-        >
-          <ChevronLeft className="h-3.5 w-3.5" />
-          {project?.name ?? "Issues"}
-        </Button>
-        <span className="text-border">/</span>
-        <span className="font-mono text-xs">{issue.identifier}</span>
-        <Badge variant="muted" className="text-[10px] ml-1">
-          {ISSUE_TYPE_LABELS[issue.type] ?? issue.type}
-        </Badge>
+    <div className="min-h-full bg-[hsl(60_5%_96%)] dark:bg-background">
+      {/* ── Sticky top bar ──────────────────────────────────────────────────── */}
+      <div className="sticky top-0 z-10 flex items-center justify-between px-6 h-[57px] bg-white dark:bg-card border-b border-border">
+        {/* Left: breadcrumb */}
+        <div className="flex items-center gap-1.5">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 gap-1 text-muted-foreground hover:text-foreground px-2"
+            onClick={() => navigate(`/${workspace}/projects/${projectId}/issues`)}
+          >
+            <ChevronLeft className="h-3.5 w-3.5" />
+            {project?.name ?? "Issues"}
+          </Button>
+          <span className="text-border">/</span>
+          <span className="font-mono text-xs text-muted-foreground">{issue.identifier}</span>
+          <Badge variant="muted" className="text-[10px] ml-1">
+            {ISSUE_TYPE_LABELS[issue.type] ?? issue.type}
+          </Badge>
+        </div>
+
+        {/* Right: edit actions */}
+        <div className="flex items-center gap-2">
+          {!isEditing ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 gap-1.5 text-muted-foreground hover:text-foreground"
+              onClick={() => setIsEditing(true)}
+            >
+              <Pencil className="h-3.5 w-3.5" />
+              Edit
+            </Button>
+          ) : (
+            <>
+              <Button variant="ghost" size="sm" onClick={handleCancelEdit}>
+                Discard
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleSaveEdit}
+                disabled={!editTitle.trim() || updateIssue.isPending}
+                className="px-4"
+              >
+                {updateIssue.isPending ? "Saving…" : "Save changes"}
+              </Button>
+            </>
+          )}
+        </div>
       </div>
 
-      {/* ── Two-column layout ──────────────────────────────────────────────── */}
-      <div className="grid grid-cols-[1fr_272px] gap-8 items-start">
-        {/* ── Main content ───────────────────────────────────────────────── */}
-        <div className="min-w-0">
-          {/* Title */}
-          <div className="flex items-start gap-2 mb-5">
-            {isEditing ? (
-              <Input
-                value={editTitle}
-                onChange={(e) => setEditTitle(e.target.value)}
-                className="text-xl font-semibold h-auto py-1.5"
-                autoFocus
-              />
-            ) : (
-              <h1 className="text-xl font-semibold text-foreground leading-snug flex-1">
-                {issue.title}
-              </h1>
-            )}
-            {!isEditing ? (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 text-xs text-muted-foreground shrink-0 mt-0.5 gap-1.5"
-                onClick={() => setIsEditing(true)}
-              >
-                <Pencil className="h-3.5 w-3.5" />
-                Edit
-              </Button>
-            ) : (
-              <div className="flex items-center gap-1 shrink-0 mt-0.5">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 text-xs text-muted-foreground"
-                  onClick={handleCancelEdit}
-                >
-                  <X className="h-3.5 w-3.5" />
-                </Button>
-                <Button
-                  size="sm"
-                  className="h-7 text-xs gap-1.5"
-                  onClick={handleSaveEdit}
-                  disabled={!editTitle.trim() || updateIssue.isPending}
-                >
-                  <Check className="h-3.5 w-3.5" />
-                  Save
-                </Button>
-              </div>
-            )}
-          </div>
+      {/* ── Content ─────────────────────────────────────────────────────────── */}
+      <div className="px-2 py-2">
+        <div className="grid grid-cols-[1fr_256px] gap-5 items-start">
 
-          {/* Description */}
-          <div className="mb-6">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
-              Description
-            </p>
-            {isEditing ? (
-              <div className="border border-border rounded-lg overflow-hidden">
-                <RichTextEditor
-                  content={editDescription}
-                  onChange={setEditDescription}
-                  placeholder="Add a description…"
-                  className="min-h-[200px]"
+          {/* ── Left — title + description + activity ─────────────────────── */}
+          <div className="bg-white dark:bg-card border border-border rounded-xl overflow-hidden shadow-sm">
+            {/* Title */}
+            <div className="px-6 pt-6 pb-3">
+              {isEditing ? (
+                <input
+                  autoFocus
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") e.preventDefault() }}
+                  className={cn(
+                    "w-full text-xl font-semibold leading-snug text-foreground",
+                    "bg-transparent border-0 outline-none resize-none",
+                    "placeholder:text-muted-foreground/40"
+                  )}
                 />
-              </div>
-            ) : issue.description ? (
-              <RichTextContent html={issue.description} />
-            ) : (
-              <p className="text-sm text-muted-foreground/50 italic">No description</p>
-            )}
-          </div>
-
-          <Separator className="mb-6" />
-
-          {/* Activity */}
-          <div>
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-4">
-              Activity {comments && comments.length > 0 ? `· ${comments.length}` : ""}
-            </p>
-
-            <div className="space-y-5 mb-6">
-              {loadingComments ? (
-                <>
-                  <div className="flex gap-3">
-                    <Skeleton className="h-7 w-7 rounded-full shrink-0" />
-                    <Skeleton className="h-16 flex-1" />
-                  </div>
-                  <div className="flex gap-3">
-                    <Skeleton className="h-7 w-7 rounded-full shrink-0" />
-                    <Skeleton className="h-16 flex-1" />
-                  </div>
-                </>
-              ) : comments && comments.length > 0 ? (
-                comments.map((c) => {
-                  const author = getCommentAuthor(c.author_id)
-                  return (
-                    <div key={c.id} className="flex gap-3">
-                      <Avatar className="h-7 w-7 mt-0.5 shrink-0">
-                        <AvatarFallback className="text-[11px] bg-muted text-muted-foreground">
-                          {author.initials}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-baseline gap-2 mb-1">
-                          <span className="text-sm font-medium text-foreground">
-                            {author.name}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            {format(new Date(c.created_at), "MMM d, h:mm a")}
-                          </span>
-                        </div>
-                        <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
-                          {c.body}
-                        </p>
-                      </div>
-                    </div>
-                  )
-                })
               ) : (
-                <p className="text-sm text-muted-foreground">No activity yet.</p>
+                <h1 className="text-xl font-semibold text-foreground leading-snug">
+                  {issue.title}
+                </h1>
               )}
             </div>
 
-            {/* Comment input */}
-            <div className="flex gap-3 items-end">
-              <Avatar className="h-7 w-7 shrink-0 mb-1">
-                <AvatarFallback className="text-[11px] bg-muted text-muted-foreground">
-                  {currentUser
-                    ? `${currentUser.first_name?.[0] ?? ""}${currentUser.last_name?.[0] ?? ""}`.toUpperCase()
-                    : "?"}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1 flex gap-2 items-end">
-                <Textarea
-                  placeholder="Leave a comment..."
-                  value={comment}
-                  onChange={(e) => setComment(e.target.value)}
-                  className="min-h-[72px] text-sm resize-none bg-transparent"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-                      handleSubmitComment()
-                    }
-                  }}
-                />
-                <Button
-                  size="icon"
-                  className="h-8 w-8 shrink-0"
-                  onClick={handleSubmitComment}
-                  disabled={!comment.trim() || createComment.isPending}
-                >
-                  <Send className="h-3.5 w-3.5" />
-                </Button>
-              </div>
+            {/* Description label */}
+            <div className="flex items-center gap-2 px-6 pb-2">
+              <span className="text-[11px] font-medium text-muted-foreground/60 uppercase tracking-widest">
+                Description
+              </span>
             </div>
-            <p className="text-[11px] text-muted-foreground mt-1.5 pl-10">
-              ⌘ + Enter to submit
-            </p>
+
+            {/* Description content */}
+            {isEditing ? (
+              <RichTextEditor
+                content={editDescription}
+                onChange={setEditDescription}
+                placeholder="Add a description…"
+                className="border-t border-border/50 min-h-[280px]"
+              />
+            ) : issue.description ? (
+              <div className="border-t border-border/50">
+                <RichTextContent html={issue.description} className="px-5 py-4" />
+              </div>
+            ) : (
+              <div className="border-t border-border/50 px-6 py-4">
+                <p className="text-sm text-muted-foreground/50 italic">No description</p>
+              </div>
+            )}
+
+            {/* ── Comments + Activity ──────────────────────────────────── */}
+            <IssueActivity issueId={issueId} className="border-t border-border" />
           </div>
-        </div>
 
-        {/* ── Right sidebar ───────────────────────────────────────────────── */}
-        <aside className="space-y-3">
-          {/* Properties card */}
-          <div className="bg-white dark:bg-card border border-border rounded-xl p-4 space-y-4">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-              Properties
-            </p>
+          {/* ── Right — properties ──────────────────────────────────────────── */}
+          <div className="bg-white dark:bg-card border border-border rounded-xl shadow-sm overflow-hidden">
+            <div className="px-4 py-3 border-b border-border/60">
+              <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest">
+                Properties
+              </p>
+            </div>
 
-            <div className="space-y-3">
-              <div>
-                <p className="text-xs text-muted-foreground mb-1.5">Status</p>
-                <Select
+            <div className="px-4 py-1">
+              <PropertyRow label="Status">
+                <IconSelect
                   value={issue.status}
-                  onValueChange={(v) =>
-                    updateIssue.mutate({ status: v }, { onError: () => toast.error("Failed to update") })
-                  }
-                >
-                  <SelectTrigger className="h-8 text-xs bg-transparent">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(ISSUE_STATUS_LABELS).map(([val, label]) => (
-                      <SelectItem key={val} value={val} className="text-xs">
-                        {label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                  onValueChange={(v) => handlePropUpdate({ status: v }, "Status")}
+                  options={statusOptions}
+                  icons={statusIcons}
+                />
+              </PropertyRow>
 
-              <div>
-                <p className="text-xs text-muted-foreground mb-1.5">Priority</p>
-                <Select
+              <PropertyRow label="Priority">
+                <IconSelect
                   value={issue.priority}
-                  onValueChange={(v) =>
-                    updateIssue.mutate({ priority: v }, { onError: () => toast.error("Failed to update") })
-                  }
-                >
-                  <SelectTrigger className="h-8 text-xs bg-transparent">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(ISSUE_PRIORITY_LABELS).map(([val, label]) => (
-                      <SelectItem key={val} value={val} className="text-xs">
-                        {label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                  onValueChange={(v) => handlePropUpdate({ priority: v }, "Priority")}
+                  options={ISSUE_PRIORITY_LABELS}
+                  icons={PRIORITY_ICONS}
+                />
+              </PropertyRow>
 
-              <div>
-                <p className="text-xs text-muted-foreground mb-1.5">Type</p>
-                <Select
+              <PropertyRow label="Type">
+                <IconSelect
                   value={issue.type}
-                  onValueChange={(v) =>
-                    updateIssue.mutate({ type: v }, { onError: () => toast.error("Failed to update") })
-                  }
-                >
-                  <SelectTrigger className="h-8 text-xs bg-transparent">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(ISSUE_TYPE_LABELS).map(([val, label]) => (
-                      <SelectItem key={val} value={val} className="text-xs">
-                        {label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                  onValueChange={(v) => handlePropUpdate({ type: v }, "Type")}
+                  options={ISSUE_TYPE_LABELS}
+                  icons={TYPE_ICONS}
+                />
+              </PropertyRow>
 
-              <div>
-                <p className="text-xs text-muted-foreground mb-1">Assignees</p>
+              <PropertyRow label="Assignees">
                 <AssigneeSelector
                   value={issue.assignee_ids ?? []}
-                  onChange={(assignee_ids) =>
-                    updateIssue.mutate({ assignee_ids }, { onError: () => toast.error("Failed to update") })
-                  }
+                  onChange={(assignee_ids) => handlePropUpdate({ assignee_ids }, "Assignees")}
                   disabled={updateIssue.isPending}
                 />
+              </PropertyRow>
+            </div>
+
+            {/* Details */}
+            <div className="px-4 pt-3 pb-4 border-t border-border/60 space-y-2.5">
+              <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest mb-2">
+                Details
+              </p>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">Created</span>
+                <span className="text-foreground">
+                  {format(new Date(issue.created_at), "MMM d, yyyy")}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">Updated</span>
+                <span className="text-foreground">
+                  {format(new Date(issue.updated_at), "MMM d, yyyy")}
+                </span>
               </div>
             </div>
           </div>
 
-          {/* Metadata card */}
-          <div className="bg-white dark:bg-card border border-border rounded-xl p-4 space-y-2.5">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
-              Details
-            </p>
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-muted-foreground">Created</span>
-              <span className="text-foreground">
-                {format(new Date(issue.created_at), "MMM d, yyyy")}
-              </span>
-            </div>
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-muted-foreground">Updated</span>
-              <span className="text-foreground">
-                {format(new Date(issue.updated_at), "MMM d, yyyy")}
-              </span>
-            </div>
-          </div>
-        </aside>
+        </div>
       </div>
     </div>
   )

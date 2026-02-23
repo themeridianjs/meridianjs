@@ -1,202 +1,318 @@
-import { NavLink, useParams } from "react-router-dom"
+import { NavLink, useParams, useNavigate, useLocation } from "react-router-dom"
 import {
   LayoutDashboard,
   Bell,
   Settings,
   Search,
-  MoreHorizontal,
+  Check,
+  ChevronsUpDown,
+  LogOut,
 } from "lucide-react"
-import { cn } from "@/lib/utils"
 import { useProjects } from "@/api/hooks/useProjects"
+import { useWorkspaces } from "@/api/hooks/useWorkspaces"
 import { useAuth } from "@/stores/auth"
 import { useCommandPalette } from "@/stores/command-palette"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Separator } from "@/components/ui/separator"
+import {
+  Sidebar as SidebarRoot,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarSeparator,
+} from "@/components/ui/sidebar"
+import type { ComponentProps } from "react"
+type SidebarProps = ComponentProps<typeof SidebarRoot>
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { LogOut } from "lucide-react"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 
-interface NavItemDef {
-  label: string
-  href: string
-  icon: React.ElementType
-  end?: boolean
-}
+// ── Workspace Switcher (header) ───────────────────────────────────────────────
 
-function NavItem({ item }: { item: NavItemDef }) {
-  const Icon = item.icon
-  return (
-    <NavLink
-      to={item.href}
-      end={item.end}
-      className={({ isActive }) =>
-        cn(
-          "flex items-center gap-2.5 px-3 py-1.5 rounded-md text-sm transition-colors relative",
-          "text-[#6b7280] hover:text-foreground hover:bg-[#f3f4f6] dark:text-muted-foreground dark:hover:bg-muted",
-          isActive && [
-            "text-foreground font-medium",
-            "bg-[#eff6ff] dark:bg-[hsl(var(--indigo-subtle))]",
-            "before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2",
-            "before:w-0.5 before:h-5 before:rounded-full before:bg-indigo",
-          ]
-        )
-      }
-    >
-      <Icon className="h-[18px] w-[18px] shrink-0" strokeWidth={1.5} />
-      <span>{item.label}</span>
-    </NavLink>
-  )
-}
-
-function SubNavItem({ label, href }: { label: string; href: string }) {
-  return (
-    <NavLink
-      to={href}
-      className={({ isActive }) =>
-        cn(
-          "flex items-center gap-2.5 pl-[2.375rem] pr-3 py-1.5 rounded-md text-[13px] transition-colors relative",
-          "text-[#6b7280] hover:text-foreground hover:bg-[#f3f4f6] dark:text-muted-foreground dark:hover:bg-muted",
-          isActive && [
-            "text-foreground font-medium",
-            "bg-[#eff6ff] dark:bg-[hsl(var(--indigo-subtle))]",
-            "before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2",
-            "before:w-0.5 before:h-4 before:rounded-full before:bg-indigo",
-          ]
-        )
-      }
-    >
-      {label}
-    </NavLink>
-  )
-}
-
-export function Sidebar() {
-  const { projectId } = useParams<{ projectId: string }>()
-  const { data: projects } = useProjects()
-  const { user, logout } = useAuth()
-  const { toggle: openCommandPalette } = useCommandPalette()
-
-  const currentProject = projects?.find((p) => p.id === projectId)
-
-  const initials = user
-    ? `${user.first_name?.[0] ?? ""}`.toUpperCase()
-    : "?"
+function WorkspaceSwitcher() {
+  const { workspace, setWorkspace } = useAuth()
+  const { data: workspaces } = useWorkspaces()
+  const navigate = useNavigate()
 
   return (
-    <aside className="flex flex-col h-full w-[240px] shrink-0 bg-white dark:bg-card border-r border-border">
-      {/* Workspace header */}
-      <div className="flex items-center justify-between h-[57px] px-4 border-b border-border">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <div className="h-6 w-6 rounded-md bg-foreground flex items-center justify-center shrink-0">
-            <span className="text-background text-[11px] font-bold">
-              {(user?.first_name?.[0] ?? "M").toUpperCase()}
-            </span>
-          </div>
-          <span className="font-medium text-sm text-foreground truncate">
-            {user?.first_name && user?.last_name
-              ? `${user.first_name} ${user.last_name}`
-              : "Meridian"}
-          </span>
-        </div>
-        <button className="text-muted-foreground hover:text-foreground transition-colors ml-2 shrink-0">
-          <MoreHorizontal className="h-4 w-4" />
-        </button>
-      </div>
-
-      <ScrollArea className="flex-1">
-        <div className="px-3 py-3 space-y-0.5">
-          {/* Search */}
-          <button onClick={openCommandPalette} className="w-full flex items-center justify-between px-3 py-1.5 rounded-md text-sm text-[#6b7280] dark:text-muted-foreground hover:text-foreground hover:bg-[#f3f4f6] dark:hover:bg-muted transition-colors">
-            <div className="flex items-center gap-2.5">
-              <Search className="h-[18px] w-[18px] shrink-0" strokeWidth={1.5} />
-              <span>Search</span>
-            </div>
-            <kbd className="hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 rounded border border-border bg-muted text-[10px] text-muted-foreground font-mono">
-              ⌘K
-            </kbd>
-          </button>
-
-          <Separator className="my-2" />
-
-          {/* Main nav */}
-          <NavItem
-            item={{ label: "Projects", href: "/projects", icon: LayoutDashboard, end: true }}
-          />
-          <NavItem item={{ label: "Notifications", href: "/notifications", icon: Bell }} />
-
-          {/* Current project section */}
-          {projectId && (
-            <>
-              <Separator className="my-2" />
-              <p className="px-3 py-1 text-[11px] font-medium text-[#9ca3af] dark:text-muted-foreground uppercase tracking-wider">
-                {currentProject?.name ?? "Project"}
-              </p>
-              <SubNavItem
-                label="Board"
-                href={`/projects/${projectId}/board`}
-              />
-              <SubNavItem
-                label="Issues"
-                href={`/projects/${projectId}/issues`}
-              />
-            </>
-          )}
-
-          {/* Extensions / quick project links */}
-          {projects && projects.length > 0 && (
-            <>
-              <Separator className="my-2" />
-              <p className="px-3 py-1 text-[11px] font-medium text-[#9ca3af] dark:text-muted-foreground uppercase tracking-wider flex items-center justify-between">
-                <span>Recent</span>
-              </p>
-              {projects.slice(0, 5).map((p) => (
-                <SubNavItem
-                  key={p.id}
-                  label={p.name}
-                  href={`/projects/${p.id}/board`}
-                />
-              ))}
-            </>
-          )}
-        </div>
-      </ScrollArea>
-
-      {/* Bottom */}
-      <div className="px-3 py-3 border-t border-border space-y-0.5">
-        <NavItem item={{ label: "Settings", href: "/settings", icon: Settings }} />
-
-        {/* User row */}
+    <SidebarMenu>
+      <SidebarMenuItem>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="w-full flex items-center justify-between px-3 py-1.5 rounded-md hover:bg-[#f3f4f6] dark:hover:bg-muted transition-colors group">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="h-5 w-5 rounded-full bg-foreground flex items-center justify-center shrink-0">
-                  <span className="text-background text-[10px] font-medium">{initials}</span>
-                </div>
-                <span className="text-[13px] text-[#6b7280] dark:text-muted-foreground truncate">
-                  {user?.email ?? ""}
+            <SidebarMenuButton
+              size="lg"
+              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+            >
+              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-foreground text-background shrink-0">
+                <span className="text-[13px] font-bold">
+                  {(workspace?.name?.[0] ?? "M").toUpperCase()}
                 </span>
               </div>
-              <MoreHorizontal className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0 ml-1" />
-            </button>
+              <div className="grid flex-1 text-left text-sm leading-tight">
+                <span className="truncate font-semibold">{workspace?.name ?? "Meridian"}</span>
+                <span className="truncate text-xs text-sidebar-foreground/60">{workspace?.slug ?? ""}</span>
+              </div>
+              <ChevronsUpDown className="ml-auto size-4 shrink-0" />
+            </SidebarMenuButton>
           </DropdownMenuTrigger>
-          <DropdownMenuContent side="top" align="start" className="w-48">
+          <DropdownMenuContent
+            className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
+            side="bottom"
+            align="start"
+            sideOffset={4}
+          >
+            <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">
+              Workspaces
+            </DropdownMenuLabel>
+            {workspaces?.map((w) => (
+              <DropdownMenuItem
+                key={w.id}
+                className="cursor-pointer gap-2 p-2"
+                onClick={() => {
+                  setWorkspace({ id: w.id, name: w.name, slug: w.slug })
+                  navigate(`/${w.slug}/projects`)
+                }}
+              >
+                <div className="flex size-6 items-center justify-center rounded-sm bg-foreground text-background shrink-0">
+                  <span className="text-[10px] font-bold">{w.name[0].toUpperCase()}</span>
+                </div>
+                <span className="flex-1 truncate">{w.name}</span>
+                {w.id === workspace?.id && (
+                  <Check className="size-3.5 text-muted-foreground shrink-0" />
+                )}
+              </DropdownMenuItem>
+            ))}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className="cursor-pointer gap-2 p-2 text-muted-foreground"
+              onClick={() => navigate("/setup")}
+            >
+              <div className="flex size-6 items-center justify-center rounded-md border bg-background">
+                <span className="text-xs font-semibold">+</span>
+              </div>
+              <span>Create workspace</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </SidebarMenuItem>
+    </SidebarMenu>
+  )
+}
+
+// ── User nav (footer) ─────────────────────────────────────────────────────────
+
+function NavUser() {
+  const { user, logout } = useAuth()
+  const initials = user
+    ? `${user.first_name?.[0] ?? ""}${user.last_name?.[0] ?? ""}`.toUpperCase() || user.email[0].toUpperCase()
+    : "?"
+  const fullName = user
+    ? [user.first_name, user.last_name].filter(Boolean).join(" ") || user.email
+    : "User"
+
+  return (
+    <SidebarMenu>
+      <SidebarMenuItem>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <SidebarMenuButton
+              size="lg"
+              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+            >
+              <Avatar className="h-8 w-8 rounded-lg shrink-0">
+                <AvatarFallback className="rounded-lg bg-foreground text-background text-xs font-medium">
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
+              <div className="grid flex-1 text-left text-sm leading-tight">
+                <span className="truncate font-semibold">{fullName}</span>
+                <span className="truncate text-xs text-sidebar-foreground/60">{user?.email ?? ""}</span>
+              </div>
+              <ChevronsUpDown className="ml-auto size-4 shrink-0" />
+            </SidebarMenuButton>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
+            side="top"
+            align="end"
+            sideOffset={4}
+          >
+            <DropdownMenuLabel className="p-0 font-normal">
+              <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
+                <Avatar className="h-8 w-8 rounded-lg">
+                  <AvatarFallback className="rounded-lg bg-foreground text-background text-xs font-medium">
+                    {initials}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="grid flex-1 text-left text-sm leading-tight">
+                  <span className="truncate font-semibold">{fullName}</span>
+                  <span className="truncate text-xs text-muted-foreground">{user?.email ?? ""}</span>
+                </div>
+              </div>
+            </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               className="text-destructive focus:text-destructive cursor-pointer"
               onClick={logout}
             >
-              <LogOut className="h-4 w-4" />
+              <LogOut className="size-4" />
               Sign out
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-      </div>
-    </aside>
+      </SidebarMenuItem>
+    </SidebarMenu>
+  )
+}
+
+// ── Main sidebar ──────────────────────────────────────────────────────────────
+
+export function AppSidebar({ ...props }: SidebarProps) {
+  const { workspace: workspaceSlug, projectId } = useParams<{ workspace: string; projectId: string }>()
+  const { data: projects } = useProjects()
+  const { toggle: openCommandPalette } = useCommandPalette()
+  const location = useLocation()
+  const ws = workspaceSlug ?? ""
+
+  const currentProject = projects?.find((p) => p.id === projectId)
+
+  const isProjectsActive = location.pathname === `/${ws}/projects`
+  const isNotificationsActive = location.pathname.includes("/notifications")
+  const isSettingsActive = location.pathname.includes("/settings")
+  const isBoardActive = projectId ? location.pathname.endsWith("/board") : false
+  const isIssuesActive = projectId ? location.pathname.endsWith("/issues") : false
+
+  return (
+    <SidebarRoot collapsible="offcanvas" {...props}>
+      {/* Workspace switcher */}
+      <SidebarHeader>
+        <WorkspaceSwitcher />
+      </SidebarHeader>
+
+      <SidebarContent>
+        {/* Main nav */}
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {/* Search */}
+              <SidebarMenuItem>
+                <SidebarMenuButton onClick={openCommandPalette} tooltip="Search">
+                  <Search />
+                  <span>Search</span>
+                  <kbd className="ml-auto hidden text-[10px] text-sidebar-foreground/40 font-mono sm:inline-flex">
+                    ⌘K
+                  </kbd>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+
+              {/* Projects */}
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={isProjectsActive} tooltip="Projects">
+                  <NavLink to={`/${ws}/projects`} end>
+                    <LayoutDashboard />
+                    <span>Projects</span>
+                  </NavLink>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+
+              {/* Notifications */}
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={isNotificationsActive} tooltip="Notifications">
+                  <NavLink to={`/${ws}/notifications`}>
+                    <Bell />
+                    <span>Notifications</span>
+                  </NavLink>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Current project sub-nav */}
+        {projectId && (
+          <>
+            <SidebarSeparator />
+            <SidebarGroup>
+              <SidebarGroupLabel>{currentProject?.name ?? "Project"}</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={isBoardActive}>
+                      <NavLink to={`/${ws}/projects/${projectId}/board`}>
+                        Board
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={isIssuesActive}>
+                      <NavLink to={`/${ws}/projects/${projectId}/issues`}>
+                        Issues
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </>
+        )}
+
+        {/* Recent projects */}
+        {projects && projects.length > 0 && (
+          <>
+            <SidebarSeparator />
+            <SidebarGroup>
+              <SidebarGroupLabel>Recent</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {projects.slice(0, 5).map((p) => (
+                    <SidebarMenuItem key={p.id}>
+                      <SidebarMenuButton asChild isActive={p.id === projectId} tooltip={p.name}>
+                        <NavLink to={`/${ws}/projects/${p.id}/board`}>
+                          <span className="font-mono text-[11px] text-sidebar-foreground/50 shrink-0">
+                            {p.identifier}
+                          </span>
+                          <span className="truncate">{p.name}</span>
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </>
+        )}
+
+        {/* Settings — pushed to bottom */}
+        <SidebarGroup className="mt-auto">
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={isSettingsActive} tooltip="Settings">
+                  <NavLink to={`/${ws}/settings`}>
+                    <Settings />
+                    <span>Settings</span>
+                  </NavLink>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+
+      {/* User footer */}
+      <SidebarFooter>
+        <NavUser />
+      </SidebarFooter>
+    </SidebarRoot>
   )
 }

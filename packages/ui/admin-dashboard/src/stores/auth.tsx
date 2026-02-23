@@ -8,18 +8,27 @@ interface User {
   avatar_url?: string
 }
 
+export interface WorkspaceRef {
+  id: string
+  name: string
+  slug: string
+}
+
 interface AuthState {
   user: User | null
   token: string | null
+  workspace: WorkspaceRef | null
   isAuthenticated: boolean
   login: (user: User, token: string) => void
   logout: () => void
+  setWorkspace: (w: WorkspaceRef | null) => void
 }
 
 const AuthContext = createContext<AuthState | null>(null)
 
 const TOKEN_KEY = "meridian_token"
 const USER_KEY = "meridian_user"
+const WORKSPACE_KEY = "meridian_workspace"
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(() => {
@@ -33,6 +42,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(() => {
     return localStorage.getItem(TOKEN_KEY)
   })
+  const [workspace, setWorkspaceState] = useState<WorkspaceRef | null>(() => {
+    try {
+      const stored = localStorage.getItem(WORKSPACE_KEY)
+      return stored ? JSON.parse(stored) : null
+    } catch {
+      return null
+    }
+  })
 
   const login = (user: User, token: string) => {
     setUser(user)
@@ -44,12 +61,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = () => {
     setUser(null)
     setToken(null)
+    setWorkspaceState(null)
     localStorage.removeItem(TOKEN_KEY)
     localStorage.removeItem(USER_KEY)
+    localStorage.removeItem(WORKSPACE_KEY)
+  }
+
+  const setWorkspace = (w: WorkspaceRef | null) => {
+    setWorkspaceState(w)
+    if (w) {
+      localStorage.setItem(WORKSPACE_KEY, JSON.stringify(w))
+    } else {
+      localStorage.removeItem(WORKSPACE_KEY)
+    }
   }
 
   useEffect(() => {
-    // Validate token on mount
     if (token && !user) {
       logout()
     }
@@ -57,7 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, token, isAuthenticated: !!token && !!user, login, logout }}
+      value={{ user, token, workspace, isAuthenticated: !!token && !!user, login, logout, setWorkspace }}
     >
       {children}
     </AuthContext.Provider>

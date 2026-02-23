@@ -22,7 +22,7 @@ const fetchIssueStep = createStep(
   async (input: UpdateIssueStatusInput, { container }) => {
     const svc = container.resolve("issueModuleService") as any
     const issue = await svc.retrieveIssue(input.issueId)
-    return { issue, newStatus: input.status, actor_id: input.actor_id }
+    return { issue, newStatus: input.status, actor_id: input.actor_id, oldStatus: issue.status }
   }
 )
 
@@ -56,6 +56,7 @@ const logStatusChangedStep = createStep(
       actor_id: string
       workspace_id: string
       newStatus: string
+      oldStatus: string
     },
     { container }
   ) => {
@@ -66,7 +67,7 @@ const logStatusChangedStep = createStep(
       actor_id: input.actor_id,
       action: "status_changed",
       workspace_id: input.workspace_id,
-      changes: { status: { to: input.newStatus } },
+      changes: { status: { from: input.oldStatus, to: input.newStatus } },
     })
   }
 )
@@ -76,7 +77,7 @@ const logStatusChangedStep = createStep(
 export const updateIssueStatusWorkflow = createWorkflow(
   "update-issue-status",
   async (input: UpdateIssueStatusInput) => {
-    const { issue, newStatus, actor_id } = await fetchIssueStep(input)
+    const { issue, newStatus, actor_id, oldStatus } = await fetchIssueStep(input)
     const updated = await setIssueStatusStep({ issue, newStatus, actor_id })
 
     const activityInput = transform(updated, (u) => ({
@@ -84,6 +85,7 @@ export const updateIssueStatusWorkflow = createWorkflow(
       actor_id: actor_id ?? "system",
       workspace_id: u.workspace_id,
       newStatus,
+      oldStatus,
     }))
     await logStatusChangedStep(activityInput)
 

@@ -23,7 +23,7 @@ const fetchIssueForAssignStep = createStep(
   async (input: AssignIssueInput, { container }) => {
     const svc = container.resolve("issueModuleService") as any
     const issue = await svc.retrieveIssue(input.issueId)
-    return { issue, newAssignees: input.assignee_ids, actor_id: input.actor_id }
+    return { issue, newAssignees: input.assignee_ids, actor_id: input.actor_id, oldAssignees: issue.assignee_ids ?? [] }
   }
 )
 
@@ -57,6 +57,7 @@ const logAssigneesStep = createStep(
       actor_id: string
       workspace_id: string
       assignee_ids: string[]
+      oldAssignees: string[]
     },
     { container }
   ) => {
@@ -68,7 +69,7 @@ const logAssigneesStep = createStep(
       actor_id: input.actor_id,
       action,
       workspace_id: input.workspace_id,
-      changes: { assignee_ids: { to: input.assignee_ids } },
+      changes: { assignee_ids: { from: input.oldAssignees, to: input.assignee_ids } },
     })
   }
 )
@@ -78,7 +79,7 @@ const logAssigneesStep = createStep(
 export const assignIssueWorkflow = createWorkflow(
   "assign-issue",
   async (input: AssignIssueInput) => {
-    const { issue, newAssignees, actor_id } = await fetchIssueForAssignStep(input)
+    const { issue, newAssignees, actor_id, oldAssignees } = await fetchIssueForAssignStep(input)
     const updated = await setAssigneesStep({ issue, newAssignees, actor_id })
 
     const activityInput = transform(updated, (u) => ({
@@ -86,6 +87,7 @@ export const assignIssueWorkflow = createWorkflow(
       actor_id: actor_id ?? "system",
       workspace_id: u.workspace_id,
       assignee_ids: newAssignees,
+      oldAssignees,
     }))
     await logAssigneesStep(activityInput)
 

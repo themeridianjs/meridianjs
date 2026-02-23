@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom"
 import { useProject } from "@/api/hooks/useProjects"
 import { useIssues, type Issue } from "@/api/hooks/useIssues"
 import { useUserMap } from "@/api/hooks/useUsers"
+import { useProjectStatuses } from "@/api/hooks/useProjectStatuses"
 import { IssueDetail } from "@/components/issues/IssueDetail"
 import { CreateIssueDialog } from "@/components/issues/CreateIssueDialog"
 import { Button } from "@/components/ui/button"
@@ -21,6 +22,7 @@ import {
   ISSUE_PRIORITY_COLORS,
 } from "@/lib/constants"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Plus, Search, ArrowUp, ArrowDown, Minus, Zap, Circle, ExternalLink } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { format } from "date-fns"
@@ -46,7 +48,7 @@ const STATUS_DOT: Record<string, string> = {
 }
 
 export function ProjectIssuesPage() {
-  const { projectId } = useParams<{ projectId: string }>()
+  const { workspace, projectId } = useParams<{ workspace: string; projectId: string }>()
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null)
   const [createOpen, setCreateOpen] = useState(false)
   const [search, setSearch] = useState("")
@@ -57,6 +59,16 @@ export function ProjectIssuesPage() {
   useProject(projectId ?? "")
   const { data: issues, isLoading } = useIssues(projectId)
   const { data: userMap } = useUserMap()
+  const { data: projectStatuses } = useProjectStatuses(projectId)
+
+  const statusLabels = projectStatuses && projectStatuses.length > 0
+    ? Object.fromEntries(projectStatuses.map((s) => [s.key, s.name]))
+    : ISSUE_STATUS_LABELS
+
+  // Map status key → hex color for dot indicator
+  const statusColors = projectStatuses && projectStatuses.length > 0
+    ? Object.fromEntries(projectStatuses.map((s) => [s.key, s.color]))
+    : null
 
   if (!projectId) return null
 
@@ -71,18 +83,17 @@ export function ProjectIssuesPage() {
   })
 
   return (
-    <div className="p-6 max-w-[1200px] mx-auto">
-      {/* Page header */}
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-xl font-semibold">Issues</h1>
-        <Button size="sm" onClick={() => setCreateOpen(true)}>
-          <Plus className="h-4 w-4" />
-          Create
-        </Button>
-      </div>
-
+    <div className="p-2">
       {/* Content card */}
       <div className="bg-white dark:bg-card border border-border rounded-xl overflow-hidden">
+        {/* Card header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+          <h1 className="text-base font-semibold">Issues</h1>
+          <Button size="sm" onClick={() => setCreateOpen(true)}>
+            <Plus className="h-4 w-4" />
+            Create
+          </Button>
+        </div>
         {/* Toolbar */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border gap-3 flex-wrap">
           <div className="flex items-center gap-2">
@@ -92,7 +103,7 @@ export function ProjectIssuesPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all" className="text-xs">All statuses</SelectItem>
-                {Object.entries(ISSUE_STATUS_LABELS).map(([v, l]) => (
+                {Object.entries(statusLabels).map(([v, l]) => (
                   <SelectItem key={v} value={v} className="text-xs">{l}</SelectItem>
                 ))}
               </SelectContent>
@@ -180,9 +191,16 @@ export function ProjectIssuesPage() {
                   {issue.title}
                 </span>
                 <div className="flex items-center gap-1.5">
-                  <span className={cn("h-1.5 w-1.5 rounded-full shrink-0", STATUS_DOT[issue.status] ?? "bg-zinc-400")} />
+                  {statusColors ? (
+                    <span
+                      className="h-1.5 w-1.5 rounded-full shrink-0"
+                      style={{ backgroundColor: statusColors[issue.status] ?? "#94a3b8" }}
+                    />
+                  ) : (
+                    <span className={cn("h-1.5 w-1.5 rounded-full shrink-0", STATUS_DOT[issue.status] ?? "bg-zinc-400")} />
+                  )}
                   <span className="text-xs text-muted-foreground">
-                    {ISSUE_STATUS_LABELS[issue.status] ?? issue.status}
+                    {statusLabels[issue.status] ?? issue.status}
                   </span>
                 </div>
                 <div className="flex items-center gap-1.5">
@@ -191,30 +209,48 @@ export function ProjectIssuesPage() {
                     {ISSUE_PRIORITY_LABELS[issue.priority] ?? issue.priority}
                   </span>
                 </div>
-                <div className="flex -space-x-1.5">
-                  {(issue.assignee_ids ?? []).slice(0, 3).map((uid) => {
-                    const u = userMap?.get(uid)
-                    return (
-                      <Avatar key={uid} className="h-5 w-5 border border-background">
-                        <AvatarFallback className="text-[9px] bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300">
-                          {u?.initials ?? "?"}
-                        </AvatarFallback>
-                      </Avatar>
-                    )
-                  })}
-                  {(issue.assignee_ids?.length ?? 0) > 3 && (
-                    <span className="text-[10px] text-muted-foreground ml-2 self-center">
-                      +{(issue.assignee_ids?.length ?? 0) - 3}
-                    </span>
-                  )}
-                </div>
+                <TooltipProvider delayDuration={200}>
+                  <div className="flex -space-x-1.5">
+                    {(issue.assignee_ids ?? []).slice(0, 3).map((uid) => {
+                      const u = userMap?.get(uid)
+                      return (
+                        <Tooltip key={uid}>
+                          <TooltipTrigger asChild>
+                            <Avatar className="h-6 w-6 border-2 border-background ring-0 cursor-default relative hover:z-10 transition-[z-index]">
+                              <AvatarFallback className="text-[10px] bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300">
+                                {u?.initials ?? "?"}
+                              </AvatarFallback>
+                            </Avatar>
+                          </TooltipTrigger>
+                          <TooltipContent side="top">
+                            {u?.name ?? uid}
+                          </TooltipContent>
+                        </Tooltip>
+                      )
+                    })}
+                    {(issue.assignee_ids?.length ?? 0) > 3 && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Avatar className="h-5 w-5 border-2 border-background cursor-default">
+                            <AvatarFallback className="text-[9px] bg-muted text-muted-foreground">
+                              +{(issue.assignee_ids?.length ?? 0) - 3}
+                            </AvatarFallback>
+                          </Avatar>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">
+                          {(issue.assignee_ids ?? []).slice(3).map(uid => userMap?.get(uid)?.name ?? uid).join(", ")}
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
+                  </div>
+                </TooltipProvider>
                 <span className="text-xs text-muted-foreground">
                   {format(new Date(issue.created_at), "MMM d, yyyy")}
                 </span>
                 <button
                   onClick={(e) => {
                     e.stopPropagation()
-                    navigate(`/projects/${projectId}/issues/${issue.id}`)
+                    navigate(`/${workspace}/projects/${projectId}/issues/${issue.id}`)
                   }}
                   className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-border text-muted-foreground hover:text-foreground"
                   title="Open full page"

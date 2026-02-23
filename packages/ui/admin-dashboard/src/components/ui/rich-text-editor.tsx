@@ -141,7 +141,7 @@ export function RichTextEditor({
       {/* ── Editor ─────────────────────────────────────────────────────────── */}
       <EditorContent
         editor={editor}
-        className={cn("flex-1", editorClassName)}
+        className={cn("flex-1 px-5 py-4", editorClassName)}
       />
     </div>
   )
@@ -159,7 +159,7 @@ export function RichTextContent({ html, className }: RichTextContentProps) {
   if (!html) return null
   return (
     <div
-      className={cn("meridian-editor !min-h-0 !px-0 !py-0", className)}
+      className={cn("meridian-editor", className)}
       dangerouslySetInnerHTML={{ __html: html }}
     />
   )

@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, useParams } from "react-router-dom"
 import { useProjects, useDeleteProject } from "@/api/hooks/useProjects"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils"
 export function ProjectsPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [search, setSearch] = useState("")
+  const { workspace } = useParams<{ workspace: string }>()
   const { data: projects, isLoading } = useProjects()
   const deleteProject = useDeleteProject()
   const navigate = useNavigate()
@@ -32,18 +33,17 @@ export function ProjectsPage() {
   )
 
   return (
-    <div className="p-6 max-w-[1200px] mx-auto">
-      {/* Page header */}
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-xl font-semibold">Projects</h1>
-        <Button size="sm" onClick={() => setDialogOpen(true)}>
-          <Plus className="h-4 w-4" />
-          Create
-        </Button>
-      </div>
-
+    <div className="p-2">
       {/* Content card */}
       <div className="bg-white dark:bg-card border border-border rounded-xl overflow-hidden">
+        {/* Card header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+          <h1 className="text-base font-semibold">Projects</h1>
+          <Button size="sm" onClick={() => setDialogOpen(true)}>
+            <Plus className="h-4 w-4" />
+            Create
+          </Button>
+        </div>
         {/* Card toolbar */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
           <div className="flex items-center gap-2">
@@ -108,7 +108,7 @@ export function ProjectsPage() {
               <div
                 key={project.id}
                 className="grid grid-cols-[2fr_1fr_1fr_1fr_40px] items-center px-6 py-3 hover:bg-[#f9fafb] dark:hover:bg-muted/30 cursor-pointer transition-colors group"
-                onClick={() => navigate(`/projects/${project.id}/board`)}
+                onClick={() => navigate(`/${workspace}/projects/${project.id}/board`)}
               >
                 {/* Name */}
                 <div className="flex items-center gap-3 min-w-0">
@@ -164,13 +164,13 @@ export function ProjectsPage() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem
-                        onClick={() => navigate(`/projects/${project.id}/board`)}
+                        onClick={() => navigate(`/${workspace}/projects/${project.id}/board`)}
                       >
                         <Layers className="h-4 w-4" />
                         Open board
                       </DropdownMenuItem>
                       <DropdownMenuItem
-                        onClick={() => navigate(`/projects/${project.id}/issues`)}
+                        onClick={() => navigate(`/${workspace}/projects/${project.id}/issues`)}
                       >
                         <GitBranch className="h-4 w-4" />
                         View issues

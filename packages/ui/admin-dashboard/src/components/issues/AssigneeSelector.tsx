@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useUsers } from "@/api/hooks/useUsers"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -24,17 +24,27 @@ function getUserName(firstName: string, lastName: string, email: string) {
 
 export function AssigneeSelector({ value, onChange, disabled }: AssigneeSelectorProps) {
   const [open, setOpen] = useState(false)
+  const [localValue, setLocalValue] = useState<string[]>(value)
   const { data: users } = useUsers()
 
+  // Sync local state when the prop changes from outside (e.g. after API refetch or
+  // when a different issue is opened). Compare sorted join to avoid reacting to
+  // new array references that have the same contents.
+  const valueKey = value.slice().sort().join(",")
+  useEffect(() => {
+    setLocalValue(value)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [valueKey])
+
   const toggle = (userId: string) => {
-    if (value.includes(userId)) {
-      onChange(value.filter((id) => id !== userId))
-    } else {
-      onChange([...value, userId])
-    }
+    const next = localValue.includes(userId)
+      ? localValue.filter((id) => id !== userId)
+      : [...localValue, userId]
+    setLocalValue(next)   // instant visual feedback
+    onChange(next)        // trigger parent (API call or local state update)
   }
 
-  const assignedUsers = (users ?? []).filter((u) => value.includes(u.id))
+  const assignedUsers = (users ?? []).filter((u) => localValue.includes(u.id))
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -89,7 +99,7 @@ export function AssigneeSelector({ value, onChange, disabled }: AssigneeSelector
             <CommandEmpty className="text-xs py-4">No users found.</CommandEmpty>
             <CommandGroup>
               {(users ?? []).map((user) => {
-                const selected = value.includes(user.id)
+                const selected = localValue.includes(user.id)
                 const name = getUserName(user.first_name, user.last_name, user.email)
                 const initials = getInitials(user.first_name, user.last_name, user.email)
                 return (

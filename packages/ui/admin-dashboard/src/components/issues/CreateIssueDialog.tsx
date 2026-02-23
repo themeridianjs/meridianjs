@@ -1,6 +1,8 @@
 import { useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, useParams } from "react-router-dom"
 import { useCreateIssue } from "@/api/hooks/useIssues"
+import { useProjectStatuses } from "@/api/hooks/useProjectStatuses"
+import { useAuth } from "@/stores/auth"
 import { AssigneeSelector } from "@/components/issues/AssigneeSelector"
 import {
   Dialog,
@@ -27,6 +29,8 @@ interface CreateIssueDialogProps {
 
 export function CreateIssueDialog({ open, onClose, projectId, defaultStatus = "backlog" }: CreateIssueDialogProps) {
   const navigate = useNavigate()
+  const { workspace } = useParams<{ workspace: string }>()
+  const { workspace: workspaceRef } = useAuth()
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
   const [status, setStatus] = useState(defaultStatus)
@@ -34,6 +38,12 @@ export function CreateIssueDialog({ open, onClose, projectId, defaultStatus = "b
   const [type, setType] = useState("task")
   const [assigneeIds, setAssigneeIds] = useState<string[]>([])
   const createIssue = useCreateIssue()
+  const { data: projectStatuses } = useProjectStatuses(projectId)
+
+  // Build status options from project statuses; fall back to constants while loading
+  const statusOptions = projectStatuses && projectStatuses.length > 0
+    ? Object.fromEntries(projectStatuses.map((s) => [s.key, s.name]))
+    : ISSUE_STATUS_LABELS
 
   const handleClose = () => {
     setTitle("")
@@ -49,7 +59,7 @@ export function CreateIssueDialog({ open, onClose, projectId, defaultStatus = "b
     e.preventDefault()
     if (!title.trim()) return
     createIssue.mutate(
-      { title: title.trim(), description: description.trim() || undefined, status, priority, type, project_id: projectId, assignee_ids: assigneeIds.length > 0 ? assigneeIds : undefined },
+      { title: title.trim(), description: description.trim() || undefined, status, priority, type, project_id: projectId, workspace_id: workspaceRef!.id, assignee_ids: assigneeIds.length > 0 ? assigneeIds : undefined },
       {
         onSuccess: () => {
           toast.success("Issue created")
@@ -92,7 +102,7 @@ export function CreateIssueDialog({ open, onClose, projectId, defaultStatus = "b
               <Select value={status} onValueChange={setStatus}>
                 <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {Object.entries(ISSUE_STATUS_LABELS).map(([v, l]) => (
+                  {Object.entries(statusOptions).map(([v, l]) => (
                     <SelectItem key={v} value={v} className="text-xs">{l}</SelectItem>
                   ))}
                 </SelectContent>
@@ -133,7 +143,7 @@ export function CreateIssueDialog({ open, onClose, projectId, defaultStatus = "b
               className="text-muted-foreground gap-1.5 justify-start sm:justify-center"
               onClick={() => {
                 handleClose()
-                navigate(`/projects/${projectId}/issues/new`)
+                navigate(`/${workspace}/projects/${projectId}/issues/new`)
               }}
             >
               <ExternalLink className="h-3.5 w-3.5" />

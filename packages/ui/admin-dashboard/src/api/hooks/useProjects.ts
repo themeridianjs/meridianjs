@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { api } from "../client"
+import { useAuth } from "@/stores/auth"
 
 export interface Project {
   id: string
@@ -20,6 +21,7 @@ interface CreateProjectInput {
   name: string
   identifier: string
   description?: string
+  workspace_id: string
 }
 
 export const projectKeys = {
@@ -29,10 +31,15 @@ export const projectKeys = {
 }
 
 export function useProjects() {
+  const { workspace } = useAuth()
   return useQuery({
-    queryKey: projectKeys.list(),
-    queryFn: () => api.get<ProjectsResponse>("/admin/projects"),
+    queryKey: [...projectKeys.list(), workspace?.id],
+    queryFn: () => {
+      const qs = workspace?.id ? `?workspace_id=${workspace.id}` : ""
+      return api.get<ProjectsResponse>(`/admin/projects${qs}`)
+    },
     select: (data) => data.projects,
+    enabled: !!workspace?.id,
   })
 }
 

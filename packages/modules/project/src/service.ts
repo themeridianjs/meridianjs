@@ -3,11 +3,13 @@ import type { MeridianContainer } from "@meridian/types"
 import ProjectModel from "./models/project.js"
 import LabelModel from "./models/label.js"
 import MilestoneModel from "./models/milestone.js"
+import ProjectStatusModel from "./models/project-status.js"
 
 export class ProjectModuleService extends MeridianService({
   Project: ProjectModel,
   Label: LabelModel,
   Milestone: MilestoneModel,
+  ProjectStatus: ProjectStatusModel,
 }) {
   private readonly container: MeridianContainer
 
@@ -48,5 +50,21 @@ export class ProjectModuleService extends MeridianService({
   async listMilestonesByProject(projectId: string): Promise<any[]> {
     const repo = this.container.resolve<any>("milestoneRepository")
     return repo.find({ project_id: projectId })
+  }
+
+  /** List all statuses for a given project, ordered by position. */
+  async listStatusesByProject(projectId: string): Promise<any[]> {
+    const repo = this.container.resolve<any>("projectStatusRepository")
+    return repo.find({ project_id: projectId }, { orderBy: { position: "ASC" } })
+  }
+
+  /** Update position field for each status to match the provided orderedIds index. */
+  async reorderStatuses(projectId: string, orderedIds: string[]): Promise<void> {
+    const repo = this.container.resolve<any>("projectStatusRepository")
+    for (let i = 0; i < orderedIds.length; i++) {
+      const entity = await repo.findOneOrFail({ id: orderedIds[i], project_id: projectId })
+      Object.assign(entity as object, { position: i })
+    }
+    await repo.flush()
   }
 }

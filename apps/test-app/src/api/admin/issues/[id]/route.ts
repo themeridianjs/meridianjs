@@ -72,6 +72,8 @@ export const PUT = async (req: any, res: Response) => {
   }
 
   // Plain field updates (title, description, priority, etc.) — direct service call
+  // Fetch current state first so we can record `from` values in the activity log
+  const currentIssue = await issueService.retrieveIssue(req.params.id)
   const issue = await issueService.updateIssue(req.params.id, updates)
 
   await activityService.recordActivity({
@@ -80,7 +82,9 @@ export const PUT = async (req: any, res: Response) => {
     actor_id: req.user?.id ?? "system",
     action: "updated",
     workspace_id: issue.workspace_id,
-    changes: Object.fromEntries(Object.keys(updates).map(k => [k, { to: updates[k] }])),
+    changes: Object.fromEntries(
+      Object.keys(updates).map(k => [k, { from: (currentIssue as any)[k], to: updates[k] }])
+    ),
   }).catch(() => {})
 
   res.json({ issue })

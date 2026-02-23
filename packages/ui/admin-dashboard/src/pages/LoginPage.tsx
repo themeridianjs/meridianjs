@@ -18,7 +18,7 @@ export function LoginPage() {
     login.mutate(
       { email, password },
       {
-        onSuccess: () => navigate("/projects"),
+        onSuccess: () => navigate("/"),
         onError: (err) => toast.error(err.message ?? "Invalid email or password"),
       }
     )

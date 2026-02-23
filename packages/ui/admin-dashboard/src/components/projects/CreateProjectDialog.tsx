@@ -1,5 +1,15 @@
 import { useState } from "react"
 import { useCreateProject } from "@/api/hooks/useProjects"
+import { useAuth } from "@/stores/auth"
+import {
+  DndContext,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core"
+import { SortableContext, arrayMove, horizontalListSortingStrategy, useSortable } from "@dnd-kit/sortable"
+import { CSS } from "@dnd-kit/utilities"
 import {
   Dialog,
   DialogContent,
@@ -12,6 +22,68 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { toast } from "sonner"
+import { ChevronDown, ChevronRight, X, Plus, GripVertical } from "lucide-react"
+import { cn } from "@/lib/utils"
+
+// ── Types ──────────────────────────────────────────────────────────────────────
+
+interface StatusChip {
+  key: string
+  name: string
+  color: string
+  category: "backlog" | "unstarted" | "started" | "completed" | "cancelled"
+  position: number
+}
+
+const DEFAULT_STATUSES: StatusChip[] = [
+  { name: "Backlog",     key: "backlog",      color: "#94a3b8", category: "backlog",    position: 0 },
+  { name: "Todo",        key: "todo",         color: "#64748b", category: "unstarted",  position: 1 },
+  { name: "In Progress", key: "in_progress",  color: "#6366f1", category: "started",    position: 2 },
+  { name: "In Review",   key: "in_review",    color: "#f59e0b", category: "started",    position: 3 },
+  { name: "Done",        key: "done",         color: "#10b981", category: "completed",  position: 4 },
+  { name: "Cancelled",   key: "cancelled",    color: "#9ca3af", category: "cancelled",  position: 5 },
+]
+
+const PRESET_COLORS = ["#94a3b8", "#64748b", "#6366f1", "#f59e0b", "#10b981", "#ef4444", "#3b82f6", "#8b5cf6"]
+
+function toKey(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "")
+}
+
+// ── Sortable chip ──────────────────────────────────────────────────────────────
+
+function SortableChip({ chip, onRemove }: { chip: StatusChip; onRemove: () => void }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: chip.key })
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={cn(
+        "flex items-center gap-1 pl-1 pr-1.5 py-0.5 rounded-full border text-xs font-medium transition-opacity",
+        isDragging ? "opacity-50" : "opacity-100"
+      )}
+    >
+      <span
+        {...attributes}
+        {...listeners}
+        className="text-muted-foreground/50 hover:text-muted-foreground cursor-grab touch-none"
+      >
+        <GripVertical className="h-3 w-3" />
+      </span>
+      <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: chip.color }} />
+      <span className="text-[11px]">{chip.name}</span>
+      <button
+        type="button"
+        onClick={onRemove}
+        className="ml-0.5 text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+      >
+        <X className="h-3 w-3" />
+      </button>
+    </div>
+  )
+}
+
+// ── Main dialog ────────────────────────────────────────────────────────────────
 
 interface CreateProjectDialogProps {
   open: boolean
@@ -23,12 +95,18 @@ export function CreateProjectDialog({ open, onClose }: CreateProjectDialogProps)
   const [identifier, setIdentifier] = useState("")
   const [description, setDescription] = useState("")
   const [identifierTouched, setIdentifierTouched] = useState(false)
+  const [statusesExpanded, setStatusesExpanded] = useState(false)
+  const [statuses, setStatuses] = useState<StatusChip[]>(DEFAULT_STATUSES)
+  const [newStatusName, setNewStatusName] = useState("")
+  const [newStatusColor, setNewStatusColor] = useState(PRESET_COLORS[2])
+  const { workspace } = useAuth()
   const createProject = useCreateProject()
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
 
   const handleNameChange = (v: string) => {
     setName(v)
     if (!identifierTouched) {
-      // Auto-generate identifier from name: take first letters of each word, uppercase, max 5 chars
       const auto = v
         .split(/\s+/)
         .filter(Boolean)
@@ -45,14 +123,48 @@ export function CreateProjectDialog({ open, onClose }: CreateProjectDialogProps)
     setIdentifier("")
     setDescription("")
     setIdentifierTouched(false)
+    setStatusesExpanded(false)
+    setStatuses(DEFAULT_STATUSES)
+    setNewStatusName("")
+    setNewStatusColor(PRESET_COLORS[2])
     onClose()
+  }
+
+  const handleAddStatus = () => {
+    if (!newStatusName.trim()) return
+    const key = toKey(newStatusName.trim())
+    if (statuses.some((s) => s.key === key)) {
+      toast.error("A status with this name already exists")
+      return
+    }
+    setStatuses((prev) => [
+      ...prev,
+      { name: newStatusName.trim(), key, color: newStatusColor, category: "started", position: prev.length },
+    ])
+    setNewStatusName("")
+  }
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+    setStatuses((prev) => {
+      const oldIndex = prev.findIndex((s) => s.key === active.id)
+      const newIndex = prev.findIndex((s) => s.key === over.id)
+      return arrayMove(prev, oldIndex, newIndex).map((s, i) => ({ ...s, position: i }))
+    })
   }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!name.trim() || !identifier.trim()) return
     createProject.mutate(
-      { name: name.trim(), identifier: identifier.trim().toUpperCase(), description: description.trim() || undefined },
+      {
+        name: name.trim(),
+        identifier: identifier.trim().toUpperCase(),
+        description: description.trim() || undefined,
+        workspace_id: workspace!.id,
+        initial_statuses: statuses,
+      } as any,
       {
         onSuccess: () => {
           toast.success("Project created")
@@ -116,6 +228,78 @@ export function CreateProjectDialog({ open, onClose }: CreateProjectDialogProps)
               className="min-h-[80px]"
             />
           </div>
+
+          {/* Statuses section */}
+          <div className="border border-border rounded-lg overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setStatusesExpanded(!statusesExpanded)}
+              className="w-full flex items-center justify-between px-3 py-2.5 text-xs font-medium hover:bg-muted/40 transition-colors"
+            >
+              <span className="flex items-center gap-1.5">
+                {statusesExpanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                Statuses
+                <span className="text-muted-foreground font-normal">({statuses.length})</span>
+              </span>
+            </button>
+
+            {statusesExpanded && (
+              <div className="px-3 pb-3 border-t border-border space-y-3 pt-3">
+                {/* Chips */}
+                <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+                  <SortableContext items={statuses.map((s) => s.key)} strategy={horizontalListSortingStrategy}>
+                    <div className="flex flex-wrap gap-1.5">
+                      {statuses.map((s) => (
+                        <SortableChip
+                          key={s.key}
+                          chip={s}
+                          onRemove={() => setStatuses((prev) => prev.filter((x) => x.key !== s.key).map((x, i) => ({ ...x, position: i })))}
+                        />
+                      ))}
+                    </div>
+                  </SortableContext>
+                </DndContext>
+
+                {/* Add new status inline */}
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {PRESET_COLORS.map((c) => (
+                      <button
+                        key={c}
+                        type="button"
+                        onClick={() => setNewStatusColor(c)}
+                        className={cn(
+                          "h-4 w-4 rounded-full border-2 transition-transform hover:scale-110",
+                          newStatusColor === c ? "border-foreground scale-110" : "border-transparent"
+                        )}
+                        style={{ backgroundColor: c }}
+                      />
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-1.5 flex-1">
+                    <Input
+                      placeholder="Status name…"
+                      value={newStatusName}
+                      onChange={(e) => setNewStatusName(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAddStatus() } }}
+                      className="h-7 text-xs flex-1"
+                    />
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7 shrink-0"
+                      onClick={handleAddStatus}
+                      disabled={!newStatusName.trim()}
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={handleClose}>
               Cancel

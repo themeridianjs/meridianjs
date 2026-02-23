@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/command"
 import { useCommandPalette } from "@/stores/command-palette"
 import { useProjects } from "@/api/hooks/useProjects"
+import { useAuth } from "@/stores/auth"
 import {
   LayoutDashboard,
   Layers,
@@ -22,6 +23,8 @@ export function CommandPalette() {
   const { open, setOpen } = useCommandPalette()
   const navigate = useNavigate()
   const { data: projects } = useProjects()
+  const { workspace } = useAuth()
+  const ws = workspace?.slug ?? ""
 
   const runCommand = (fn: () => void) => {
     setOpen(false)
@@ -36,15 +39,15 @@ export function CommandPalette() {
 
         {/* Navigation */}
         <CommandGroup heading="Navigation">
-          <CommandItem onSelect={() => runCommand(() => navigate("/projects"))}>
+          <CommandItem onSelect={() => runCommand(() => navigate(`/${ws}/projects`))}>
             <LayoutDashboard className="text-muted-foreground" />
             <span>Projects</span>
           </CommandItem>
-          <CommandItem onSelect={() => runCommand(() => navigate("/notifications"))}>
+          <CommandItem onSelect={() => runCommand(() => navigate(`/${ws}/notifications`))}>
             <Bell className="text-muted-foreground" />
             <span>Notifications</span>
           </CommandItem>
-          <CommandItem onSelect={() => runCommand(() => navigate("/settings"))}>
+          <CommandItem onSelect={() => runCommand(() => navigate(`/${ws}/settings`))}>
             <Settings className="text-muted-foreground" />
             <span>Settings</span>
           </CommandItem>
@@ -59,7 +62,7 @@ export function CommandPalette() {
                 <CommandItem
                   key={`${project.id}-board`}
                   value={`${project.name} board`}
-                  onSelect={() => runCommand(() => navigate(`/projects/${project.id}/board`))}
+                  onSelect={() => runCommand(() => navigate(`/${ws}/projects/${project.id}/board`))}
                 >
                   <Layers className="text-muted-foreground" />
                   <div className="flex items-center gap-2 min-w-0">
@@ -75,7 +78,7 @@ export function CommandPalette() {
                 <CommandItem
                   key={`${project.id}-issues`}
                   value={`${project.name} issues`}
-                  onSelect={() => runCommand(() => navigate(`/projects/${project.id}/issues`))}
+                  onSelect={() => runCommand(() => navigate(`/${ws}/projects/${project.id}/issues`))}
                 >
                   <GitBranch className="text-muted-foreground" />
                   <div className="flex items-center gap-2 min-w-0">

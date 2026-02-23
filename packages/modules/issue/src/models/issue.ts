@@ -10,7 +10,7 @@ const Issue = model.define("issue", {
   description: model.text().nullable(),
   type: model.enum(["bug", "feature", "task", "epic", "story"]).default("task"),
   priority: model.enum(["urgent", "high", "medium", "low", "none"]).default("none"),
-  status: model.enum(["backlog", "todo", "in_progress", "in_review", "done", "cancelled"]).default("backlog"),
+  status: model.text().default("backlog"),
   /** Denormalized — not a FK */
   project_id: model.text(),
   workspace_id: model.text(),

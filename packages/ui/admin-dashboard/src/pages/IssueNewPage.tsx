@@ -2,6 +2,8 @@ import { useState } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { useCreateIssue } from "@/api/hooks/useIssues"
 import { useProject } from "@/api/hooks/useProjects"
+import { useAuth } from "@/stores/auth"
+import { useProjectStatuses } from "@/api/hooks/useProjectStatuses"
 import { AssigneeSelector } from "@/components/issues/AssigneeSelector"
 import { RichTextEditor } from "@/components/ui/rich-text-editor"
 import { Button } from "@/components/ui/button"
@@ -10,7 +12,6 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select"
 import { ISSUE_STATUS_LABELS, ISSUE_PRIORITY_LABELS, ISSUE_TYPE_LABELS } from "@/lib/constants"
 import {
@@ -76,7 +77,7 @@ function IconSelect({
       <SelectTrigger className="h-7 text-xs border-0 bg-transparent px-0 gap-1.5 focus:ring-0 hover:bg-accent rounded-md pl-1">
         <div className="flex items-center gap-1.5">
           {icons[value] ?? <HelpCircle className="h-3 w-3 text-muted-foreground" />}
-          <SelectValue placeholder={placeholder} />
+          <span>{options[value] ?? placeholder ?? ""}</span>
         </div>
       </SelectTrigger>
       <SelectContent>
@@ -96,8 +97,9 @@ function IconSelect({
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export function IssueNewPage() {
-  const { projectId } = useParams<{ projectId: string }>()
+  const { workspace, projectId } = useParams<{ workspace: string; projectId: string }>()
   const navigate = useNavigate()
+  const { workspace: workspaceRef } = useAuth()
 
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
@@ -108,6 +110,22 @@ export function IssueNewPage() {
 
   const { data: project } = useProject(projectId ?? "")
   const createIssue = useCreateIssue()
+  const { data: projectStatuses } = useProjectStatuses(projectId)
+
+  const statusOptions = projectStatuses && projectStatuses.length > 0
+    ? Object.fromEntries(projectStatuses.map((s) => [s.key, s.name]))
+    : ISSUE_STATUS_LABELS
+
+  const statusIcons: Record<string, React.ReactNode> = projectStatuses && projectStatuses.length > 0
+    ? Object.fromEntries(projectStatuses.map((s) => [
+        s.key,
+        s.category === "completed"
+          ? <CheckCircle2 className="h-3 w-3" style={{ color: s.color }} />
+          : s.category === "started"
+          ? <Clock className="h-3 w-3" style={{ color: s.color }} />
+          : <Circle className="h-3 w-3" style={{ color: s.color }} />,
+      ]))
+    : STATUS_ICONS
 
   if (!projectId) return null
 
@@ -124,12 +142,13 @@ export function IssueNewPage() {
         priority,
         type,
         project_id: projectId,
+        workspace_id: workspaceRef!.id,
         assignee_ids: assigneeIds.length > 0 ? assigneeIds : undefined,
       },
       {
         onSuccess: (data) => {
           toast.success("Issue created")
-          navigate(`/projects/${projectId}/issues/${data.issue.id}`, { replace: true })
+          navigate(`/${workspace}/projects/${projectId}/issues/${data.issue.id}`, { replace: true })
         },
         onError: (err) => toast.error((err as Error).message ?? "Failed to create issue"),
       }
@@ -144,7 +163,7 @@ export function IssueNewPage() {
           variant="ghost"
           size="sm"
           className="h-7 gap-1 text-muted-foreground hover:text-foreground px-2"
-          onClick={() => navigate(`/projects/${projectId}/issues`)}
+          onClick={() => navigate(`/${workspace}/projects/${projectId}/issues`)}
         >
           <ChevronLeft className="h-3.5 w-3.5" />
           {project?.name ?? "Issues"}
@@ -154,7 +173,7 @@ export function IssueNewPage() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => navigate(`/projects/${projectId}/issues`)}
+            onClick={() => navigate(`/${workspace}/projects/${projectId}/issues`)}
           >
             Discard
           </Button>
@@ -170,7 +189,7 @@ export function IssueNewPage() {
       </div>
 
       {/* ── Content ──────────────────────────────────────────────────────────── */}
-      <div className="max-w-[1060px] mx-auto px-6 py-8">
+      <div className="px-2 py-2">
         <div className="grid grid-cols-[1fr_256px] gap-5 items-start">
 
           {/* ── Left — title + editor ───────────────────────────────────────── */}
@@ -222,8 +241,8 @@ export function IssueNewPage() {
                 <IconSelect
                   value={status}
                   onValueChange={setStatus}
-                  options={ISSUE_STATUS_LABELS}
-                  icons={STATUS_ICONS}
+                  options={statusOptions}
+                  icons={statusIcons}
                 />
               </PropertyRow>
 
