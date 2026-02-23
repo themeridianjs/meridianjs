@@ -12,6 +12,9 @@ export const GET = async (req: any, res: Response) => {
   // sprint_id=<id> → issues in that sprint; sprint_id=none → unscheduled issues
   if (req.query.sprint_id === "none") filters.sprint_id = null
   else if (req.query.sprint_id) filters.sprint_id = req.query.sprint_id as string
+  // task_list_id=<id> → issues in that list; task_list_id=none → no list
+  if (req.query.task_list_id === "none") filters.task_list_id = null
+  else if (req.query.task_list_id) filters.task_list_id = req.query.task_list_id as string
 
   const [issues, count] = await issueService.listAndCountIssues(filters, { limit, offset })
   res.json({ issues, count, limit, offset })
@@ -22,7 +25,7 @@ export const POST = async (req: any, res: Response) => {
     title, project_id, workspace_id,
     description, type, priority, status,
     assignee_ids, reporter_id, parent_id,
-    due_date, estimate, sprint_id,
+    due_date, estimate, sprint_id, task_list_id,
   } = req.body
 
   if (!title || !project_id || !workspace_id) {
@@ -45,6 +48,7 @@ export const POST = async (req: any, res: Response) => {
       due_date: due_date ? new Date(due_date) : undefined,
       estimate: estimate ?? null,
       sprint_id: sprint_id ?? null,
+      task_list_id: task_list_id ?? null,
       actor_id: req.user?.id ?? null,
     },
   })

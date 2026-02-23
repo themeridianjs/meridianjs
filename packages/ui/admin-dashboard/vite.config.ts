@@ -46,6 +46,7 @@ export default defineConfig({
     proxy: {
       "/auth": "http://localhost:9000",
       "/admin": "http://localhost:9000",
+      "/uploads": "http://localhost:9000",
     },
   },
 })

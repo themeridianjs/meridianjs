@@ -1,12 +1,11 @@
 import { useState } from "react"
 import { format } from "date-fns"
-import { useIssueComments, useIssueActivities, useCreateComment } from "@/api/hooks/useIssues"
+import { useIssueComments, useIssueActivities } from "@/api/hooks/useIssues"
 import type { Activity } from "@/api/hooks/useIssues"
+import { useAttachments } from "@/api/hooks/useAttachments"
 import { useUserMap } from "@/api/hooks/useUsers"
 import { useAuth } from "@/stores/auth"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   ISSUE_STATUS_LABELS,
@@ -14,12 +13,13 @@ import {
   ISSUE_TYPE_LABELS,
 } from "@/lib/constants"
 import {
-  Plus, Pencil, UserPlus, UserMinus, ArrowRight, Send,
+  Plus, Pencil, UserPlus, UserMinus, ArrowRight,
 } from "lucide-react"
-import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { IssueAttachments } from "@/components/issues/IssueAttachments"
 import { IssueTimeLog } from "@/components/issues/IssueTimeLog"
+import { CommentInput } from "@/components/issues/CommentInput"
+import { InlineAttachment } from "@/components/issues/AttachmentViewer"
 
 // ── Activity helpers ───────────────────────────────────────────────────────────
 
@@ -58,8 +58,7 @@ function renderActivityDescription(
     const removed = fromIds.filter(id => !toIds.includes(id))
     const resolve = (id: string) => userMap?.get(id)?.name ?? id.slice(0, 8) + "…"
 
-    if (added.length > 0 && removed.length > 0)
-      return <>updated assignees</>
+    if (added.length > 0 && removed.length > 0) return <>updated assignees</>
     if (added.length > 0)
       return <>assigned <strong className="font-medium text-foreground">{added.map(resolve).join(", ")}</strong></>
     if (removed.length > 0)
@@ -72,9 +71,7 @@ function renderActivityDescription(
     for (const [field, change] of Object.entries(changes)) {
       const { from, to } = change as { from: unknown; to: unknown }
       if (field === "title" || field === "description") {
-        parts.push(
-          <span key={field}>updated <strong className="font-medium text-foreground">{field}</strong></span>
-        )
+        parts.push(<span key={field}>updated <strong className="font-medium text-foreground">{field}</strong></span>)
       } else if (field === "priority") {
         parts.push(
           <span key={field}>
@@ -92,9 +89,7 @@ function renderActivityDescription(
           </span>
         )
       } else {
-        parts.push(
-          <span key={field}>updated <strong className="font-medium text-foreground">{field.replace(/_/g, " ")}</strong></span>
-        )
+        parts.push(<span key={field}>updated <strong className="font-medium text-foreground">{field.replace(/_/g, " ")}</strong></span>)
       }
     }
     if (parts.length === 0) return "made changes"
@@ -117,13 +112,9 @@ export type ActivityTab = "comments" | "activity" | "attachments" | "time"
 interface IssueActivityProps {
   issueId: string
   className?: string
-  /** Show only the latest N items with a "View all" button */
   compact?: boolean
-  /** Called when the user clicks "View all" */
   onViewMore?: () => void
-  /** Called whenever the active tab changes */
   onTabChange?: (tab: ActivityTab) => void
-  /** Hide the built-in comment input (e.g. when parent renders a sticky one) */
   hideCommentInput?: boolean
 }
 
@@ -135,7 +126,6 @@ export function IssueActivity({
   onTabChange,
   hideCommentInput,
 }: IssueActivityProps) {
-  const [comment, setComment] = useState("")
   const [activeTab, setActiveTab] = useState<ActivityTab>("comments")
 
   const handleTabChange = (tab: ActivityTab) => {
@@ -147,7 +137,8 @@ export function IssueActivity({
   const { data: userMap } = useUserMap()
   const { data: comments, isLoading: loadingComments } = useIssueComments(issueId)
   const { data: activities, isLoading: loadingActivities } = useIssueActivities(issueId)
-  const createComment = useCreateComment(issueId)
+  // All issue attachments — used to filter inline per-comment attachments
+  const { data: allAttachments } = useAttachments(issueId)
 
   const getCommentAuthor = (authorId: string) => {
     if (currentUser && authorId === currentUser.id) {
@@ -158,17 +149,6 @@ export function IssueActivity({
       return { name, initials }
     }
     return userMap?.get(authorId) ?? { name: "Unknown", initials: "?" }
-  }
-
-  const handleSubmitComment = () => {
-    if (!comment.trim()) return
-    createComment.mutate(comment.trim(), {
-      onSuccess: () => {
-        setComment("")
-        toast.success("Comment added")
-      },
-      onError: () => toast.error("Failed to add comment"),
-    })
   }
 
   return (
@@ -183,8 +163,7 @@ export function IssueActivity({
           const label =
             tab === "comments" ? "Comments" :
             tab === "activity" ? "Activity" :
-            tab === "attachments" ? "Attachments" :
-            "Time"
+            tab === "attachments" ? "Attachments" : "Time"
           return (
             <button
               key={tab}
@@ -219,6 +198,9 @@ export function IssueActivity({
             ) : comments && comments.length > 0 ? (
               (compact ? comments.slice(-5) : comments).map((c) => {
                 const author = getCommentAuthor(c.author_id)
+                const commentAttachments = (allAttachments ?? []).filter(
+                  (a) => a.comment_id === c.id
+                )
                 return (
                   <div key={c.id} className="flex gap-3">
                     <Avatar className="h-7 w-7 mt-0.5 shrink-0">
@@ -233,9 +215,20 @@ export function IssueActivity({
                           {format(new Date(c.created_at), "MMM d, h:mm a")}
                         </span>
                       </div>
-                      <p className="text-xs text-foreground leading-relaxed whitespace-pre-wrap">
-                        {c.body}
-                      </p>
+                      {/* Comment body — trim the placeholder space used for file-only comments */}
+                      {c.body.trim() && (
+                        <p className="text-xs text-foreground leading-relaxed whitespace-pre-wrap">
+                          {c.body}
+                        </p>
+                      )}
+                      {/* Inline attachments */}
+                      {commentAttachments.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {commentAttachments.map((a) => (
+                            <InlineAttachment key={a.id} attachment={a} />
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )
@@ -255,39 +248,7 @@ export function IssueActivity({
           )}
 
           {!hideCommentInput && (
-            <>
-              <div className="flex gap-3 items-end">
-                <Avatar className="h-7 w-7 shrink-0 mb-1">
-                  <AvatarFallback className="text-[11px] bg-muted text-muted-foreground">
-                    {currentUser
-                      ? `${currentUser.first_name?.[0] ?? ""}${currentUser.last_name?.[0] ?? ""}`.toUpperCase()
-                      : "?"}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 flex gap-2 items-end">
-                  <Textarea
-                    placeholder="Leave a comment..."
-                    value={comment}
-                    onChange={(e) => setComment(e.target.value)}
-                    className="min-h-[72px] text-sm resize-none bg-transparent"
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) handleSubmitComment()
-                    }}
-                  />
-                  <Button
-                    size="icon"
-                    className="h-8 w-8 shrink-0"
-                    onClick={handleSubmitComment}
-                    disabled={!comment.trim() || createComment.isPending}
-                  >
-                    <Send className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              </div>
-              <p className="text-[11px] text-muted-foreground/50 mt-1.5 pl-10">
-                Press <kbd className="px-1 py-0.5 rounded border border-border bg-muted font-mono text-[10px]">⌘ Enter</kbd> to submit
-              </p>
-            </>
+            <CommentInput issueId={issueId} />
           )}
         </div>
       )}
@@ -306,53 +267,54 @@ export function IssueActivity({
             </div>
           ) : activities && activities.length > 0 ? (
             <>
-            <div className="relative">
-              <div className="absolute left-[11px] top-2 bottom-2 w-px bg-border" />
-              <div className="space-y-0">
-                {(compact ? activities.slice(-5) : activities).map((act, idx, arr) => {
-                  const cfg = ACTIVITY_ICONS[act.action] ?? ACTIVITY_ICONS.updated
-                  const Icon = cfg.icon
-                  const actorName = userMap?.get(act.actor_id)?.name ?? "System"
-                  const isLast = idx === arr.length - 1
-                  return (
-                    <div key={act.id} className={cn("relative flex gap-3", isLast ? "pb-0" : "pb-4")}>
-                      <div className={cn(
-                        "relative z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full mt-0.5",
-                        cfg.bg
-                      )}>
-                        <Icon className={cn("h-3 w-3", cfg.color)} />
+              <div className="relative">
+                <div className="absolute left-[11px] top-2 bottom-2 w-px bg-border" />
+                <div className="space-y-0">
+                  {(compact ? activities.slice(-5) : activities).map((act, idx, arr) => {
+                    const cfg = ACTIVITY_ICONS[act.action] ?? ACTIVITY_ICONS.updated
+                    const Icon = cfg.icon
+                    const actorName = userMap?.get(act.actor_id)?.name ?? "System"
+                    const isLast = idx === arr.length - 1
+                    return (
+                      <div key={act.id} className={cn("relative flex gap-3", isLast ? "pb-0" : "pb-4")}>
+                        <div className={cn(
+                          "relative z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full mt-0.5",
+                          cfg.bg
+                        )}>
+                          <Icon className={cn("h-3 w-3", cfg.color)} />
+                        </div>
+                        <div className="flex-1 min-w-0 pt-0.5">
+                          <p className="text-xs text-foreground leading-relaxed">
+                            <span className="font-medium">{actorName}</span>
+                            {" "}
+                            <span className="text-muted-foreground">
+                              {renderActivityDescription(act, userMap)}
+                            </span>
+                          </p>
+                          <p className="text-[11px] text-muted-foreground/60 mt-0.5">
+                            {format(new Date(act.created_at), "MMM d, yyyy · h:mm a")}
+                          </p>
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0 pt-0.5">
-                        <p className="text-xs text-foreground leading-relaxed">
-                          <span className="font-medium">{actorName}</span>
-                          {" "}
-                          <span className="text-muted-foreground">
-                            {renderActivityDescription(act, userMap)}
-                          </span>
-                        </p>
-                        <p className="text-[11px] text-muted-foreground/60 mt-0.5">
-                          {format(new Date(act.created_at), "MMM d, yyyy · h:mm a")}
-                        </p>
-                      </div>
-                    </div>
-                  )
-                })}
+                    )
+                  })}
+                </div>
               </div>
-            </div>
-            {compact && activities.length > 5 && onViewMore && (
-              <button
-                onClick={onViewMore}
-                className="text-xs text-muted-foreground hover:text-foreground mt-3 underline underline-offset-2"
-              >
-                View all {activities.length} events
-              </button>
-            )}
+              {compact && activities.length > 5 && onViewMore && (
+                <button
+                  onClick={onViewMore}
+                  className="text-xs text-muted-foreground hover:text-foreground mt-3 underline underline-offset-2"
+                >
+                  View all {activities.length} events
+                </button>
+              )}
             </>
           ) : (
             <p className="text-sm text-muted-foreground/50 py-2">No activity yet.</p>
           )}
         </div>
       )}
+
       {/* ── Attachments tab ───────────────────────────────────────────────────── */}
       {activeTab === "attachments" && (
         <IssueAttachments issueId={issueId} />

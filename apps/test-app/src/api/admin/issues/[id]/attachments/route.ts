@@ -35,8 +35,11 @@ export const POST = async (req: any, res: Response) => {
     return
   }
 
+  const comment_id: string | null = req.body?.comment_id || null
+
   const attachment = await issueService.createAttachment({
     issue_id: req.params.id,
+    comment_id,
     filename: req.file.filename,
     original_name: req.file.originalname,
     mime_type: req.file.mimetype,

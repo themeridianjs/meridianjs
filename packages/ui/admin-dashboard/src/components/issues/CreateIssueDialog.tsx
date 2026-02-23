@@ -4,6 +4,7 @@ import { format } from "date-fns"
 import { useCreateIssue } from "@/api/hooks/useIssues"
 import { useProjectStatuses } from "@/api/hooks/useProjectStatuses"
 import { useSprints, type Sprint } from "@/api/hooks/useSprints"
+import { useTaskLists } from "@/api/hooks/useTaskLists"
 import { useAuth } from "@/stores/auth"
 import { AssigneeSelector } from "@/components/issues/AssigneeSelector"
 import {
@@ -34,9 +35,11 @@ interface CreateIssueDialogProps {
   onClose: () => void
   projectId: string
   defaultStatus?: string
+  defaultTaskListId?: string | null
+  defaultParentId?: string | null
 }
 
-export function CreateIssueDialog({ open, onClose, projectId, defaultStatus = "backlog" }: CreateIssueDialogProps) {
+export function CreateIssueDialog({ open, onClose, projectId, defaultStatus = "backlog", defaultTaskListId, defaultParentId }: CreateIssueDialogProps) {
   const navigate = useNavigate()
   const { workspace, projectKey } = useParams<{ workspace: string; projectKey: string }>()
   const { workspace: workspaceRef } = useAuth()
@@ -47,9 +50,11 @@ export function CreateIssueDialog({ open, onClose, projectId, defaultStatus = "b
   const [type, setType] = useState("task")
   const [assigneeIds, setAssigneeIds] = useState<string[]>([])
   const [sprintId, setSprintId] = useState<string>("")
+  const [taskListId, setTaskListId] = useState<string>(defaultTaskListId ?? "")
   const createIssue = useCreateIssue()
   const { data: projectStatuses } = useProjectStatuses(projectId)
   const { data: sprints } = useSprints(projectId || undefined)
+  const { data: taskLists } = useTaskLists(projectId || undefined)
   const activeSprints = (sprints ?? []).filter((s) => s.status !== "completed")
 
   // Build status options from project statuses; fall back to constants while loading
@@ -65,6 +70,7 @@ export function CreateIssueDialog({ open, onClose, projectId, defaultStatus = "b
     setType("task")
     setAssigneeIds([])
     setSprintId("")
+    setTaskListId(defaultTaskListId ?? "")
     onClose()
   }
 
@@ -72,7 +78,7 @@ export function CreateIssueDialog({ open, onClose, projectId, defaultStatus = "b
     e.preventDefault()
     if (!title.trim()) return
     createIssue.mutate(
-      { title: title.trim(), description: description.trim() || undefined, status, priority, type, project_id: projectId, workspace_id: workspaceRef!.id, assignee_ids: assigneeIds.length > 0 ? assigneeIds : undefined, sprint_id: sprintId || null },
+      { title: title.trim(), description: description.trim() || undefined, status, priority, type, project_id: projectId, workspace_id: workspaceRef!.id, assignee_ids: assigneeIds.length > 0 ? assigneeIds : undefined, sprint_id: sprintId || null, task_list_id: taskListId || null, parent_id: defaultParentId || null },
       {
         onSuccess: () => {
           toast.success("Issue created")
@@ -144,6 +150,29 @@ export function CreateIssueDialog({ open, onClose, projectId, defaultStatus = "b
               </Select>
             </div>
           </div>
+          {defaultParentId && (
+            <div className="rounded-md bg-muted/50 border border-border px-3 py-2 text-xs text-muted-foreground">
+              Will be created as a child issue
+            </div>
+          )}
+          {(taskLists ?? []).length > 0 && !defaultParentId && (
+            <div className="space-y-1.5">
+              <Label>List <span className="text-xs text-muted-foreground font-normal">Optional</span></Label>
+              <Select value={taskListId} onValueChange={setTaskListId}>
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue placeholder="No list" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="" className="text-xs">
+                    <span className="text-muted-foreground">No list</span>
+                  </SelectItem>
+                  {(taskLists ?? []).map((tl) => (
+                    <SelectItem key={tl.id} value={tl.id} className="text-xs">{tl.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           {activeSprints.length > 0 && (
             <div className="space-y-1.5">
               <Label>Sprint <span className="text-xs text-muted-foreground font-normal">Optional</span></Label>

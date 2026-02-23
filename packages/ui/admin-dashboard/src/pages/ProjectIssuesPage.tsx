@@ -4,6 +4,7 @@ import { useProjectByKey } from "@/api/hooks/useProjects"
 import { useIssues, useUpdateIssue, type Issue } from "@/api/hooks/useIssues"
 import { useProjectStatuses, type ProjectStatus } from "@/api/hooks/useProjectStatuses"
 import { useSprints, type Sprint } from "@/api/hooks/useSprints"
+import { useTaskLists, useCreateTaskList, useUpdateTaskList, useDeleteTaskList, type TaskList } from "@/api/hooks/useTaskLists"
 import { IssueDetail } from "@/components/issues/IssueDetail"
 import { CreateIssueDialog } from "@/components/issues/CreateIssueDialog"
 import { AssigneeSelector } from "@/components/issues/AssigneeSelector"
@@ -20,6 +21,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import {
   ISSUE_STATUS_LABELS,
   ISSUE_PRIORITY_LABELS,
@@ -39,9 +46,16 @@ import {
   Calendar as CalendarIcon,
   X,
   Layers,
+  ChevronRight,
+  ChevronDown,
+  MoreHorizontal,
+  Pencil,
+  Trash2,
+  ListTree,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { format } from "date-fns"
+import { toast } from "sonner"
 
 // ─── PriorityIcon ─────────────────────────────────────────────────────────────
 
@@ -68,6 +82,9 @@ interface IssueRowProps {
   workspace: string
   projectKey: string
   onOpen: (issue: Issue) => void
+  isChild?: boolean
+  children?: Issue[]
+  onAddChild?: (parentId: string) => void
 }
 
 function IssueRow({
@@ -80,9 +97,13 @@ function IssueRow({
   workspace,
   projectKey,
   onOpen,
+  isChild = false,
+  children = [],
+  onAddChild,
 }: IssueRowProps) {
   const navigate = useNavigate()
   const [openPopover, setOpenPopover] = useState<"status" | "priority" | "due" | "sprint" | null>(null)
+  const [expanded, setExpanded] = useState(false)
   const update = useUpdateIssue(issue.id, projectId)
 
   function save(data: { status?: string; priority?: string; due_date?: string | null; sprint_id?: string | null; assignee_ids?: string[] }) {
@@ -92,226 +113,430 @@ function IssueRow({
 
   const statusColor = statusColorMap?.[issue.status] ?? "#94a3b8"
   const activeSprint = sprints.find((s) => s.id === issue.sprint_id)
+  const hasChildren = children.length > 0
 
   return (
-    <div
-      onClick={() => onOpen(issue)}
-      className={cn(
-        "group grid grid-cols-[70px_1fr_150px_120px_130px_140px_130px_32px] items-center px-6 py-3",
-        "hover:bg-[#f9fafb] dark:hover:bg-muted/30 cursor-pointer transition-colors",
-        update.isPending && "opacity-70"
-      )}
-    >
-      {/* ID */}
-      <span className="text-xs font-mono text-muted-foreground truncate">
-        {issue.identifier}
-      </span>
-
-      {/* Title */}
-      <span className="text-sm text-foreground truncate pr-3">
-        {issue.title}
-      </span>
-
-      {/* ── Status ────────────────────────────────────────────────────────── */}
-      <div onClick={(e) => e.stopPropagation()}>
-        <Popover open={openPopover === "status"} onOpenChange={(o) => setOpenPopover(o ? "status" : null)}>
-          <PopoverTrigger asChild>
-            <button
-              type="button"
-              className="flex items-center gap-1.5 max-w-full px-1.5 py-1 rounded hover:bg-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-            >
-              <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: statusColor }} />
-              <span className="text-xs text-muted-foreground truncate">
-                {statusLabels[issue.status] ?? issue.status}
-              </span>
-            </button>
-          </PopoverTrigger>
-          <PopoverContent className="w-52 p-1" align="start" onClick={(e) => e.stopPropagation()}>
-            <Command>
-              <CommandList>
-                <CommandGroup>
-                  {statuses.map((s) => (
-                    <CommandItem
-                      key={s.key}
-                      value={s.name}
-                      onSelect={() => save({ status: s.key })}
-                      className="flex items-center gap-2 py-1.5 px-2 cursor-pointer"
-                    >
-                      <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: s.color }} />
-                      <span className="text-xs flex-1">{s.name}</span>
-                      {issue.status === s.key && <Check className="h-3.5 w-3.5 text-indigo-500" />}
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              </CommandList>
-            </Command>
-          </PopoverContent>
-        </Popover>
-      </div>
-
-      {/* ── Priority ──────────────────────────────────────────────────────── */}
-      <div onClick={(e) => e.stopPropagation()}>
-        <Popover open={openPopover === "priority"} onOpenChange={(o) => setOpenPopover(o ? "priority" : null)}>
-          <PopoverTrigger asChild>
-            <button
-              type="button"
-              className="flex items-center gap-1.5 px-1.5 py-1 rounded hover:bg-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-            >
-              <PriorityIcon priority={issue.priority} />
-              <span className="text-xs text-muted-foreground">
-                {ISSUE_PRIORITY_LABELS[issue.priority] ?? issue.priority}
-              </span>
-            </button>
-          </PopoverTrigger>
-          <PopoverContent className="w-44 p-1" align="start" onClick={(e) => e.stopPropagation()}>
-            <Command>
-              <CommandList>
-                <CommandGroup>
-                  {Object.entries(ISSUE_PRIORITY_LABELS).map(([key, label]) => (
-                    <CommandItem
-                      key={key}
-                      value={label}
-                      onSelect={() => save({ priority: key })}
-                      className="flex items-center gap-2 py-1.5 px-2 cursor-pointer"
-                    >
-                      <PriorityIcon priority={key} />
-                      <span className="text-xs flex-1">{label}</span>
-                      {issue.priority === key && <Check className="h-3.5 w-3.5 text-indigo-500" />}
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              </CommandList>
-            </Command>
-          </PopoverContent>
-        </Popover>
-      </div>
-
-      {/* ── Sprint ────────────────────────────────────────────────────────── */}
-      <div onClick={(e) => e.stopPropagation()}>
-        <Popover open={openPopover === "sprint"} onOpenChange={(o) => setOpenPopover(o ? "sprint" : null)}>
-          <PopoverTrigger asChild>
-            <button
-              type="button"
-              className="flex items-center gap-1.5 px-1.5 py-1 rounded hover:bg-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-ring max-w-full"
-            >
-              <Layers className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-              <span className={cn("text-xs truncate", activeSprint ? "text-foreground" : "text-muted-foreground")}>
-                {activeSprint?.name ?? "No sprint"}
-              </span>
-            </button>
-          </PopoverTrigger>
-          <PopoverContent className="w-56 p-1" align="start" onClick={(e) => e.stopPropagation()}>
-            <Command>
-              <CommandList>
-                <CommandGroup>
-                  {/* Clear option */}
-                  <CommandItem
-                    value="no-sprint"
-                    onSelect={() => save({ sprint_id: null })}
-                    className="flex items-center gap-2 py-1.5 px-2 cursor-pointer"
-                  >
-                    <X className="h-3.5 w-3.5 text-muted-foreground" />
-                    <span className="text-xs flex-1 text-muted-foreground">No sprint</span>
-                    {!issue.sprint_id && <Check className="h-3.5 w-3.5 text-indigo-500" />}
-                  </CommandItem>
-                  {sprints.filter((s) => s.status !== "completed").map((s) => (
-                    <CommandItem
-                      key={s.id}
-                      value={s.name}
-                      onSelect={() => save({ sprint_id: s.id })}
-                      className="flex items-center gap-2 py-1.5 px-2 cursor-pointer"
-                    >
-                      <Layers className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs truncate">{s.name}</p>
-                        {(s.start_date || s.end_date) && (
-                          <p className="text-[10px] text-muted-foreground">
-                            {s.start_date ? format(new Date(s.start_date), "MMM d") : "—"}
-                            {" → "}
-                            {s.end_date ? format(new Date(s.end_date), "MMM d") : "—"}
-                          </p>
-                        )}
-                      </div>
-                      {issue.sprint_id === s.id && <Check className="h-3.5 w-3.5 text-indigo-500 shrink-0" />}
-                    </CommandItem>
-                  ))}
-                  {sprints.filter((s) => s.status !== "completed").length === 0 && (
-                    <p className="text-xs text-muted-foreground py-3 text-center">
-                      No active or planned sprints
-                    </p>
-                  )}
-                </CommandGroup>
-              </CommandList>
-            </Command>
-          </PopoverContent>
-        </Popover>
-      </div>
-
-      {/* ── Due Date ──────────────────────────────────────────────────────── */}
-      <div onClick={(e) => e.stopPropagation()}>
-        <Popover open={openPopover === "due"} onOpenChange={(o) => setOpenPopover(o ? "due" : null)}>
-          <PopoverTrigger asChild>
-            <button
-              type="button"
-              className="flex items-center gap-1.5 px-1.5 py-1 rounded hover:bg-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-            >
-              <CalendarIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-              <span className={cn("text-xs", issue.due_date ? "text-foreground" : "text-muted-foreground")}>
-                {issue.due_date ? format(new Date(issue.due_date), "MMM d, yyyy") : "No due date"}
-              </span>
-            </button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="start" onClick={(e) => e.stopPropagation()}>
-            <Calendar
-              mode="single"
-              selected={issue.due_date ? new Date(issue.due_date) : undefined}
-              onSelect={(date) => save({ due_date: date ? format(date, "yyyy-MM-dd") : null })}
-              initialFocus
-            />
-            {issue.due_date && (
-              <div className="border-t px-3 py-2">
-                <button
-                  onClick={() => save({ due_date: null })}
-                  className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors"
-                >
-                  <X className="h-3 w-3" />
-                  Clear date
-                </button>
-              </div>
-            )}
-          </PopoverContent>
-        </Popover>
-      </div>
-
-      {/* ── Assignees ─────────────────────────────────────────────────────── */}
-      <div onClick={(e) => e.stopPropagation()}>
-        <AssigneeSelector
-          value={issue.assignee_ids ?? []}
-          onChange={(ids) => update.mutate({ assignee_ids: ids } as any)}
-        />
-      </div>
-
-      {/* External link */}
-      <button
-        onClick={(e) => {
-          e.stopPropagation()
-          navigate(`/${workspace}/projects/${projectKey}/issues/${issue.id}`)
-        }}
-        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-border text-muted-foreground hover:text-foreground"
-        title="Open full page"
+    <>
+      <div
+        onClick={() => onOpen(issue)}
+        className={cn(
+          "group grid grid-cols-[70px_1fr_150px_120px_130px_140px_130px_32px] items-center px-6 py-3",
+          "hover:bg-[#f9fafb] dark:hover:bg-muted/30 cursor-pointer transition-colors",
+          isChild && "pl-14 bg-muted/10",
+          update.isPending && "opacity-70"
+        )}
       >
-        <ExternalLink className="h-3.5 w-3.5" />
-      </button>
+        {/* ID */}
+        <span className={cn("text-xs font-mono text-muted-foreground truncate", isChild && "text-muted-foreground/60")}>
+          {issue.identifier}
+        </span>
+
+        {/* Title — with expand/collapse for children */}
+        <div className="flex items-center gap-1 min-w-0 pr-3">
+          {!isChild && hasChildren && (
+            <button
+              onClick={(e) => { e.stopPropagation(); setExpanded(!expanded) }}
+              className="shrink-0 text-muted-foreground hover:text-foreground transition-colors p-0.5 rounded"
+            >
+              {expanded
+                ? <ChevronDown className="h-3.5 w-3.5" />
+                : <ChevronRight className="h-3.5 w-3.5" />}
+            </button>
+          )}
+          {!isChild && !hasChildren && <span className="w-4 shrink-0" />}
+          {isChild && <span className="text-muted-foreground/40 shrink-0 text-xs">↳</span>}
+          <span className={cn("text-sm text-foreground truncate", isChild && "text-muted-foreground")}>
+            {issue.title}
+          </span>
+          {!isChild && hasChildren && (
+            <span className="shrink-0 text-[10px] text-muted-foreground/60 ml-1 font-mono">
+              {children.length}
+            </span>
+          )}
+        </div>
+
+        {/* ── Status ── */}
+        <div onClick={(e) => e.stopPropagation()}>
+          <Popover open={openPopover === "status"} onOpenChange={(o) => setOpenPopover(o ? "status" : null)}>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                className="flex items-center gap-1.5 max-w-full px-1.5 py-1 rounded hover:bg-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              >
+                <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: statusColor }} />
+                <span className="text-xs text-muted-foreground truncate">
+                  {statusLabels[issue.status] ?? issue.status}
+                </span>
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-52 p-1" align="start" onClick={(e) => e.stopPropagation()}>
+              <Command>
+                <CommandList>
+                  <CommandGroup>
+                    {statuses.map((s) => (
+                      <CommandItem
+                        key={s.key}
+                        value={s.name}
+                        onSelect={() => save({ status: s.key })}
+                        className="flex items-center gap-2 py-1.5 px-2 cursor-pointer"
+                      >
+                        <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: s.color }} />
+                        <span className="text-xs flex-1">{s.name}</span>
+                        {issue.status === s.key && <Check className="h-3.5 w-3.5 text-indigo-500" />}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+        </div>
+
+        {/* ── Priority ── */}
+        <div onClick={(e) => e.stopPropagation()}>
+          <Popover open={openPopover === "priority"} onOpenChange={(o) => setOpenPopover(o ? "priority" : null)}>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                className="flex items-center gap-1.5 px-1.5 py-1 rounded hover:bg-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              >
+                <PriorityIcon priority={issue.priority} />
+                <span className="text-xs text-muted-foreground">
+                  {ISSUE_PRIORITY_LABELS[issue.priority] ?? issue.priority}
+                </span>
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-44 p-1" align="start" onClick={(e) => e.stopPropagation()}>
+              <Command>
+                <CommandList>
+                  <CommandGroup>
+                    {Object.entries(ISSUE_PRIORITY_LABELS).map(([key, label]) => (
+                      <CommandItem
+                        key={key}
+                        value={label}
+                        onSelect={() => save({ priority: key })}
+                        className="flex items-center gap-2 py-1.5 px-2 cursor-pointer"
+                      >
+                        <PriorityIcon priority={key} />
+                        <span className="text-xs flex-1">{label}</span>
+                        {issue.priority === key && <Check className="h-3.5 w-3.5 text-indigo-500" />}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+        </div>
+
+        {/* ── Sprint ── */}
+        <div onClick={(e) => e.stopPropagation()}>
+          <Popover open={openPopover === "sprint"} onOpenChange={(o) => setOpenPopover(o ? "sprint" : null)}>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                className="flex items-center gap-1.5 px-1.5 py-1 rounded hover:bg-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-ring max-w-full"
+              >
+                <Layers className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                <span className={cn("text-xs truncate", activeSprint ? "text-foreground" : "text-muted-foreground")}>
+                  {activeSprint?.name ?? "No sprint"}
+                </span>
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-56 p-1" align="start" onClick={(e) => e.stopPropagation()}>
+              <Command>
+                <CommandList>
+                  <CommandGroup>
+                    <CommandItem
+                      value="no-sprint"
+                      onSelect={() => save({ sprint_id: null })}
+                      className="flex items-center gap-2 py-1.5 px-2 cursor-pointer"
+                    >
+                      <X className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span className="text-xs flex-1 text-muted-foreground">No sprint</span>
+                      {!issue.sprint_id && <Check className="h-3.5 w-3.5 text-indigo-500" />}
+                    </CommandItem>
+                    {sprints.filter((s) => s.status !== "completed").map((s) => (
+                      <CommandItem
+                        key={s.id}
+                        value={s.name}
+                        onSelect={() => save({ sprint_id: s.id })}
+                        className="flex items-center gap-2 py-1.5 px-2 cursor-pointer"
+                      >
+                        <Layers className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs truncate">{s.name}</p>
+                          {(s.start_date || s.end_date) && (
+                            <p className="text-[10px] text-muted-foreground">
+                              {s.start_date ? format(new Date(s.start_date), "MMM d") : "—"}
+                              {" → "}
+                              {s.end_date ? format(new Date(s.end_date), "MMM d") : "—"}
+                            </p>
+                          )}
+                        </div>
+                        {issue.sprint_id === s.id && <Check className="h-3.5 w-3.5 text-indigo-500 shrink-0" />}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+        </div>
+
+        {/* ── Due Date ── */}
+        <div onClick={(e) => e.stopPropagation()}>
+          <Popover open={openPopover === "due"} onOpenChange={(o) => setOpenPopover(o ? "due" : null)}>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                className="flex items-center gap-1.5 px-1.5 py-1 rounded hover:bg-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              >
+                <CalendarIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                <span className={cn("text-xs", issue.due_date ? "text-foreground" : "text-muted-foreground")}>
+                  {issue.due_date ? format(new Date(issue.due_date), "MMM d, yyyy") : "No due date"}
+                </span>
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start" onClick={(e) => e.stopPropagation()}>
+              <Calendar
+                mode="single"
+                selected={issue.due_date ? new Date(issue.due_date) : undefined}
+                onSelect={(date) => save({ due_date: date ? format(date, "yyyy-MM-dd") : null })}
+                initialFocus
+              />
+              {issue.due_date && (
+                <div className="border-t px-3 py-2">
+                  <button
+                    onClick={() => save({ due_date: null })}
+                    className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors"
+                  >
+                    <X className="h-3 w-3" />
+                    Clear date
+                  </button>
+                </div>
+              )}
+            </PopoverContent>
+          </Popover>
+        </div>
+
+        {/* ── Assignees ── */}
+        <div onClick={(e) => e.stopPropagation()}>
+          <AssigneeSelector
+            value={issue.assignee_ids ?? []}
+            onChange={(ids) => update.mutate({ assignee_ids: ids } as any)}
+          />
+        </div>
+
+        {/* External link + add child */}
+        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+          {!isChild && onAddChild && (
+            <button
+              onClick={() => onAddChild(issue.id)}
+              className="p-1 rounded hover:bg-border text-muted-foreground hover:text-foreground"
+              title="Add child issue"
+            >
+              <ListTree className="h-3.5 w-3.5" />
+            </button>
+          )}
+          <button
+            onClick={() => navigate(`/${workspace}/projects/${projectKey}/issues/${issue.id}`)}
+            className="p-1 rounded hover:bg-border text-muted-foreground hover:text-foreground"
+            title="Open full page"
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </div>
+
+      {/* Children (expanded) */}
+      {!isChild && expanded && children.map((child) => (
+        <IssueRow
+          key={child.id}
+          issue={child}
+          projectId={projectId}
+          statuses={statuses}
+          statusLabels={statusLabels}
+          statusColorMap={statusColorMap}
+          sprints={sprints}
+          workspace={workspace}
+          projectKey={projectKey}
+          onOpen={onOpen}
+          isChild
+        />
+      ))}
+    </>
+  )
+}
+
+// ─── TaskListGroup ─────────────────────────────────────────────────────────────
+
+interface TaskListGroupProps {
+  taskList: TaskList | null  // null = "No List" group
+  issues: Issue[]
+  childrenMap: Record<string, Issue[]>
+  projectId: string
+  statuses: ProjectStatus[]
+  statusLabels: Record<string, string>
+  statusColorMap: Record<string, string>
+  sprints: Sprint[]
+  workspace: string
+  projectKey: string
+  onOpen: (issue: Issue) => void
+  onAddIssue: (taskListId: string | null) => void
+  onAddChild: (parentId: string) => void
+  onRenameList?: (id: string, name: string) => void
+  onDeleteList?: (id: string) => void
+}
+
+function TaskListGroup({
+  taskList,
+  issues,
+  childrenMap,
+  projectId,
+  statuses,
+  statusLabels,
+  statusColorMap,
+  sprints,
+  workspace,
+  projectKey,
+  onOpen,
+  onAddIssue,
+  onAddChild,
+  onRenameList,
+  onDeleteList,
+}: TaskListGroupProps) {
+  const [collapsed, setCollapsed] = useState(false)
+  const [isRenaming, setIsRenaming] = useState(false)
+  const [renameValue, setRenameValue] = useState(taskList?.name ?? "")
+
+  const totalChildCount = issues.reduce((sum, i) => sum + (childrenMap[i.id]?.length ?? 0), 0)
+  const totalCount = issues.length + totalChildCount
+
+  const handleRenameSubmit = () => {
+    if (taskList && renameValue.trim() && onRenameList) {
+      onRenameList(taskList.id, renameValue.trim())
+    }
+    setIsRenaming(false)
+  }
+
+  return (
+    <div>
+      {/* Group header */}
+      <div className="flex items-center gap-2 px-6 py-2 bg-muted/20 border-b border-border group/header">
+        <button
+          onClick={() => setCollapsed(!collapsed)}
+          className="text-muted-foreground hover:text-foreground transition-colors"
+        >
+          {collapsed
+            ? <ChevronRight className="h-3.5 w-3.5" />
+            : <ChevronDown className="h-3.5 w-3.5" />}
+        </button>
+
+        {taskList ? (
+          isRenaming ? (
+            <input
+              autoFocus
+              value={renameValue}
+              onChange={(e) => setRenameValue(e.target.value)}
+              onBlur={handleRenameSubmit}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleRenameSubmit()
+                if (e.key === "Escape") { setIsRenaming(false); setRenameValue(taskList.name) }
+              }}
+              className="text-xs font-semibold text-foreground bg-transparent border-b border-indigo-400 outline-none px-0.5"
+            />
+          ) : (
+            <span className="text-xs font-semibold text-foreground">{taskList.name}</span>
+          )
+        ) : (
+          <span className="text-xs font-semibold text-muted-foreground">No List</span>
+        )}
+
+        <span className="text-[11px] text-muted-foreground/60 font-mono">{totalCount}</span>
+
+        <div className="flex items-center gap-1 ml-auto opacity-0 group-hover/header:opacity-100 transition-opacity">
+          <button
+            onClick={() => onAddIssue(taskList?.id ?? null)}
+            className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors px-1.5 py-0.5 rounded hover:bg-muted"
+          >
+            <Plus className="h-3 w-3" />
+            Add issue
+          </button>
+
+          {taskList && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors">
+                  <MoreHorizontal className="h-3.5 w-3.5" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-36">
+                <DropdownMenuItem
+                  className="text-xs gap-2 cursor-pointer"
+                  onClick={() => { setIsRenaming(true); setRenameValue(taskList.name) }}
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                  Rename
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="text-xs gap-2 cursor-pointer text-destructive focus:text-destructive"
+                  onClick={() => onDeleteList?.(taskList.id)}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Delete list
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
+      </div>
+
+      {/* Issues */}
+      {!collapsed && (
+        <div className="divide-y divide-border/60">
+          {issues.length === 0 ? (
+            <div className="px-14 py-3 text-xs text-muted-foreground/50 italic">
+              No issues in this list
+            </div>
+          ) : (
+            issues.map((issue) => (
+              <IssueRow
+                key={issue.id}
+                issue={issue}
+                projectId={projectId}
+                statuses={statuses}
+                statusLabels={statusLabels}
+                statusColorMap={statusColorMap}
+                sprints={sprints}
+                workspace={workspace}
+                projectKey={projectKey}
+                onOpen={onOpen}
+                children={childrenMap[issue.id] ?? []}
+                onAddChild={onAddChild}
+              />
+            ))
+          )}
+        </div>
+      )}
     </div>
   )
 }
 
 // ─── ProjectIssuesPage ────────────────────────────────────────────────────────
 
+interface CreateDialogState {
+  open: boolean
+  defaultTaskListId?: string | null
+  defaultParentId?: string | null
+}
+
 export function ProjectIssuesPage() {
   const { workspace, projectKey } = useParams<{ workspace: string; projectKey: string }>()
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null)
-  const [createOpen, setCreateOpen] = useState(false)
+  const [createDialog, setCreateDialog] = useState<CreateDialogState>({ open: false })
+  const [newListName, setNewListName] = useState("")
+  const [showNewListInput, setShowNewListInput] = useState(false)
   const [search, setSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [priorityFilter, setPriorityFilter] = useState("all")
@@ -322,8 +547,11 @@ export function ProjectIssuesPage() {
   const { data: issues, isLoading } = useIssues(projectId || undefined)
   const { data: projectStatuses } = useProjectStatuses(projectId || undefined)
   const { data: sprints } = useSprints(projectId || undefined)
+  const { data: taskLists } = useTaskLists(projectId || undefined)
+  const createTaskList = useCreateTaskList(projectId)
+  const updateTaskList = useUpdateTaskList(projectId)
+  const deleteTaskList = useDeleteTaskList(projectId)
 
-  // Merge custom statuses with fallback defaults
   const statuses: ProjectStatus[] =
     projectStatuses && projectStatuses.length > 0
       ? projectStatuses
@@ -340,7 +568,8 @@ export function ProjectIssuesPage() {
 
   if (!projectKey || !workspace) return null
 
-  const filtered = (issues ?? [])
+  // ── Filter + sort all issues ─────────────────────────────────────────────
+  const allFiltered = (issues ?? [])
     .filter((issue) => {
       const matchesSearch =
         !search ||
@@ -359,6 +588,57 @@ export function ProjectIssuesPage() {
       return aNum - bNum
     })
 
+  // ── Build parent→children map from ALL issues (not just filtered) ─────────
+  const childrenMap: Record<string, Issue[]> = {}
+  for (const issue of issues ?? []) {
+    if (issue.parent_id) {
+      if (!childrenMap[issue.parent_id]) childrenMap[issue.parent_id] = []
+      childrenMap[issue.parent_id].push(issue)
+    }
+  }
+
+  // Top-level issues: no parent_id
+  const topLevel = allFiltered.filter((i) => !i.parent_id)
+  const totalCount = allFiltered.length
+
+  // ── Group top-level issues by task_list_id ────────────────────────────────
+  const groupedByList: Record<string, Issue[]> = { __none__: [] }
+  for (const tl of taskLists ?? []) {
+    groupedByList[tl.id] = []
+  }
+  for (const issue of topLevel) {
+    const key = issue.task_list_id ?? "__none__"
+    if (!groupedByList[key]) groupedByList[key] = []
+    groupedByList[key].push(issue)
+  }
+
+  // ── Task list CRUD handlers ───────────────────────────────────────────────
+  function handleCreateList() {
+    if (!newListName.trim()) return
+    createTaskList.mutate(
+      { name: newListName.trim() },
+      {
+        onSuccess: () => { setNewListName(""); setShowNewListInput(false); toast.success("List created") },
+        onError: () => toast.error("Failed to create list"),
+      }
+    )
+  }
+
+  function handleRenameList(id: string, name: string) {
+    updateTaskList.mutate({ id, name }, {
+      onError: () => toast.error("Failed to rename list"),
+    })
+  }
+
+  function handleDeleteList(id: string) {
+    const list = taskLists?.find((tl) => tl.id === id)
+    if (!confirm(`Delete list "${list?.name}"? Issues in this list will be moved to No List.`)) return
+    deleteTaskList.mutate(id, {
+      onSuccess: () => toast.success("List deleted"),
+      onError: () => toast.error("Failed to delete list"),
+    })
+  }
+
   const GRID = "grid-cols-[70px_1fr_150px_120px_130px_140px_130px_32px]"
 
   return (
@@ -368,16 +648,44 @@ export function ProjectIssuesPage() {
         {/* Card header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
           <h1 className="text-base font-semibold">Issues</h1>
-          <Button size="sm" onClick={() => setCreateOpen(true)}>
-            <Plus className="h-4 w-4" />
-            Create
-          </Button>
+          <div className="flex items-center gap-2">
+            {/* New list */}
+            {showNewListInput ? (
+              <div className="flex items-center gap-1.5">
+                <Input
+                  autoFocus
+                  placeholder="List name..."
+                  value={newListName}
+                  onChange={(e) => setNewListName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleCreateList()
+                    if (e.key === "Escape") { setShowNewListInput(false); setNewListName("") }
+                  }}
+                  className="h-8 text-xs w-36"
+                />
+                <Button size="sm" variant="outline" className="h-8 text-xs" onClick={handleCreateList} disabled={!newListName.trim() || createTaskList.isPending}>
+                  Add
+                </Button>
+                <Button size="sm" variant="ghost" className="h-8 text-xs" onClick={() => { setShowNewListInput(false); setNewListName("") }}>
+                  Cancel
+                </Button>
+              </div>
+            ) : (
+              <Button size="sm" variant="outline" onClick={() => setShowNewListInput(true)}>
+                <Plus className="h-4 w-4" />
+                New List
+              </Button>
+            )}
+            <Button size="sm" onClick={() => setCreateDialog({ open: true })}>
+              <Plus className="h-4 w-4" />
+              Create
+            </Button>
+          </div>
         </div>
 
         {/* Toolbar */}
         <div className="flex items-center justify-between px-6 py-3 border-b border-border gap-3 flex-wrap">
           <div className="flex items-center gap-2">
-            {/* Sprint filter */}
             <Select value={sprintFilter} onValueChange={setSprintFilter}>
               <SelectTrigger className="h-8 text-xs w-[140px] bg-transparent">
                 <SelectValue placeholder="Sprint" />
@@ -391,7 +699,6 @@ export function ProjectIssuesPage() {
               </SelectContent>
             </Select>
 
-            {/* Status filter */}
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="h-8 text-xs w-[130px] bg-transparent">
                 <SelectValue placeholder="Status" />
@@ -404,7 +711,6 @@ export function ProjectIssuesPage() {
               </SelectContent>
             </Select>
 
-            {/* Priority filter */}
             <Select value={priorityFilter} onValueChange={setPriorityFilter}>
               <SelectTrigger className="h-8 text-xs w-[130px] bg-transparent">
                 <SelectValue placeholder="Priority" />
@@ -441,7 +747,7 @@ export function ProjectIssuesPage() {
           <span />
         </div>
 
-        {/* Rows */}
+        {/* Content */}
         {isLoading ? (
           <div className="divide-y divide-border">
             {[1, 2, 3, 4].map((i) => (
@@ -457,32 +763,31 @@ export function ProjectIssuesPage() {
               </div>
             ))}
           </div>
-        ) : filtered.length === 0 ? (
+        ) : totalCount === 0 && (issues ?? []).length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
-            <p className="text-sm font-medium mb-1">
-              {search || statusFilter !== "all" || priorityFilter !== "all" || sprintFilter !== "all"
-                ? "No issues match your filters"
-                : "No issues yet"}
-            </p>
+            <p className="text-sm font-medium mb-1">No issues yet</p>
             <p className="text-sm text-muted-foreground mb-4">
-              {search || statusFilter !== "all" || priorityFilter !== "all" || sprintFilter !== "all"
-                ? "Try adjusting your search or filters."
-                : "Create your first issue to start tracking work."}
+              Create your first issue to start tracking work.
             </p>
-            {!search && statusFilter === "all" && priorityFilter === "all" && sprintFilter === "all" && (
-              <Button size="sm" onClick={() => setCreateOpen(true)}>
-                <Plus className="h-4 w-4" />
-                Create issue
-              </Button>
-            )}
+            <Button size="sm" onClick={() => setCreateDialog({ open: true })}>
+              <Plus className="h-4 w-4" />
+              Create issue
+            </Button>
+          </div>
+        ) : topLevel.length === 0 && (issues ?? []).length > 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <p className="text-sm text-muted-foreground">No issues match your filters.</p>
           </div>
         ) : (
           <TooltipProvider delayDuration={200}>
             <div className="divide-y divide-border">
-              {filtered.map((issue) => (
-                <IssueRow
-                  key={issue.id}
-                  issue={issue}
+              {/* Task list groups */}
+              {(taskLists ?? []).map((tl) => (
+                <TaskListGroup
+                  key={tl.id}
+                  taskList={tl}
+                  issues={groupedByList[tl.id] ?? []}
+                  childrenMap={childrenMap}
                   projectId={projectId}
                   statuses={statuses}
                   statusLabels={statusLabels}
@@ -491,23 +796,41 @@ export function ProjectIssuesPage() {
                   workspace={workspace}
                   projectKey={projectKey}
                   onOpen={setSelectedIssue}
+                  onAddIssue={(id) => setCreateDialog({ open: true, defaultTaskListId: id })}
+                  onAddChild={(parentId) => setCreateDialog({ open: true, defaultParentId: parentId })}
+                  onRenameList={handleRenameList}
+                  onDeleteList={handleDeleteList}
                 />
               ))}
+
+              {/* "No List" group — always show if there are ungrouped issues or no task lists */}
+              {(groupedByList["__none__"]?.length > 0 || (taskLists ?? []).length === 0) && (
+                <TaskListGroup
+                  taskList={null}
+                  issues={groupedByList["__none__"] ?? []}
+                  childrenMap={childrenMap}
+                  projectId={projectId}
+                  statuses={statuses}
+                  statusLabels={statusLabels}
+                  statusColorMap={statusColorMap}
+                  sprints={allSprints}
+                  workspace={workspace}
+                  projectKey={projectKey}
+                  onOpen={setSelectedIssue}
+                  onAddIssue={(id) => setCreateDialog({ open: true, defaultTaskListId: id })}
+                  onAddChild={(parentId) => setCreateDialog({ open: true, defaultParentId: parentId })}
+                />
+              )}
             </div>
           </TooltipProvider>
         )}
 
         {/* Footer */}
-        {!isLoading && filtered.length > 0 && (
-          <div className="flex items-center justify-between px-6 py-3 border-t border-border">
+        {!isLoading && totalCount > 0 && (
+          <div className="flex items-center px-6 py-3 border-t border-border">
             <span className="text-xs text-muted-foreground">
-              {filtered.length} result{filtered.length !== 1 ? "s" : ""}
+              {totalCount} issue{totalCount !== 1 ? "s" : ""}
             </span>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <span>1 of 1 pages</span>
-              <Button variant="ghost" size="sm" className="h-7 text-xs" disabled>Prev</Button>
-              <Button variant="ghost" size="sm" className="h-7 text-xs" disabled>Next</Button>
-            </div>
           </div>
         )}
       </div>
@@ -519,9 +842,11 @@ export function ProjectIssuesPage() {
         onClose={() => setSelectedIssue(null)}
       />
       <CreateIssueDialog
-        open={createOpen}
-        onClose={() => setCreateOpen(false)}
+        open={createDialog.open}
+        onClose={() => setCreateDialog({ open: false })}
         projectId={projectId}
+        defaultTaskListId={createDialog.defaultTaskListId}
+        defaultParentId={createDialog.defaultParentId}
       />
     </div>
   )

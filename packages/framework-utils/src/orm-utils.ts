@@ -119,6 +119,9 @@ export function createRepository(em: EntityManager, entityName: string): Meridia
       ])
       return [data, count] as [unknown[], number]
     },
+    async findOne(filters: object) {
+      return repo.findOne(filters as any)
+    },
     async findOneOrFail(filters: object) {
       return repo.findOneOrFail(filters as any)
     },
@@ -140,6 +143,7 @@ export function createRepository(em: EntityManager, entityName: string): Meridia
 export interface MeridianRepository {
   find(filters: object, options?: object): Promise<unknown[]>
   findAndCount(filters: object, options?: object): Promise<[unknown[], number]>
+  findOne(filters: object): Promise<unknown | null>
   findOneOrFail(filters: object): Promise<unknown>
   create(data: object): unknown
   persistAndFlush(entity: unknown): Promise<void>

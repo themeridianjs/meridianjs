@@ -4,6 +4,7 @@ import IssueModel from "./models/issue.js"
 import CommentModel from "./models/comment.js"
 import AttachmentModel from "./models/attachment.js"
 import TimeLogModel from "./models/time-log.js"
+import TaskListModel from "./models/task-list.js"
 
 export interface CreateIssueInput {
   title: string
@@ -15,13 +16,16 @@ export interface CreateIssueInput {
   status?: string
   assignee_ids?: string[]
   reporter_id?: string
-  parent_id?: string
+  parent_id?: string | null
   due_date?: Date
   estimate?: number
+  sprint_id?: string | null
+  task_list_id?: string | null
 }
 
 export interface CreateAttachmentInput {
   issue_id: string
+  comment_id?: string | null
   filename: string
   original_name: string
   mime_type: string
@@ -45,6 +49,7 @@ export class IssueModuleService extends MeridianService({
   Comment: CommentModel,
   Attachment: AttachmentModel,
   TimeLog: TimeLogModel,
+  TaskList: TaskListModel,
 }) {
   private readonly container: MeridianContainer
 
@@ -251,5 +256,51 @@ export class IssueModuleService extends MeridianService({
     }
     await repo.removeAndFlush(entry)
     return entry
+  }
+
+  // ---------------------------------------------------------------------------
+  // Task Lists
+  // ---------------------------------------------------------------------------
+
+  /** List all task lists for a project, ordered by position. */
+  async listTaskListsByProject(projectId: string): Promise<any[]> {
+    const repo = this.container.resolve<any>("taskListRepository")
+    return repo.find({ project_id: projectId }, { orderBy: { position: "ASC" } })
+  }
+
+  /** Create a task list for a project. Position defaults to max+1. */
+  async createTaskList(input: { name: string; description?: string; project_id: string }): Promise<any> {
+    const repo = this.container.resolve<any>("taskListRepository")
+    const existing = await repo.find({ project_id: input.project_id })
+    const maxPos = (existing as any[]).reduce((m: number, tl: any) => Math.max(m, tl.position ?? 0), -1)
+    const taskList = repo.create({ ...input, position: maxPos + 1 })
+    await repo.persistAndFlush(taskList)
+    return taskList
+  }
+
+  /** Update a task list's name or description. */
+  async updateTaskList(id: string, data: { name?: string; description?: string }): Promise<any> {
+    const repo = this.container.resolve<any>("taskListRepository")
+    const taskList = await repo.findOne({ id })
+    if (!taskList) throw Object.assign(new Error(`TaskList ${id} not found`), { status: 404 })
+    Object.assign(taskList, data)
+    await repo.persistAndFlush(taskList)
+    return taskList
+  }
+
+  /** Delete a task list by ID. Clears task_list_id on associated issues. */
+  async deleteTaskList(id: string): Promise<any> {
+    const taskListRepo = this.container.resolve<any>("taskListRepository")
+    const issueRepo = this.container.resolve<any>("issueRepository")
+    const taskList = await taskListRepo.findOne({ id })
+    if (!taskList) throw Object.assign(new Error(`TaskList ${id} not found`), { status: 404 })
+    // Clear task_list_id on all issues that belonged to this list
+    const issues = await issueRepo.find({ task_list_id: id })
+    for (const issue of issues as any[]) {
+      issue.task_list_id = null
+    }
+    if ((issues as any[]).length > 0) await issueRepo.flush()
+    await taskListRepo.removeAndFlush(taskList)
+    return taskList
   }
 }

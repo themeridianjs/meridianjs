@@ -4,6 +4,7 @@ import { api } from "../client"
 export interface Attachment {
   id: string
   issue_id: string
+  comment_id: string | null
   filename: string
   original_name: string
   mime_type: string
@@ -31,9 +32,10 @@ export function useAttachments(issueId: string) {
 export function useUploadAttachment(issueId: string) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (file: File) => {
+    mutationFn: ({ file, commentId }: { file: File; commentId?: string }) => {
       const form = new FormData()
       form.append("file", file)
+      if (commentId) form.append("comment_id", commentId)
       return api.upload<{ attachment: Attachment }>(
         `/admin/issues/${issueId}/attachments`,
         form

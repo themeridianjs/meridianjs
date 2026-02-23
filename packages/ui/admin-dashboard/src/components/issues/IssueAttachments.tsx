@@ -2,56 +2,74 @@ import { useRef, useState, useCallback } from "react"
 import { format } from "date-fns"
 import { useAttachments, useUploadAttachment, useDeleteAttachment } from "@/api/hooks/useAttachments"
 import type { Attachment } from "@/api/hooks/useAttachments"
+import {
+  isImage, isVideo, formatBytes, downloadFile,
+  FileTypeIcon, ViewerModal,
+} from "@/components/issues/AttachmentViewer"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
-import {
-  Paperclip, Upload, Trash2, FileText, FileImage, FileArchive, FileCode, File,
-} from "lucide-react"
+import { Paperclip, Upload, Trash2, Download } from "lucide-react"
 import { toast } from "sonner"
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-}
-
-function FileIcon({ mimeType, className }: { mimeType: string; className?: string }) {
-  if (mimeType.startsWith("image/")) return <FileImage className={className} />
-  if (mimeType.startsWith("text/") || mimeType.includes("json")) return <FileCode className={className} />
-  if (mimeType.includes("zip") || mimeType.includes("tar") || mimeType.includes("gz")) return <FileArchive className={className} />
-  if (mimeType.includes("pdf") || mimeType.includes("word") || mimeType.includes("document")) return <FileText className={className} />
-  return <File className={className} />
-}
+// ── Attachment row ────────────────────────────────────────────────────────────
 
 function AttachmentRow({
   attachment,
+  onOpen,
   onDelete,
   isDeleting,
 }: {
   attachment: Attachment
+  onOpen: (a: Attachment) => void
   onDelete: (id: string) => void
   isDeleting: boolean
 }) {
+  const viewable = isImage(attachment.mime_type) || isVideo(attachment.mime_type)
+
+  const handleClick = () => {
+    if (viewable) onOpen(attachment)
+    else downloadFile(attachment.url, attachment.original_name)
+  }
+
   return (
     <div className="flex items-center gap-3 py-2.5 px-3 rounded-lg hover:bg-muted/50 group transition-colors">
-      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
-        <FileIcon mimeType={attachment.mime_type} className="h-4 w-4" />
-      </div>
+      <button
+        type="button"
+        onClick={handleClick}
+        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors"
+        title={viewable ? "View" : "Download"}
+      >
+        <FileTypeIcon mimeType={attachment.mime_type} className="h-4 w-4" />
+      </button>
 
       <div className="flex-1 min-w-0">
-        <a
-          href={attachment.url}
-          target="_blank"
-          rel="noreferrer"
-          className="text-xs font-medium text-foreground truncate block hover:underline"
+        <button
+          type="button"
+          onClick={handleClick}
+          className="text-xs font-medium text-foreground truncate block text-left w-full hover:underline"
         >
           {attachment.original_name}
-        </a>
-        <p className="text-[11px] text-muted-foreground mt-0.5">
-          {formatBytes(attachment.size)} · {format(new Date(attachment.created_at), "MMM d, yyyy")}
+        </button>
+        <p className="text-[11px] text-muted-foreground mt-0.5 flex items-center gap-1.5">
+          <span>{formatBytes(attachment.size)}</span>
+          <span>·</span>
+          <span>{format(new Date(attachment.created_at), "MMM d, yyyy")}</span>
+          {attachment.comment_id && (
+            <>
+              <span>·</span>
+              <span className="italic">from comment</span>
+            </>
+          )}
+          {!viewable && (
+            <>
+              <span>·</span>
+              <span className="flex items-center gap-0.5">
+                <Download className="h-2.5 w-2.5" />
+                Click to download
+              </span>
+            </>
+          )}
         </p>
       </div>
 
@@ -70,12 +88,7 @@ function AttachmentRow({
 
 // ── Drop zone ─────────────────────────────────────────────────────────────────
 
-interface DropZoneProps {
-  onFiles: (files: File[]) => void
-  isUploading: boolean
-}
-
-function DropZone({ onFiles, isUploading }: DropZoneProps) {
+function DropZone({ onFiles, isUploading }: { onFiles: (files: File[]) => void; isUploading: boolean }) {
   const [isDragging, setIsDragging] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -134,13 +147,15 @@ interface IssueAttachmentsProps {
 }
 
 export function IssueAttachments({ issueId, className }: IssueAttachmentsProps) {
+  const [viewingAttachment, setViewingAttachment] = useState<Attachment | null>(null)
+
   const { data: attachments, isLoading } = useAttachments(issueId)
   const upload = useUploadAttachment(issueId)
   const deleteAttachment = useDeleteAttachment(issueId)
 
   const handleFiles = (files: File[]) => {
     files.forEach((file) => {
-      upload.mutate(file, {
+      upload.mutate({ file }, {
         onSuccess: () => toast.success(`${file.name} uploaded`),
         onError: () => toast.error(`Failed to upload ${file.name}`),
       })
@@ -148,8 +163,6 @@ export function IssueAttachments({ issueId, className }: IssueAttachmentsProps) 
   }
 
   const handleDelete = (id: string) => {
-    const attachment = attachments?.find((a) => a.id === id)
-    if (!attachment) return
     deleteAttachment.mutate(id, {
       onSuccess: () => toast.success("Attachment removed"),
       onError: () => toast.error("Failed to remove attachment"),
@@ -185,6 +198,7 @@ export function IssueAttachments({ issueId, className }: IssueAttachmentsProps) 
               <AttachmentRow
                 key={a.id}
                 attachment={a}
+                onOpen={setViewingAttachment}
                 onDelete={handleDelete}
                 isDeleting={deleteAttachment.isPending}
               />
@@ -196,6 +210,11 @@ export function IssueAttachments({ issueId, className }: IssueAttachmentsProps) 
           No attachments yet.
         </p>
       )}
+
+      <ViewerModal
+        attachment={viewingAttachment}
+        onClose={() => setViewingAttachment(null)}
+      />
     </div>
   )
 }

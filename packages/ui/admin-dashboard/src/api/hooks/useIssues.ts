@@ -13,6 +13,8 @@ export interface Issue {
   workspace_id: string
   assignee_ids?: string[]
   sprint_id?: string | null
+  task_list_id?: string | null
+  parent_id?: string | null
   due_date?: string | null
   created_at: string
   updated_at: string
@@ -41,6 +43,8 @@ interface CreateIssueInput {
   workspace_id: string
   assignee_ids?: string[]
   sprint_id?: string | null
+  task_list_id?: string | null
+  parent_id?: string | null
 }
 
 interface UpdateIssueInput {
@@ -51,6 +55,8 @@ interface UpdateIssueInput {
   type?: string
   assignee_ids?: string[]
   sprint_id?: string | null
+  task_list_id?: string | null
+  parent_id?: string | null
   due_date?: string | null
 }
 

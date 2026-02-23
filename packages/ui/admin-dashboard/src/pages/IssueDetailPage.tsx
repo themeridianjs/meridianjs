@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { format } from "date-fns"
-import { useIssue, useUpdateIssue } from "@/api/hooks/useIssues"
+import { useIssue, useUpdateIssue, useIssues } from "@/api/hooks/useIssues"
 import { useProjectByKey } from "@/api/hooks/useProjects"
 import { useProjectStatuses } from "@/api/hooks/useProjectStatuses"
 import { useSprints, type Sprint } from "@/api/hooks/useSprints"
+import { useTaskLists } from "@/api/hooks/useTaskLists"
 import { AssigneeSelector } from "@/components/issues/AssigneeSelector"
+import { CreateIssueDialog } from "@/components/issues/CreateIssueDialog"
 import { IssueActivity } from "@/components/issues/IssueActivity"
 import { RichTextEditor, RichTextContent } from "@/components/ui/rich-text-editor"
 import { Badge } from "@/components/ui/badge"
@@ -23,10 +25,11 @@ import {
   ISSUE_TYPE_LABELS,
 } from "@/lib/constants"
 import {
-  ChevronLeft, Pencil,
+  ChevronLeft, Pencil, Plus,
   Circle, Clock, ArrowRight, Eye, CheckCircle2, XCircle,
   Zap, ArrowUp, Minus, ArrowDown,
-  Bug, Sparkles, CheckSquare, HelpCircle, Layers,
+  Bug, Sparkles, CheckSquare, HelpCircle, Layers, FolderOpen,
+  CornerDownRight, ChevronUp,
 } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
@@ -120,6 +123,7 @@ export function IssueDetailPage() {
   const [isEditing, setIsEditing] = useState(false)
   const [editTitle, setEditTitle] = useState("")
   const [editDescription, setEditDescription] = useState("")
+  const [createChildOpen, setCreateChildOpen] = useState(false)
 
   const { data: project } = useProjectByKey(projectKey ?? "")
   const projectId = project?.id ?? ""
@@ -127,7 +131,13 @@ export function IssueDetailPage() {
   const updateIssue = useUpdateIssue(issueId ?? "", projectId)
   const { data: projectStatuses } = useProjectStatuses(projectId || undefined)
   const { data: sprints } = useSprints(projectId || undefined)
+  const { data: taskLists } = useTaskLists(projectId || undefined)
+  const { data: allIssues } = useIssues(projectId || undefined)
   const activeSprints = (sprints ?? []).filter((s) => s.status !== "completed")
+
+  const parentIssue = issue?.parent_id ? allIssues?.find((i) => i.id === issue.parent_id) : null
+  const childIssues = allIssues?.filter((i) => i.parent_id === issueId) ?? []
+  const currentTaskList = issue?.task_list_id ? taskLists?.find((tl) => tl.id === issue.task_list_id) : null
 
   const statusOptions = projectStatuses && projectStatuses.length > 0
     ? Object.fromEntries(projectStatuses.map((s) => [s.key, s.name]))
@@ -202,6 +212,7 @@ export function IssueDetailPage() {
   }
 
   return (
+    <>
     <div className="min-h-full bg-[hsl(60_5%_96%)] dark:bg-background">
       {/* ── Sticky top bar ──────────────────────────────────────────────────── */}
       <div className="sticky top-0 z-10 flex items-center justify-between px-6 h-[57px] bg-white dark:bg-card border-b border-border">
@@ -403,6 +414,81 @@ export function IssueDetailPage() {
                   </SelectContent>
                 </Select>
               </PropertyRow>
+
+              {(taskLists ?? []).length > 0 && (
+                <PropertyRow label="List">
+                  <Select
+                    value={issue.task_list_id ?? "none"}
+                    onValueChange={(v) =>
+                      handlePropUpdate({ task_list_id: v === "none" ? null : v }, "List")
+                    }
+                  >
+                    <SelectTrigger className="h-7 text-xs border-0 bg-transparent px-0 gap-1.5 focus:ring-0 hover:bg-accent rounded-md pl-1">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <FolderOpen className="h-3 w-3 shrink-0 text-muted-foreground" />
+                        <span className={currentTaskList ? "truncate" : "text-muted-foreground"}>
+                          {currentTaskList?.name ?? "No list"}
+                        </span>
+                      </div>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none" className="text-xs text-muted-foreground">No list</SelectItem>
+                      {(taskLists ?? []).map((tl) => (
+                        <SelectItem key={tl.id} value={tl.id} className="text-xs">{tl.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </PropertyRow>
+              )}
+            </div>
+
+            {/* Relationships */}
+            {(parentIssue || childIssues.length > 0) && (
+              <div className="px-4 py-3 border-t border-border/60 space-y-2">
+                <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest">
+                  Relationships
+                </p>
+                {parentIssue && (
+                  <div className="flex items-center gap-2 text-xs">
+                    <ChevronUp className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                    <span className="text-muted-foreground shrink-0">Parent</span>
+                    <button
+                      onClick={() => navigate(`/${workspace}/projects/${projectKey}/issues/${parentIssue.id}`)}
+                      className="font-mono text-muted-foreground hover:text-foreground transition-colors shrink-0"
+                    >
+                      {parentIssue.identifier}
+                    </button>
+                    <span className="text-foreground truncate">{parentIssue.title}</span>
+                  </div>
+                )}
+                {childIssues.map((child) => (
+                  <div key={child.id} className="flex items-center gap-2 text-xs pl-1">
+                    <CornerDownRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                    <button
+                      onClick={() => navigate(`/${workspace}/projects/${projectKey}/issues/${child.id}`)}
+                      className="font-mono text-muted-foreground hover:text-foreground transition-colors shrink-0"
+                    >
+                      {child.identifier}
+                    </button>
+                    <button
+                      onClick={() => navigate(`/${workspace}/projects/${projectKey}/issues/${child.id}`)}
+                      className="text-muted-foreground hover:text-foreground truncate transition-colors text-left"
+                    >
+                      {child.title}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="px-4 py-2 border-t border-border/60">
+              <button
+                onClick={() => setCreateChildOpen(true)}
+                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Add child issue
+              </button>
             </div>
 
             {/* Details */}
@@ -428,5 +514,14 @@ export function IssueDetailPage() {
         </div>
       </div>
     </div>
+
+    <CreateIssueDialog
+      open={createChildOpen}
+      onClose={() => setCreateChildOpen(false)}
+      projectId={projectId}
+      defaultParentId={issueId}
+      defaultTaskListId={issue.task_list_id}
+    />
+    </>
   )
 }
