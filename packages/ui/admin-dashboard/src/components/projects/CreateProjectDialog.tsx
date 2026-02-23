@@ -133,9 +133,10 @@ export function CreateProjectDialog({ open, onClose }: CreateProjectDialogProps)
     // Identifier is driven by useSuggestProjectIdentifier when !identifierTouched
   }
 
-  // When user leaves the name field, ensure we have a suggestion (refetch so identifier auto-fills immediately)
+  // When user leaves the name field, flush the debounce so the suggestion
+  // fires immediately for the current name rather than a stale debounced value.
   const handleNameBlur = () => {
-    if (name.trim() && !identifierTouched) suggestQuery.refetch()
+    if (name.trim() && !identifierTouched) suggestQuery.flush()
   }
 
   const handleClose = () => {

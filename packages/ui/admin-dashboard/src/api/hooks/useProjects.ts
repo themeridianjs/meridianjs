@@ -79,7 +79,7 @@ export function useSuggestProjectIdentifier(name: string, options: { enabled?: b
     return () => clearTimeout(t)
   }, [name, enabled])
 
-  return useQuery({
+  const query = useQuery({
     queryKey: ["projects", "suggest-identifier", debouncedName] as const,
     queryFn: () =>
       api.get<{ identifier: string }>(
@@ -88,6 +88,11 @@ export function useSuggestProjectIdentifier(name: string, options: { enabled?: b
     select: (data) => data.identifier,
     enabled: enabled && debouncedName.trim().length > 0,
   })
+
+  /** Immediately flush the current name into the debounced value, bypassing the timer. */
+  const flush = () => setDebouncedName(name)
+
+  return { ...query, flush }
 }
 
 /** Check if a project key is available. Debounced; only runs for valid keys (e.g. length >= 3). */
