@@ -11,6 +11,8 @@ import {
   renderMainTs,
   renderMiddlewares,
   renderHelloRoute,
+  renderAuthRegisterRoute,
+  renderAuthLoginRoute,
   renderGitIgnore,
   renderEnvExample,
   renderReadme,
@@ -124,6 +126,16 @@ export async function runNew(projectName?: string): Promise<void> {
     await writeFile(
       path.join(targetDir, "src", "api", "admin", "hello", "route.ts"),
       renderHelloRoute()
+    )
+
+    // src/api/auth/register/route.ts and src/api/auth/login/route.ts
+    await writeFile(
+      path.join(targetDir, "src", "api", "auth", "register", "route.ts"),
+      renderAuthRegisterRoute()
+    )
+    await writeFile(
+      path.join(targetDir, "src", "api", "auth", "login", "route.ts"),
+      renderAuthLoginRoute()
     )
 
     // Empty directories for user's code
