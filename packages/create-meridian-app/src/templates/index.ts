@@ -101,19 +101,9 @@ export default defineConfig({
     port: Number(process.env.DASHBOARD_PORT) || ${vars.dashboardPort},
   },
   modules: [
+    // Infrastructure — swap for @meridianjs/event-bus-redis in production
     { resolve: "@meridianjs/event-bus-local" },
-    { resolve: "@meridianjs/user" },
-    { resolve: "@meridianjs/workspace" },
-    { resolve: "@meridianjs/auth" },
-    { resolve: "@meridianjs/project" },
-    { resolve: "@meridianjs/issue" },
-    { resolve: "@meridianjs/sprint" },
-    { resolve: "@meridianjs/activity" },
-    { resolve: "@meridianjs/notification" },
-    { resolve: "@meridianjs/invitation" },
-    { resolve: "@meridianjs/workspace-member" },
-    { resolve: "@meridianjs/team-member" },
-    { resolve: "@meridianjs/project-member" },
+    // Core domain modules are automatically loaded by the @meridianjs/meridian plugin
   ],
   plugins: [
     { resolve: "@meridianjs/meridian" },

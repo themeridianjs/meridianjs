@@ -7,26 +7,12 @@ export default defineConfig({
     httpPort: 9000,
   },
   modules: [
-    // Infrastructure
+    // Infrastructure (optional — swap for @meridianjs/event-bus-redis in production)
     { resolve: "@meridianjs/event-bus-local" },
     { resolve: "@meridianjs/job-queue-local" },
-    // Domain modules — order matters: project before issue (issue resolves projectModuleService)
-    { resolve: "@meridianjs/user" },
-    { resolve: "@meridianjs/workspace" },
-    { resolve: "@meridianjs/auth" },
-    { resolve: "@meridianjs/project" },
-    { resolve: "@meridianjs/issue" },
-    { resolve: "@meridianjs/sprint" },
-    { resolve: "@meridianjs/activity" },
-    { resolve: "@meridianjs/notification" },
     // Local test module (Phase 1 smoke test)
     { resolve: "./src/modules/hello-module/index.ts" },
-    // Invitation module
-    { resolve: "@meridianjs/invitation" },
-    // Access control modules
-    { resolve: "@meridianjs/workspace-member" },
-    { resolve: "@meridianjs/team-member" },
-    { resolve: "@meridianjs/project-member" },
+    // Core domain modules are automatically loaded by the @meridianjs/meridian plugin
   ],
   plugins: [
     // Default meridian routes/workflows/links/subscribers
