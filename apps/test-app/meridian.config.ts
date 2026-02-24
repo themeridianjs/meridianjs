@@ -25,5 +25,7 @@ export default defineConfig({
   plugins: [
     // Phase 9 reference plugin: webhook receiver
     { resolve: "@meridianjs/plugin-webhook" },
+    // Default meridian routes/workflows/links/subscribers
+    { resolve: "@meridianjs/meridian" },
   ],
 })

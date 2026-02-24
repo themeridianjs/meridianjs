@@ -132,20 +132,23 @@ async function autoScanPlugin(
 
   for (const candidate of candidates) {
     const apiDir = path.join(candidate, "api")
+    // Only skip to the next candidate if the api/ dir doesn't exist.
+    // Errors from the loaders themselves should propagate so they're visible.
     try {
       await fs.access(apiDir)
-      // Found a valid candidate — scan all sub-dirs in parallel
-      await Promise.all([
-        server ? loadRoutes(server, container, apiDir) : Promise.resolve(),
-        loadSubscribers(container, path.join(candidate, "subscribers")),
-        loadJobs(container, path.join(candidate, "jobs")),
-        loadLinks(container, path.join(candidate, "links")),
-      ])
-      logger.debug(`Plugin auto-scanned from: ${candidate}`)
-      return
     } catch {
-      // This candidate doesn't have an api/ dir, try the next one
+      continue // This candidate doesn't have an api/ dir, try the next one
     }
+
+    // Found a valid candidate — scan all sub-dirs
+    await Promise.all([
+      server ? loadRoutes(server, container, apiDir) : Promise.resolve(),
+      loadSubscribers(container, path.join(candidate, "subscribers")),
+      loadJobs(container, path.join(candidate, "jobs")),
+      loadLinks(container, path.join(candidate, "links")),
+    ])
+    logger.debug(`Plugin auto-scanned from: ${candidate}`)
+    return
   }
 
   // No api/ dir found — that's fine, plugin may only use register()

@@ -35,15 +35,14 @@ export interface MeridianApp {
  *  1. Load meridian.config.ts
  *  2. Create global DI container
  *  3. Register core primitives (logger, config)
- *  4. Register infrastructure modules (event bus, scheduler)
- *  5. Load domain modules from config.modules[]
- *  6. Load plugins from config.plugins[]
- *  7. Load module links from src/links/
- *  8. Create Express server
- *  9. Apply middlewares from src/api/middlewares.ts
- * 10. Load file-based API routes from src/api/
- * 11. Load subscribers from src/subscribers/
- * 12. Load scheduled jobs from src/jobs/
+ *  4. Load modules from config.modules[]
+ *  5. Create Express server (registered before plugins so they can add routes)
+ *  6. Apply middlewares from src/api/middlewares.ts
+ *  7. Load plugins from config.plugins[]
+ *  8. Load module links from src/links/
+ *  9. Load file-based API routes from src/api/
+ * 10. Load subscribers from src/subscribers/
+ * 11. Load scheduled jobs from src/jobs/
  */
 export async function bootstrap(opts: BootstrapOptions): Promise<MeridianApp> {
   const { rootDir } = opts
@@ -86,20 +85,19 @@ export async function bootstrap(opts: BootstrapOptions): Promise<MeridianApp> {
     container.register({ eventBus: eventBus })
   }
 
-  // ── 5. Load plugins ────────────────────────────────────────────────────────
-  await loadPlugins(container, config.plugins ?? [], rootDir)
-
-  // ── 6. Load module links ───────────────────────────────────────────────────
-  await loadLinks(container, path.join(rootDir, "src", "links"))
-
-  // ── 7. Create Express server ───────────────────────────────────────────────
+  // ── 5. Create Express server ───────────────────────────────────────────────
+  // Must happen before plugins so plugins can register routes against the server.
   const server = createServer(container, config)
-
-  // Register server in container so plugins can add routes
   container.register({ server })
 
-  // ── 8. Load API middlewares ────────────────────────────────────────────────
+  // ── 6. Load API middlewares ────────────────────────────────────────────────
   await loadMiddlewares(server, container, path.join(rootDir, "src", "api"))
+
+  // ── 7. Load plugins ────────────────────────────────────────────────────────
+  await loadPlugins(container, config.plugins ?? [], rootDir)
+
+  // ── 8. Load module links ───────────────────────────────────────────────────
+  await loadLinks(container, path.join(rootDir, "src", "links"))
 
   // ── 9. Load file-based API routes ─────────────────────────────────────────
   await loadRoutes(server, container, path.join(rootDir, "src", "api"))

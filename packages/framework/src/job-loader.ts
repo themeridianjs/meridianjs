@@ -41,6 +41,7 @@ export async function loadJobs(
   const files = await fs.readdir(jobsDir)
 
   for (const file of files) {
+    if (/\.d\.(ts|mts)$/.test(file)) continue // skip declaration files
     if (!/\.(ts|mts|js|mjs|cjs)$/.test(file)) continue
 
     const fullPath = path.join(jobsDir, file)

@@ -16,6 +16,7 @@
     "@meridianjs/issue": "*",
     "@meridianjs/job-queue-local": "*",
     "@meridianjs/job-queue-redis": "*",
+    "@meridianjs/meridian": "*",
     "@meridianjs/notification": "*",
     "@meridianjs/plugin-webhook": "*",
     "@meridianjs/project": "*",
