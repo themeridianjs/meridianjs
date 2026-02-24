@@ -1,4 +1,4 @@
-import { useMutation } from "@tanstack/react-query"
+import { useMutation, useQuery } from "@tanstack/react-query"
 import { api } from "../client"
 import { useAuth } from "@/stores/auth"
 
@@ -22,6 +22,16 @@ interface AuthResponse {
     last_name: string
   }
   token: string
+}
+
+/** Checks if the app needs first-time setup (no users registered yet). */
+export function useSetupStatus() {
+  return useQuery({
+    queryKey: ["setup-status"],
+    queryFn: () => api.get<{ needsSetup: boolean }>("/auth/setup"),
+    staleTime: 60_000,
+    retry: false,
+  })
 }
 
 export function useLogin() {

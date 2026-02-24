@@ -31,4 +31,10 @@ export class UserModuleService extends MeridianService({ User: UserModel, Team: 
   async deactivateUser(userId: string): Promise<any> {
     return (this as any).updateUser(userId, { is_active: false })
   }
+
+  /** Return the total number of registered users. */
+  async countUsers(): Promise<number> {
+    const userRepository = this.container.resolve<any>("userRepository")
+    return userRepository.count({})
+  }
 }

@@ -1,6 +1,6 @@
 {
   "name": "create-meridian-app",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Create a new Meridian project or manage an existing one",
   "main": "./dist/index.js",
   "type": "module",

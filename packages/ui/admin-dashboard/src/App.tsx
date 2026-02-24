@@ -1,7 +1,8 @@
-import { Navigate, Route, Routes, useNavigate, useParams } from "react-router-dom"
+import { Navigate, Route, Routes, useNavigate, useParams, useLocation } from "react-router-dom"
 import { useEffect, type ReactNode } from "react"
 import { useAuth } from "@/stores/auth"
 import { useWorkspaces } from "@/api/hooks/useWorkspaces"
+import { useSetupStatus } from "@/api/hooks/useAuth"
 import { AppShell } from "@/components/layout/AppShell"
 import { ProjectLayout } from "@/components/layout/ProjectLayout"
 import { CommandPalette } from "@/components/CommandPalette"
@@ -24,7 +25,16 @@ function RequireAuth({ children }: { children: ReactNode }) {
 
 function RedirectIfAuth({ children }: { children: ReactNode }) {
   const { isAuthenticated } = useAuth()
+  const { data: setupStatus } = useSetupStatus()
+  const location = useLocation()
+
   if (isAuthenticated) return <Navigate to="/" replace />
+
+  // First-time setup: redirect /login → /register when no users exist yet
+  if (setupStatus?.needsSetup && location.pathname === "/login") {
+    return <Navigate to="/register" replace />
+  }
+
   return <>{children}</>
 }
 
@@ -74,7 +84,10 @@ function WorkspaceLayout() {
       }
     } else if (workspaces.length > 0) {
       navigate(`/${workspaces[0].slug}/projects`, { replace: true })
-    } else {
+    } else if (!workspace) {
+      // Only redirect to /setup when no workspace is in context.
+      // Guards against the race where stale empty data arrives during
+      // query refetch immediately after workspace creation.
       navigate("/setup", { replace: true })
     }
   }, [workspaces, slugParam, isLoading, workspace?.id, navigate, setWorkspace])

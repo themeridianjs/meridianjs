@@ -21,6 +21,7 @@ import { runDbMigrate } from "./commands/db-migrate.js"
 import { runDbGenerate } from "./commands/db-generate.js"
 import { generateModule, generateWorkflow, generatePlugin } from "./commands/generate/index.js"
 import { runServeDashboard } from "./commands/serve-dashboard.js"
+import { runUserCreate } from "./commands/user-create.js"
 
 const program = new Command()
 
@@ -94,6 +95,24 @@ program
       console.error(err)
       process.exit(1)
     })
+  })
+
+// ── user:create ───────────────────────────────────────────────────────────
+program
+  .command("user:create")
+  .description("Create a new user with a specified role")
+  .option("-e, --email <email>", "Email address")
+  .option(
+    "-r, --role <role>",
+    "Role: super-admin | admin | moderator | member"
+  )
+  .action((options) => {
+    runUserCreate({ email: options.email, role: options.role }).catch(
+      (err: unknown) => {
+        console.error(err)
+        process.exit(1)
+      }
+    )
   })
 
 // ── generate ──────────────────────────────────────────────────────────────

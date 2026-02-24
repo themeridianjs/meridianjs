@@ -6,11 +6,14 @@ import jwt from "jsonwebtoken"
 const BCRYPT_ROUNDS = 12
 const JWT_EXPIRES_IN = "7d"
 
+export type UserRole = "super-admin" | "admin" | "moderator" | "member"
+
 export interface RegisterInput {
   email: string
   password: string
   first_name?: string
   last_name?: string
+  role?: UserRole
 }
 
 export interface LoginInput {
@@ -56,15 +59,24 @@ export class AuthModuleService extends MeridianService({}) {
 
     const password_hash = await bcrypt.hash(input.password, BCRYPT_ROUNDS)
 
+    // If no role is specified, the first registered user becomes super-admin;
+    // all subsequent users default to member.
+    let role: UserRole = input.role ?? "member"
+    if (!input.role) {
+      const userCount = await userService.countUsers()
+      if (userCount === 0) role = "super-admin"
+    }
+
     const user = await userService.createUser({
       email: input.email.toLowerCase().trim(),
       password_hash,
       first_name: input.first_name ?? null,
       last_name: input.last_name ?? null,
+      role,
       is_active: true,
     })
 
-    const token = this.signToken(user.id, null, [], config.projectConfig.jwtSecret)
+    const token = this.signToken(user.id, null, [user.role], config.projectConfig.jwtSecret)
 
     return {
       user: {
@@ -99,7 +111,7 @@ export class AuthModuleService extends MeridianService({}) {
     // Non-critical — don't fail login if timestamp update fails
     await userService.recordLogin(user.id).catch(() => {})
 
-    const token = this.signToken(user.id, null, [], config.projectConfig.jwtSecret)
+    const token = this.signToken(user.id, null, [user.role ?? "member"], config.projectConfig.jwtSecret)
 
     return {
       user: {

@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
-import { useRegister } from "@/api/hooks/useAuth"
+import { useRegister, useSetupStatus } from "@/api/hooks/useAuth"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { toast } from "sonner"
@@ -14,6 +14,8 @@ export function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false)
   const navigate = useNavigate()
   const register = useRegister()
+  const { data: setupStatus } = useSetupStatus()
+  const isFirstSetup = setupStatus?.needsSetup === true
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -39,8 +41,14 @@ export function RegisterPage() {
             </div>
           </div>
           <div className="text-center">
-            <h1 className="text-lg font-semibold text-foreground">Create your account</h1>
-            <p className="text-sm text-muted-foreground mt-0.5">Get started with Meridian</p>
+            <h1 className="text-lg font-semibold text-foreground">
+              {isFirstSetup ? "Set up your account" : "Create your account"}
+            </h1>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              {isFirstSetup
+                ? "You're the first user — you'll be the super admin."
+                : "Get started with Meridian"}
+            </p>
           </div>
         </div>
 
