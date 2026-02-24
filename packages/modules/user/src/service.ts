@@ -35,6 +35,7 @@ export class UserModuleService extends MeridianService({ User: UserModel, Team: 
   /** Return the total number of registered users. */
   async countUsers(): Promise<number> {
     const userRepository = this.container.resolve<any>("userRepository")
-    return userRepository.count({})
+    const [, count] = await userRepository.findAndCount({})
+    return count
   }
 }
