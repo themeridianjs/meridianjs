@@ -7,6 +7,7 @@ export interface ProjectTemplateVars {
   name: string          // e.g. "my-app"
   databaseUrl: string   // e.g. "postgresql://..."
   httpPort: number
+  dashboardPort: number
   dashboard: boolean
 }
 
@@ -87,6 +88,9 @@ export default defineConfig({
     databaseUrl: process.env.DATABASE_URL ?? "${vars.databaseUrl}",
     httpPort: Number(process.env.PORT) || ${vars.httpPort},
     jwtSecret: process.env.JWT_SECRET ?? "changeme-replace-in-production",
+  },
+  admin: {
+    port: Number(process.env.DASHBOARD_PORT) || ${vars.dashboardPort},
   },
   modules: [
     { resolve: "@meridianjs/event-bus-local" },
@@ -175,7 +179,8 @@ export function renderEnvExample(vars: ProjectTemplateVars): string {
 DATABASE_URL=${vars.databaseUrl}
 PORT=${vars.httpPort}
 JWT_SECRET=changeme-replace-in-production
-`
+${vars.dashboard ? `DASHBOARD_PORT=${vars.dashboardPort}` : ""}
+`.trimEnd() + "\n"
 }
 
 export function renderReadme(vars: ProjectTemplateVars): string {

@@ -79,6 +79,8 @@ export interface PluginConfig {
 export interface AdminConfig {
   disable?: boolean
   path?: string
+  /** Port for the admin dashboard static server (default: 5174) */
+  port?: number
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -69,7 +69,7 @@ export async function runNew(projectName?: string): Promise<void> {
       {
         type: "number",
         name: "httpPort",
-        message: "HTTP port",
+        message: "API port",
         initial: 9000,
       },
       {
@@ -77,6 +77,12 @@ export async function runNew(projectName?: string): Promise<void> {
         name: "dashboard",
         message: "Install admin dashboard?",
         initial: true,
+      },
+      {
+        type: (prev: boolean) => (prev ? "number" : null),
+        name: "dashboardPort",
+        message: "Dashboard port",
+        initial: 5174,
       },
       {
         type: "confirm",
@@ -93,6 +99,7 @@ export async function runNew(projectName?: string): Promise<void> {
     databaseUrl: answers.databaseUrl as string,
     httpPort: answers.httpPort as number,
     dashboard: answers.dashboard as boolean,
+    dashboardPort: (answers.dashboardPort as number | undefined) ?? 5174,
   }
 
   // ── 4. Scaffold files ───────────────────────────────────────────────────

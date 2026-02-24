@@ -2,7 +2,7 @@ import path from "node:path"
 import { existsSync } from "node:fs"
 import chalk from "chalk"
 import { execa } from "execa"
-import { findProjectRoot } from "../utils.js"
+import { findProjectRoot, readProjectPorts } from "../utils.js"
 import { startDashboardServer } from "./serve-dashboard.js"
 
 export async function runDev(): Promise<void> {
@@ -20,15 +20,19 @@ export async function runDev(): Promise<void> {
 
   const dashboardDist = path.join(rootDir, "node_modules", "@meridianjs", "admin-dashboard", "dist")
   const hasDashboard = existsSync(dashboardDist)
-  const dashPort = Number(process.env.DASHBOARD_PORT ?? 5174)
 
-  // Start dashboard server if installed
+  // Read ports from meridian.config.ts (falls back to 9000 / 5174)
+  const { apiPort, dashboardPort } = await readProjectPorts(rootDir)
+
   let dashServer: import("node:http").Server | null = null
   if (hasDashboard) {
-    dashServer = await startDashboardServer(dashboardDist, dashPort)
-    console.log(chalk.dim(`  → API server`) + chalk.dim(` + `) + chalk.dim(`admin dashboard on `) + chalk.cyan(`http://localhost:${dashPort}`))
+    dashServer = await startDashboardServer(dashboardDist, dashboardPort, apiPort)
+    console.log(
+      chalk.dim("  → API: ") + chalk.cyan(`http://localhost:${apiPort}`) +
+      chalk.dim("  dashboard: ") + chalk.cyan(`http://localhost:${dashboardPort}`)
+    )
   } else {
-    console.log(chalk.dim(`  → Starting API server from ${rootDir}`))
+    console.log(chalk.dim(`  → API: http://localhost:${apiPort}`))
   }
   console.log()
 
