@@ -15,8 +15,8 @@ export interface MiddlewaresConfig {
  *
  * @example
  * // src/api/middlewares.ts
- * import { defineMiddlewares } from "@meridian/framework"
- * import { authenticateJWT } from "@meridian/auth"
+ * import { defineMiddlewares } from "@meridianjs/framework"
+ * import { authenticateJWT } from "@meridianjs/auth"
  *
  * export default defineMiddlewares({
  *   routes: [

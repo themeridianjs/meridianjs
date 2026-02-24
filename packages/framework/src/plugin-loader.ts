@@ -12,7 +12,7 @@ import type {
   ILogger,
   PluginRegistrationContext,
   ModuleConfig,
-} from "@meridian/types"
+} from "@meridianjs/types"
 
 /**
  * Loads plugins declared in config.plugins[].

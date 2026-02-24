@@ -6,7 +6,7 @@ import express, {
 } from "express"
 import cors from "cors"
 import helmet from "helmet"
-import type { MeridianConfig, MeridianContainer, ILogger } from "@meridian/types"
+import type { MeridianConfig, MeridianContainer, ILogger } from "@meridianjs/types"
 
 export function createServer(
   container: MeridianContainer,

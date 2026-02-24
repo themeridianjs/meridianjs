@@ -1,4 +1,4 @@
-import { Module } from "@meridian/framework-utils"
+import { Module } from "@meridianjs/framework-utils"
 import { IssueModuleService } from "./service.js"
 import IssueModel from "./models/issue.js"
 import CommentModel from "./models/comment.js"

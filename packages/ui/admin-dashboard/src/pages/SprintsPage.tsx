@@ -214,8 +214,7 @@ export function SprintsPage() {
       <div className="bg-white dark:bg-card border border-border rounded-xl overflow-hidden">
 
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-          <h1 className="text-base font-semibold">Sprints</h1>
+        <div className="flex items-center justify-end px-6 py-3 border-b border-border">
           <Button size="sm" onClick={() => setCreateOpen(true)}>
             <Plus className="h-4 w-4" />
             New Sprint

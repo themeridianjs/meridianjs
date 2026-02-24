@@ -1,0 +1,60 @@
+import { NavLink, Outlet, useParams } from "react-router-dom"
+import { Zap, GitBranch, LayoutDashboard } from "lucide-react"
+import type { LucideIcon } from "lucide-react"
+import { useProjectByKey } from "@/api/hooks/useProjects"
+
+export function ProjectLayout() {
+  const { projectKey, workspace: ws } = useParams<{ projectKey: string; workspace: string }>()
+  const { data: project } = useProjectByKey(projectKey ?? "")
+
+  const base = `/${ws}/projects/${projectKey}`
+  const tabs: { to: string; label: string; icon: LucideIcon; end: boolean }[] = [
+    { to: `${base}/board`, label: "Board", icon: LayoutDashboard, end: true },
+    { to: `${base}/issues`, label: "Issues", icon: GitBranch, end: false },
+    { to: `${base}/sprints`, label: "Sprints", icon: Zap, end: true },
+  ]
+
+  return (
+    <div className="flex flex-col h-full">
+      {/* Project header with tabs */}
+      <div className="px-6 pt-5 border-b border-border bg-white dark:bg-card shrink-0">
+        {/* Project name row */}
+        <div className="flex items-center gap-2.5 mb-4">
+          {project && (
+            <span className="text-xs font-mono text-muted-foreground bg-muted border border-border px-2 py-0.5 rounded">
+              {project.identifier}
+            </span>
+          )}
+          <h1 className="text-sm font-semibold">
+            {project?.name ?? ""}
+          </h1>
+        </div>
+
+        {/* Tab bar */}
+        <div className="flex -mb-px">
+          {tabs.map(({ to, label, icon: Icon, end }) => (
+            <NavLink
+              key={to}
+              to={to}
+              end={end}
+              className={({ isActive }) =>
+                `flex items-center gap-1.5 px-3 py-2 text-sm border-b-2 transition-colors ${isActive
+                  ? "border-foreground text-foreground font-medium"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+                }`
+              }
+            >
+              <Icon className="h-3.5 w-3.5" strokeWidth={1.5} />
+              {label}
+            </NavLink>
+          ))}
+        </div>
+      </div>
+
+      {/* Page content */}
+      <div className="flex flex-col flex-1 min-h-0">
+        <Outlet />
+      </div>
+    </div>
+  )
+}

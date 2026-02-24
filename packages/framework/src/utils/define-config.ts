@@ -1,4 +1,4 @@
-import type { MeridianConfig } from "@meridian/types"
+import type { MeridianConfig } from "@meridianjs/types"
 
 /**
  * Type-safe helper for defining a Meridian configuration.
@@ -6,7 +6,7 @@ import type { MeridianConfig } from "@meridian/types"
  *
  * @example
  * // meridian.config.ts
- * import { defineConfig } from "@meridian/framework"
+ * import { defineConfig } from "@meridianjs/framework"
  *
  * export default defineConfig({
  *   projectConfig: {
@@ -14,8 +14,8 @@ import type { MeridianConfig } from "@meridian/types"
  *     jwtSecret: process.env.JWT_SECRET!,
  *   },
  *   modules: [
- *     { resolve: "@meridian/user" },
- *     { resolve: "@meridian/project" },
+ *     { resolve: "@meridianjs/user" },
+ *     { resolve: "@meridianjs/project" },
  *   ],
  * })
  */

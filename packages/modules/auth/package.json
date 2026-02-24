@@ -1,5 +1,5 @@
 {
-  "name": "@meridian/auth",
+  "name": "@meridianjs/auth",
   "version": "0.1.0",
   "description": "Meridian auth module — JWT authentication and middleware",
   "main": "./dist/index.js",
@@ -22,11 +22,12 @@
     "dev": "tsup src/index.ts --format esm,cjs --dts --watch",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@meridian/types": "*",
-    "@meridian/framework-utils": "*",
+    "@meridianjs/types": "^0.1.0",
+    "@meridianjs/framework-utils": "^0.1.0",
     "jsonwebtoken": "^9.0.2",
     "bcrypt": "^5.1.1"
   },
@@ -39,5 +40,8 @@
   },
   "files": [
     "dist"
-  ]
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
 }

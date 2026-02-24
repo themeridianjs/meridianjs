@@ -11,7 +11,7 @@ import { loadJobs } from "./job-loader.js"
 import { loadLinks } from "./link-loader.js"
 import { createServer } from "./server.js"
 import { ConsoleLogger } from "./logger.js"
-import type { MeridianConfig, MeridianContainer, ILogger, IEventBus } from "@meridian/types"
+import type { MeridianConfig, MeridianContainer, ILogger, IEventBus } from "@meridianjs/types"
 
 export interface BootstrapOptions {
   /** Absolute path to the project root directory */
@@ -76,7 +76,7 @@ export async function bootstrap(opts: BootstrapOptions): Promise<MeridianApp> {
   } catch {
     logger.warn(
       "No eventBus module registered. Events will not be dispatched. " +
-      "Add @meridian/event-bus-local or @meridian/event-bus-redis to your config.modules."
+      "Add @meridianjs/event-bus-local or @meridianjs/event-bus-redis to your config.modules."
     )
     eventBus = {
       async emit() {},

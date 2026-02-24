@@ -1,4 +1,4 @@
-import { Module } from "@meridian/framework-utils"
+import { Module } from "@meridianjs/framework-utils"
 import { NotificationModuleService } from "./service.js"
 import defaultLoader from "./loaders/default.js"
 

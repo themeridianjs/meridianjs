@@ -1,19 +1,19 @@
 import cron from "node-cron"
-import type { IScheduler, ScheduledJobConfig, ModuleDefinition } from "@meridian/types"
+import type { IScheduler, ScheduledJobConfig, ModuleDefinition } from "@meridianjs/types"
 
 /**
  * In-process scheduler for local development.
  * Uses node-cron for cron expressions and setInterval for fixed intervals.
  *
  * Not suitable for production (jobs are lost on process restart, no
- * distributed locking). Use @meridian/job-queue-redis in production.
+ * distributed locking). Use @meridianjs/job-queue-redis in production.
  *
  * Switching is a single config change:
  * @example
  * // development
- * { resolve: "@meridian/job-queue-local" }
+ * { resolve: "@meridianjs/job-queue-local" }
  * // production
- * { resolve: "@meridian/job-queue-redis", options: { url: process.env.REDIS_URL } }
+ * { resolve: "@meridianjs/job-queue-redis", options: { url: process.env.REDIS_URL } }
  */
 export class LocalScheduler implements IScheduler {
   private tasks: cron.ScheduledTask[] = []
@@ -59,7 +59,7 @@ export class LocalScheduler implements IScheduler {
  *
  * Register in meridian.config.ts:
  * @example
- * modules: [{ resolve: "@meridian/job-queue-local" }]
+ * modules: [{ resolve: "@meridianjs/job-queue-local" }]
  */
 const LocalJobQueueModule: ModuleDefinition = {
   key: "scheduler",

@@ -7,7 +7,7 @@ import type {
   ScheduledJobFn,
   ScheduledJobConfig,
   ILogger,
-} from "@meridian/types"
+} from "@meridianjs/types"
 
 /**
  * Scans src/jobs/ for scheduled job files and registers them with the scheduler.

@@ -1,4 +1,4 @@
-import { model } from "@meridian/framework-utils"
+import { model } from "@meridianjs/framework-utils"
 
 const ProjectStatus = model.define("project_status", {
   id: model.id().primaryKey(),

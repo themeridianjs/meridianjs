@@ -1,4 +1,4 @@
-import type { StepContext } from "@meridian/types"
+import type { StepContext } from "@meridianjs/types"
 import { StepResponse } from "./step-response.js"
 import { getWorkflowRunContext } from "./run-context.js"
 

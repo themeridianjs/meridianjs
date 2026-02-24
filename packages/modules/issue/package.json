@@ -1,5 +1,5 @@
 {
-  "name": "@meridian/issue",
+  "name": "@meridianjs/issue",
   "version": "0.1.0",
   "description": "Meridian issue module — Issue and Comment domain models",
   "main": "./dist/index.js",
@@ -21,11 +21,12 @@
     "build": "tsup src/index.ts --format esm,cjs --dts --clean",
     "dev": "tsup src/index.ts --format esm,cjs --dts --watch",
     "typecheck": "tsc --noEmit",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@meridian/framework-utils": "*",
-    "@meridian/types": "*",
+    "@meridianjs/framework-utils": "^0.1.0",
+    "@meridianjs/types": "^0.1.0",
     "@mikro-orm/core": "^6.4.3",
     "@mikro-orm/postgresql": "^6.4.3"
   },
@@ -35,5 +36,8 @@
   },
   "files": [
     "dist"
-  ]
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
 }

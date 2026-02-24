@@ -1,5 +1,5 @@
-import { MeridianService } from "@meridian/framework-utils"
-import type { MeridianContainer, MeridianConfig } from "@meridian/types"
+import { MeridianService } from "@meridianjs/framework-utils"
+import type { MeridianContainer, MeridianConfig } from "@meridianjs/types"
 import bcrypt from "bcrypt"
 import jwt from "jsonwebtoken"
 

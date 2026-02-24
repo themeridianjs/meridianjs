@@ -1,4 +1,4 @@
-import { model } from "@meridian/framework-utils"
+import { model } from "@meridianjs/framework-utils"
 
 const Milestone = model.define("milestone", {
   id: model.id().primaryKey(),

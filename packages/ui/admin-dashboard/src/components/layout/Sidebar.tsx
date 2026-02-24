@@ -1,6 +1,6 @@
 import { NavLink, useParams, useNavigate, useLocation } from "react-router-dom"
 import {
-  LayoutDashboard,
+  Layers,
   Bell,
   Settings,
   Search,
@@ -184,14 +184,9 @@ export function AppSidebar({ ...props }: SidebarProps) {
   const location = useLocation()
   const ws = workspaceSlug ?? ""
 
-  const currentProject = projects?.find((p) => p.identifier === projectKey)
-
   const isProjectsActive = location.pathname === `/${ws}/projects`
   const isNotificationsActive = location.pathname.includes("/notifications")
   const isSettingsActive = location.pathname.includes("/settings")
-  const isBoardActive = projectKey ? location.pathname.endsWith("/board") : false
-  const isIssuesActive = projectKey ? location.pathname.endsWith("/issues") : false
-  const isSprintsActive = projectKey ? location.pathname.endsWith("/sprints") : false
 
   return (
     <SidebarRoot collapsible="offcanvas" {...props}>
@@ -220,7 +215,7 @@ export function AppSidebar({ ...props }: SidebarProps) {
               <SidebarMenuItem>
                 <SidebarMenuButton asChild isActive={isProjectsActive} tooltip="Projects">
                   <NavLink to={`/${ws}/projects`} end>
-                    <LayoutDashboard />
+                    <Layers />
                     <span>Projects</span>
                   </NavLink>
                 </SidebarMenuButton>
@@ -238,41 +233,6 @@ export function AppSidebar({ ...props }: SidebarProps) {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-
-        {/* Current project sub-nav */}
-        {projectKey && (
-          <>
-            <SidebarSeparator />
-            <SidebarGroup>
-              <SidebarGroupLabel>{currentProject?.name ?? "Project"}</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={isBoardActive}>
-                      <NavLink to={`/${ws}/projects/${projectKey}/board`}>
-                        Board
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={isIssuesActive}>
-                      <NavLink to={`/${ws}/projects/${projectKey}/issues`}>
-                        Issues
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={isSprintsActive}>
-                      <NavLink to={`/${ws}/projects/${projectKey}/sprints`}>
-                        Sprints
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          </>
-        )}
 
         {/* Recent projects */}
         {projects && projects.length > 0 && (

@@ -6,7 +6,7 @@ import { writeFile, toPascalCase, toKebabCase, findProjectRoot } from "../../uti
 function renderPluginIndex(_name: string, pascalName: string): string {
   return `import { fileURLToPath } from "node:url"
 import path from "node:path"
-import type { PluginRegistrationContext } from "@meridian/types"
+import type { PluginRegistrationContext } from "@meridianjs/types"
 
 /**
  * The compiled directory of this plugin.

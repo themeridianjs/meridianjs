@@ -26,15 +26,16 @@ export function renderPackageJson(vars: ProjectTemplateVars): string {
         "db:generate": "meridian db:generate",
       },
       dependencies: {
-        "@meridian/framework": "latest",
-        "@meridian/framework-utils": "latest",
-        "@meridian/types": "latest",
-        "@meridian/event-bus-local": "latest",
-        "@meridian/user": "latest",
-        "@meridian/workspace": "latest",
-        "@meridian/auth": "latest",
-        "@meridian/project": "latest",
-        "@meridian/issue": "latest",
+        "@meridianjs/framework": "latest",
+        "@meridianjs/framework-utils": "latest",
+        "@meridianjs/types": "latest",
+        "@meridianjs/event-bus-local": "latest",
+        "@meridianjs/user": "latest",
+        "@meridianjs/workspace": "latest",
+        "@meridianjs/auth": "latest",
+        "@meridianjs/project": "latest",
+        "@meridianjs/issue": "latest",
+        "dotenv": "^16.0.0",
       },
       devDependencies: {
         "create-meridian-app": "latest",
@@ -75,7 +76,7 @@ export function renderTsConfig(): string {
 }
 
 export function renderMeridianConfig(vars: ProjectTemplateVars): string {
-  return `import { defineConfig } from "@meridian/framework"
+  return `import { defineConfig } from "@meridianjs/framework"
 import dotenv from "dotenv"
 dotenv.config()
 
@@ -86,19 +87,19 @@ export default defineConfig({
     jwtSecret: process.env.JWT_SECRET ?? "changeme-replace-in-production",
   },
   modules: [
-    { resolve: "@meridian/event-bus-local" },
-    { resolve: "@meridian/user" },
-    { resolve: "@meridian/workspace" },
-    { resolve: "@meridian/auth" },
-    { resolve: "@meridian/project" },
-    { resolve: "@meridian/issue" },
+    { resolve: "@meridianjs/event-bus-local" },
+    { resolve: "@meridianjs/user" },
+    { resolve: "@meridianjs/workspace" },
+    { resolve: "@meridianjs/auth" },
+    { resolve: "@meridianjs/project" },
+    { resolve: "@meridianjs/issue" },
   ],
 })
 `
 }
 
 export function renderMainTs(): string {
-  return `import { bootstrap } from "@meridian/framework"
+  return `import { bootstrap } from "@meridianjs/framework"
 import { fileURLToPath } from "node:url"
 import path from "node:path"
 
@@ -121,7 +122,7 @@ process.on("SIGINT", async () => {
 }
 
 export function renderMiddlewares(): string {
-  return `import { authenticateJWT } from "@meridian/auth"
+  return `import { authenticateJWT } from "@meridianjs/auth"
 
 export default {
   routes: [
@@ -235,7 +236,7 @@ See the [Meridian documentation](https://github.com/meridian/meridian) for guide
 // ─── Module template ───────────────────────────────────────────────────────
 
 export function renderModuleIndex(name: string, pascalName: string): string {
-  return `import { Module } from "@meridian/framework-utils"
+  return `import { Module } from "@meridianjs/framework-utils"
 import { ${pascalName}ModuleService } from "./service.js"
 import { ${pascalName} } from "./models/${name}.js"
 import defaultLoader from "./loaders/default.js"
@@ -252,8 +253,8 @@ export default Module("${name}ModuleService", {
 }
 
 export function renderModuleLoader(name: string, pascalName: string): string {
-  return `import { createModuleOrm, createRepository, dmlToEntitySchema } from "@meridian/framework-utils"
-import type { LoaderOptions } from "@meridian/types"
+  return `import { createModuleOrm, createRepository, dmlToEntitySchema } from "@meridianjs/framework-utils"
+import type { LoaderOptions } from "@meridianjs/types"
 import { ${pascalName} } from "../models/${name}.js"
 
 const ${pascalName}Schema = dmlToEntitySchema(${pascalName})
@@ -274,7 +275,7 @@ export default async function defaultLoader({ container }: LoaderOptions): Promi
 }
 
 export function renderModuleModel(name: string, pascalName: string): string {
-  return `import { model } from "@meridian/framework-utils"
+  return `import { model } from "@meridianjs/framework-utils"
 
 export const ${pascalName} = model("${name}", {
   id: model.id(),
@@ -286,8 +287,8 @@ export const ${pascalName} = model("${name}", {
 }
 
 export function renderModuleService(name: string, pascalName: string): string {
-  return `import { MeridianService } from "@meridian/framework-utils"
-import type { MeridianContainer } from "@meridian/types"
+  return `import { MeridianService } from "@meridianjs/framework-utils"
+import type { MeridianContainer } from "@meridianjs/types"
 import { ${pascalName} } from "./models/${name}.js"
 
 export class ${pascalName}ModuleService extends MeridianService({ ${pascalName} }) {
@@ -305,8 +306,8 @@ export class ${pascalName}ModuleService extends MeridianService({ ${pascalName} 
 export function renderWorkflow(name: string, pascalName: string): string {
   // camelCase for the exported identifier, e.g. "sendNotificationWorkflow"
   const camelName = pascalName.charAt(0).toLowerCase() + pascalName.slice(1)
-  return `import { createStep, createWorkflow, WorkflowResponse } from "@meridian/workflow-engine"
-import type { MeridianContainer } from "@meridian/types"
+  return `import { createStep, createWorkflow, WorkflowResponse } from "@meridianjs/workflow-engine"
+import type { MeridianContainer } from "@meridianjs/types"
 
 interface ${pascalName}WorkflowInput {
   // Define your input shape here
@@ -336,7 +337,7 @@ export const ${camelName}Workflow = createWorkflow(
 // ─── Subscriber template ───────────────────────────────────────────────────
 
 export function renderSubscriber(eventName: string): string {
-  return `import type { SubscriberArgs, SubscriberConfig } from "@meridian/types"
+  return `import type { SubscriberArgs, SubscriberConfig } from "@meridianjs/types"
 
 export default async function handler({ event, container }: SubscriberArgs) {
   const logger = container.resolve("logger") as any

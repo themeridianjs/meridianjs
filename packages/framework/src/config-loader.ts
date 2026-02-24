@@ -1,6 +1,6 @@
 import path from "node:path"
 import { pathToFileURL } from "node:url"
-import type { MeridianConfig } from "@meridian/types"
+import type { MeridianConfig } from "@meridianjs/types"
 
 /**
  * Loads and validates the user's meridian.config.ts (or .js / .mjs) file.

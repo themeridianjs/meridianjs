@@ -1,5 +1,5 @@
-import { authenticateJWT, requireWorkspace } from "@meridian/auth"
-import { authRateLimit, apiRateLimit } from "@meridian/framework"
+import { authenticateJWT, requireWorkspace } from "@meridianjs/auth"
+import { authRateLimit, apiRateLimit } from "@meridianjs/framework"
 
 /**
  * Route-level middleware configuration.

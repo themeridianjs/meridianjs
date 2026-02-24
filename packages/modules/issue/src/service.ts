@@ -1,5 +1,5 @@
-import { MeridianService } from "@meridian/framework-utils"
-import type { MeridianContainer } from "@meridian/types"
+import { MeridianService } from "@meridianjs/framework-utils"
+import type { MeridianContainer } from "@meridianjs/types"
 import IssueModel from "./models/issue.js"
 import CommentModel from "./models/comment.js"
 import AttachmentModel from "./models/attachment.js"

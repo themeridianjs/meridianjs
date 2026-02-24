@@ -4,7 +4,7 @@ import {
   StepResponse,
   WorkflowResponse,
   transform,
-} from "@meridian/workflow-engine"
+} from "@meridianjs/workflow-engine"
 import { emitEventStep } from "./emit-event.js"
 
 // ─── Input / Output types ────────────────────────────────────────────────────

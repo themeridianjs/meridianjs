@@ -1,4 +1,4 @@
-import { Module } from "@meridian/framework-utils"
+import { Module } from "@meridianjs/framework-utils"
 import { ProjectModuleService } from "./service.js"
 import ProjectModel from "./models/project.js"
 import LabelModel from "./models/label.js"

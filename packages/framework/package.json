@@ -1,5 +1,5 @@
 {
-  "name": "@meridian/framework",
+  "name": "@meridianjs/framework",
   "version": "0.1.0",
   "description": "Core Meridian framework: bootstrap, DI container, module/route/subscriber/job loaders",
   "main": "./dist/index.js",
@@ -17,11 +17,12 @@
     "dev": "tsup src/index.ts --format esm --dts --watch",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@meridian/framework-utils": "*",
-    "@meridian/types": "*",
+    "@meridianjs/framework-utils": "^0.1.0",
+    "@meridianjs/types": "^0.1.0",
     "awilix": "^12.0.5",
     "cors": "^2.8.5",
     "express": "^4.21.2",
@@ -39,5 +40,8 @@
   },
   "files": [
     "dist"
-  ]
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
 }

@@ -1,4 +1,4 @@
-import { model } from "@meridian/framework-utils"
+import { model } from "@meridianjs/framework-utils"
 
 const Sprint = model.define("sprint", {
   id: model.id().primaryKey(),

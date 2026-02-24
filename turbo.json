@@ -6,7 +6,7 @@
       "dependsOn": ["^build"],
       "outputs": ["dist/**", "!dist/**/*.map"]
     },
-    "@meridian/test-app#build": {
+    "@meridianjs/test-app#build": {
       "dependsOn": ["^build"],
       "outputs": []
     },

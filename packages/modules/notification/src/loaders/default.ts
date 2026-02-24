@@ -1,5 +1,5 @@
-import { createModuleOrm, createRepository, dmlToEntitySchema } from "@meridian/framework-utils"
-import type { LoaderOptions } from "@meridian/types"
+import { createModuleOrm, createRepository, dmlToEntitySchema } from "@meridianjs/framework-utils"
+import type { LoaderOptions } from "@meridianjs/types"
 import Notification from "../models/notification.js"
 
 const NotificationSchema = dmlToEntitySchema(Notification)

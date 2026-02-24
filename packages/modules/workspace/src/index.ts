@@ -1,4 +1,4 @@
-import { Module } from "@meridian/framework-utils"
+import { Module } from "@meridianjs/framework-utils"
 import { WorkspaceModuleService } from "./service.js"
 import WorkspaceModel from "./models/workspace.js"
 import defaultLoader from "./loaders/default.js"

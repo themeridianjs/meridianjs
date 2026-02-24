@@ -1,5 +1,5 @@
-import { dmlToEntitySchema, createRepository, createModuleOrm } from "@meridian/framework-utils"
-import type { LoaderOptions, MeridianConfig } from "@meridian/types"
+import { dmlToEntitySchema, createRepository, createModuleOrm } from "@meridianjs/framework-utils"
+import type { LoaderOptions, MeridianConfig } from "@meridianjs/types"
 import ProjectModel from "../models/project.js"
 import LabelModel from "../models/label.js"
 import MilestoneModel from "../models/milestone.js"

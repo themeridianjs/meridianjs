@@ -1,5 +1,5 @@
 import { EventEmitter } from "node:events"
-import type { IEventBus, EventMessage, SubscriberFn, ModuleDefinition } from "@meridian/types"
+import type { IEventBus, EventMessage, SubscriberFn, ModuleDefinition } from "@meridianjs/types"
 
 /**
  * Local in-process event bus using Node.js EventEmitter.
@@ -8,7 +8,7 @@ import type { IEventBus, EventMessage, SubscriberFn, ModuleDefinition } from "@m
  * Events are dispatched asynchronously (setImmediate) to avoid
  * blocking the caller while still maintaining ordering guarantees.
  *
- * For production multi-process deployments, use @meridian/event-bus-redis.
+ * For production multi-process deployments, use @meridianjs/event-bus-redis.
  */
 export class LocalEventBus implements IEventBus {
   private emitter: EventEmitter
@@ -45,7 +45,7 @@ export class LocalEventBus implements IEventBus {
 
   unsubscribe(eventName: string, _handler: SubscriberFn): void {
     // With anonymous wrappers, we remove all listeners for the event.
-    // Use @meridian/event-bus-redis for fine-grained removal in production.
+    // Use @meridianjs/event-bus-redis for fine-grained removal in production.
     this.emitter.removeAllListeners(eventName)
   }
 
@@ -65,7 +65,7 @@ export const EVENT_BUS_MODULE = "eventBus"
  *
  * Register in meridian.config.ts:
  * @example
- * modules: [{ resolve: "@meridian/event-bus-local" }]
+ * modules: [{ resolve: "@meridianjs/event-bus-local" }]
  */
 const LocalEventBusModule: ModuleDefinition = {
   key: EVENT_BUS_MODULE,

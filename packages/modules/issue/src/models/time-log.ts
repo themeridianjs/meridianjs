@@ -1,4 +1,4 @@
-import { model } from "@meridian/framework-utils"
+import { model } from "@meridianjs/framework-utils"
 
 const TimeLog = model.define("time_log", {
   id: model.id().primaryKey(),

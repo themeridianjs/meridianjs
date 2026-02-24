@@ -1,5 +1,5 @@
 {
-  "name": "@meridian/plugin-webhook",
+  "name": "@meridianjs/plugin-webhook",
   "version": "0.1.0",
   "description": "Meridian plugin: receive and store incoming webhooks from external services",
   "main": "./dist/index.js",
@@ -15,11 +15,12 @@
     "build": "tsup",
     "dev": "tsup --watch",
     "typecheck": "tsc --noEmit",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@meridian/framework-utils": "*",
-    "@meridian/types": "*"
+    "@meridianjs/framework-utils": "^0.1.0",
+    "@meridianjs/types": "^0.1.0"
   },
   "devDependencies": {
     "tsup": "^8.3.5",
@@ -28,5 +29,8 @@
   },
   "files": [
     "dist"
-  ]
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
 }

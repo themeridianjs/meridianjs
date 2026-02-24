@@ -1,6 +1,6 @@
 import jwt from "jsonwebtoken"
 import type { Response, NextFunction } from "express"
-import type { MeridianConfig, MeridianContainer } from "@meridian/types"
+import type { MeridianConfig, MeridianContainer } from "@meridianjs/types"
 
 /**
  * Express middleware that validates a Bearer JWT on every request.

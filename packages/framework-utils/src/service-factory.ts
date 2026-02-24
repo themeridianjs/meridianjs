@@ -1,4 +1,4 @@
-import type { IModuleService, MeridianContainer } from "@meridian/types"
+import type { IModuleService, MeridianContainer } from "@meridianjs/types"
 import type { ModelDefinition } from "./dml.js"
 
 /**

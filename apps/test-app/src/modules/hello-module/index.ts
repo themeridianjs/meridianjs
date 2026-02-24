@@ -1,5 +1,5 @@
-import { Module, MeridianService, model } from "@meridian/framework-utils"
-import type { MeridianContainer } from "@meridian/types"
+import { Module, MeridianService, model } from "@meridianjs/framework-utils"
+import type { MeridianContainer } from "@meridianjs/types"
 
 // Define a simple model
 const Greeting = model.define("greeting", {

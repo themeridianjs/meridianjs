@@ -1,4 +1,4 @@
-import { model } from "@meridian/framework-utils"
+import { model } from "@meridianjs/framework-utils"
 
 const Activity = model.define("activity", {
   id: model.id().primaryKey(),

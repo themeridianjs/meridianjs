@@ -1,6 +1,6 @@
-import { defineLink } from "@meridian/framework-utils"
-import WorkspaceModule from "@meridian/workspace"
-import ProjectModule from "@meridian/project"
+import { defineLink } from "@meridianjs/framework-utils"
+import WorkspaceModule from "@meridianjs/workspace"
+import ProjectModule from "@meridianjs/project"
 
 export default defineLink(
   WorkspaceModule.linkable!.workspace,

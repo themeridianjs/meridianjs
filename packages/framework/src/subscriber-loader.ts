@@ -7,7 +7,7 @@ import type {
   SubscriberFn,
   SubscriberConfig,
   ILogger,
-} from "@meridian/types"
+} from "@meridianjs/types"
 
 /**
  * Scans src/subscribers/ for subscriber files and registers them on the event bus.

@@ -1,4 +1,4 @@
-import type { ModuleDefinition } from "@meridian/types"
+import type { ModuleDefinition } from "@meridianjs/types"
 
 /**
  * Declares a Meridian module.

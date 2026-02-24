@@ -1,5 +1,5 @@
 {
-  "name": "@meridian/framework-utils",
+  "name": "@meridianjs/framework-utils",
   "version": "0.1.0",
   "description": "Utilities for building Meridian modules: DML, service factory, defineModule, defineLink",
   "main": "./dist/index.js",
@@ -22,10 +22,11 @@
     "dev": "tsup src/index.ts --format esm,cjs --dts --watch",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@meridian/types": "*"
+    "@meridianjs/types": "^0.1.0"
   },
   "peerDependencies": {
     "@mikro-orm/core": "^6.0.0",
@@ -45,5 +46,8 @@
   },
   "files": [
     "dist"
-  ]
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
 }

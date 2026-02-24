@@ -3,6 +3,7 @@ import { useEffect, type ReactNode } from "react"
 import { useAuth } from "@/stores/auth"
 import { useWorkspaces } from "@/api/hooks/useWorkspaces"
 import { AppShell } from "@/components/layout/AppShell"
+import { ProjectLayout } from "@/components/layout/ProjectLayout"
 import { CommandPalette } from "@/components/CommandPalette"
 import { LoginPage } from "@/pages/LoginPage"
 import { RegisterPage } from "@/pages/RegisterPage"
@@ -146,11 +147,13 @@ export function App() {
       >
         <Route index element={<Navigate to="projects" replace />} />
         <Route path="projects" element={<ProjectsPage />} />
-        <Route path="projects/:projectKey/board" element={<ProjectBoardPage />} />
-        <Route path="projects/:projectKey/issues" element={<ProjectIssuesPage />} />
-        <Route path="projects/:projectKey/issues/new" element={<IssueNewPage />} />
-        <Route path="projects/:projectKey/issues/:issueId" element={<IssueDetailPage />} />
-        <Route path="projects/:projectKey/sprints" element={<SprintsPage />} />
+        <Route path="projects/:projectKey" element={<ProjectLayout />}>
+          <Route path="board" element={<ProjectBoardPage />} />
+          <Route path="issues" element={<ProjectIssuesPage />} />
+          <Route path="issues/new" element={<IssueNewPage />} />
+          <Route path="issues/:issueId" element={<IssueDetailPage />} />
+          <Route path="sprints" element={<SprintsPage />} />
+        </Route>
         <Route path="notifications" element={<NotificationsPage />} />
       </Route>
 

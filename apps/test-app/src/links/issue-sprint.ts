@@ -1,6 +1,6 @@
-import { defineLink } from "@meridian/framework-utils"
-import SprintModule from "@meridian/sprint"
-import IssueModule from "@meridian/issue"
+import { defineLink } from "@meridianjs/framework-utils"
+import SprintModule from "@meridianjs/sprint"
+import IssueModule from "@meridianjs/issue"
 
 export default defineLink(
   SprintModule.linkable!.sprint,

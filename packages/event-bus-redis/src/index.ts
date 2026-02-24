@@ -5,7 +5,7 @@ import type {
   EventMessage,
   SubscriberFn,
   ModuleDefinition,
-} from "@meridian/types"
+} from "@meridianjs/types"
 
 export interface RedisEventBusOptions {
   url: string
@@ -22,7 +22,7 @@ export interface RedisEventBusOptions {
  * A Worker processes jobs and fans out to all registered handlers for
  * the event name — providing durable, async, at-least-once delivery.
  *
- * For local development use @meridian/event-bus-local instead.
+ * For local development use @meridianjs/event-bus-local instead.
  */
 export class RedisEventBus implements IEventBus {
   private queue: Queue
@@ -115,7 +115,7 @@ export const EVENT_BUS_MODULE = "eventBus"
  * Register in meridian.config.ts:
  * @example
  * modules: [
- *   { resolve: "@meridian/event-bus-redis", options: { url: process.env.REDIS_URL } }
+ *   { resolve: "@meridianjs/event-bus-redis", options: { url: process.env.REDIS_URL } }
  * ]
  */
 const RedisEventBusModule: ModuleDefinition = {

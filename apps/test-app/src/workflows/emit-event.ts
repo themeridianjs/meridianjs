@@ -1,5 +1,5 @@
-import { createStep } from "@meridian/workflow-engine"
-import type { EventMessage } from "@meridian/types"
+import { createStep } from "@meridianjs/workflow-engine"
+import type { EventMessage } from "@meridianjs/types"
 
 /**
  * Shared step that emits a domain event on the event bus.

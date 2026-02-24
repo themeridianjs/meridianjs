@@ -1,6 +1,6 @@
 import { Queue, Worker } from "bullmq"
 import IORedis from "ioredis"
-import type { IScheduler, ScheduledJobConfig, ModuleDefinition } from "@meridian/types"
+import type { IScheduler, ScheduledJobConfig, ModuleDefinition } from "@meridianjs/types"
 
 export interface JobQueueOptions {
   url: string
@@ -109,7 +109,7 @@ export class RedisScheduler implements IScheduler {
  * Register in meridian.config.ts:
  * @example
  * modules: [
- *   { resolve: "@meridian/job-queue-redis", options: { url: process.env.REDIS_URL } }
+ *   { resolve: "@meridianjs/job-queue-redis", options: { url: process.env.REDIS_URL } }
  * ]
  */
 const JobQueueRedisModule: ModuleDefinition = {

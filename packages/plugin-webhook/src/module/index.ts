@@ -1,4 +1,4 @@
-import { Module } from "@meridian/framework-utils"
+import { Module } from "@meridianjs/framework-utils"
 import { WebhookModuleService } from "./service.js"
 import { WebhookEvent } from "./models/webhook-event.js"
 import defaultLoader from "./loaders/default.js"

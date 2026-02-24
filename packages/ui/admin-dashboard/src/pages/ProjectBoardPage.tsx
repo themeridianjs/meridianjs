@@ -33,15 +33,8 @@ export function ProjectBoardPage() {
   return (
     <div className="flex flex-col h-full gap-0">
       <div className="flex flex-col flex-1 min-h-0 bg-white dark:bg-card">
-        {/* Page header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
-          <div className="flex items-center gap-2.5">
-            {project && (
-              <span className="text-xs font-mono text-muted-foreground bg-muted border border-border px-2 py-0.5 rounded">
-                {project.identifier}
-              </span>
-            )}
-          </div>
+        {/* Actions bar */}
+        <div className="flex items-center justify-end px-6 py-3 border-b border-border shrink-0">
           <Button size="sm" onClick={() => setCreateOpen(true)}>
             <Plus className="h-4 w-4" />
             Create

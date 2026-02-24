@@ -673,8 +673,7 @@ export function ProjectIssuesPage() {
       <div className="bg-white dark:bg-card border border-border rounded-xl overflow-hidden">
 
         {/* Card header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-          <h1 className="text-base font-semibold">Issues</h1>
+        <div className="flex items-center justify-end px-6 py-3 border-b border-border">
           <div className="flex items-center gap-2">
             {/* New list */}
             {showNewListInput ? (

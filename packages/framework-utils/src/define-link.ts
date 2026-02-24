@@ -1,4 +1,4 @@
-import type { LinkDefinition, LinkEndpoint, LinkableEntry } from "@meridian/types"
+import type { LinkDefinition, LinkEndpoint, LinkableEntry } from "@meridianjs/types"
 
 type LinkEndpointInput =
   | LinkableEntry

@@ -1,5 +1,5 @@
-import { MeridianService } from "@meridian/framework-utils"
-import type { MeridianContainer } from "@meridian/types"
+import { MeridianService } from "@meridianjs/framework-utils"
+import type { MeridianContainer } from "@meridianjs/types"
 import { WebhookEvent } from "./models/webhook-event.js"
 
 export class WebhookModuleService extends MeridianService({ WebhookEvent }) {

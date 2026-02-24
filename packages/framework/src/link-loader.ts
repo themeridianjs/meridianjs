@@ -7,7 +7,7 @@ import type {
   ILogger,
   IQuery,
   QueryGraphOptions,
-} from "@meridian/types"
+} from "@meridianjs/types"
 
 /**
  * Scans src/links/ for link definition files, registers a LinkService and

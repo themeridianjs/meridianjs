@@ -5,7 +5,7 @@ import type {
   ModuleDefinition,
   MeridianContainer,
   ILogger,
-} from "@meridian/types"
+} from "@meridianjs/types"
 
 /**
  * Loads all modules declared in the config's modules[] array.
@@ -84,7 +84,7 @@ export async function resolveModuleDefinition(
   if (!definition?.key || !definition?.service) {
     throw new Error(
       `Module at "${resolveStr}" must export a ModuleDefinition with 'key' and 'service'. ` +
-      `Use the Module() helper from @meridian/framework-utils.`
+      `Use the Module() helper from @meridianjs/framework-utils.`
     )
   }
 

@@ -1,6 +1,6 @@
-import { defineLink } from "@meridian/framework-utils"
-import ProjectModule from "@meridian/project"
-import IssueModule from "@meridian/issue"
+import { defineLink } from "@meridianjs/framework-utils"
+import ProjectModule from "@meridianjs/project"
+import IssueModule from "@meridianjs/issue"
 
 export default defineLink(
   ProjectModule.linkable!.project,

@@ -1,5 +1,5 @@
-import { MeridianService } from "@meridian/framework-utils"
-import type { MeridianContainer } from "@meridian/types"
+import { MeridianService } from "@meridianjs/framework-utils"
+import type { MeridianContainer } from "@meridianjs/types"
 import ProjectModel from "./models/project.js"
 import LabelModel from "./models/label.js"
 import MilestoneModel from "./models/milestone.js"

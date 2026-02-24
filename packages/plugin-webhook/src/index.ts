@@ -1,6 +1,6 @@
 import { fileURLToPath } from "node:url"
 import path from "node:path"
-import type { PluginRegistrationContext } from "@meridian/types"
+import type { PluginRegistrationContext } from "@meridianjs/types"
 import { WebhookModule } from "./module/index.js"
 
 /**

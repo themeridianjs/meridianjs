@@ -1,5 +1,5 @@
-import { dmlToEntitySchema, createRepository, createModuleOrm } from "@meridian/framework-utils"
-import type { LoaderOptions, MeridianConfig } from "@meridian/types"
+import { dmlToEntitySchema, createRepository, createModuleOrm } from "@meridianjs/framework-utils"
+import type { LoaderOptions, MeridianConfig } from "@meridianjs/types"
 import UserModel from "../models/user.js"
 import TeamModel from "../models/team.js"
 

@@ -1,4 +1,4 @@
-import { defineConfig } from "@meridian/framework"
+import { defineConfig } from "@meridianjs/framework"
 
 export default defineConfig({
   projectConfig: {
@@ -8,22 +8,22 @@ export default defineConfig({
   },
   modules: [
     // Infrastructure
-    { resolve: "@meridian/event-bus-local" },
-    { resolve: "@meridian/job-queue-local" },
+    { resolve: "@meridianjs/event-bus-local" },
+    { resolve: "@meridianjs/job-queue-local" },
     // Domain modules — order matters: project before issue (issue resolves projectModuleService)
-    { resolve: "@meridian/user" },
-    { resolve: "@meridian/workspace" },
-    { resolve: "@meridian/auth" },
-    { resolve: "@meridian/project" },
-    { resolve: "@meridian/issue" },
-    { resolve: "@meridian/sprint" },
-    { resolve: "@meridian/activity" },
-    { resolve: "@meridian/notification" },
+    { resolve: "@meridianjs/user" },
+    { resolve: "@meridianjs/workspace" },
+    { resolve: "@meridianjs/auth" },
+    { resolve: "@meridianjs/project" },
+    { resolve: "@meridianjs/issue" },
+    { resolve: "@meridianjs/sprint" },
+    { resolve: "@meridianjs/activity" },
+    { resolve: "@meridianjs/notification" },
     // Local test module (Phase 1 smoke test)
     { resolve: "./src/modules/hello-module/index.ts" },
   ],
   plugins: [
     // Phase 9 reference plugin: webhook receiver
-    { resolve: "@meridian/plugin-webhook" },
+    { resolve: "@meridianjs/plugin-webhook" },
   ],
 })

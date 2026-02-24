@@ -2,7 +2,7 @@ import fs from "node:fs/promises"
 import path from "node:path"
 import { pathToFileURL } from "node:url"
 import { Router, type Express } from "express"
-import type { MeridianContainer, ILogger } from "@meridian/types"
+import type { MeridianContainer, ILogger } from "@meridianjs/types"
 
 const HTTP_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"] as const
 type HttpMethod = (typeof HTTP_METHODS)[number]

@@ -1,4 +1,4 @@
-import type { MeridianContainer, ScheduledJobConfig } from "@meridian/types"
+import type { MeridianContainer, ScheduledJobConfig } from "@meridianjs/types"
 
 /**
  * Purges activity log records older than 90 days.

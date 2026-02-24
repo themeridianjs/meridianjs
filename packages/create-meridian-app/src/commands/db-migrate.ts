@@ -16,7 +16,7 @@ export async function runDbMigrate(): Promise<void> {
   // Run a small inline script that bootstraps the app (which triggers schema
   // sync in each module's loader) and then exits without starting the HTTP server.
   const script = `
-import { bootstrap } from "@meridian/framework"
+import { bootstrap } from "@meridianjs/framework"
 import { fileURLToPath } from "node:url"
 import path from "node:path"
 

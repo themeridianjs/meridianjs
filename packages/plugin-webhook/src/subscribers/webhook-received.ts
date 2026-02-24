@@ -1,4 +1,4 @@
-import type { SubscriberArgs, SubscriberConfig } from "@meridian/types"
+import type { SubscriberArgs, SubscriberConfig } from "@meridianjs/types"
 
 interface WebhookReceivedData {
   id: string

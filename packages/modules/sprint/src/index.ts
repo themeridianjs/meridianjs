@@ -1,4 +1,4 @@
-import { Module } from "@meridian/framework-utils"
+import { Module } from "@meridianjs/framework-utils"
 import { SprintModuleService } from "./service.js"
 import SprintModel from "./models/sprint.js"
 import defaultLoader from "./loaders/default.js"

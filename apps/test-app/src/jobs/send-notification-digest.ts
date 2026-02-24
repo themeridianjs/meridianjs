@@ -1,4 +1,4 @@
-import type { MeridianContainer, ScheduledJobConfig } from "@meridian/types"
+import type { MeridianContainer, ScheduledJobConfig } from "@meridianjs/types"
 
 /**
  * Weekly notification digest.

@@ -1,5 +1,5 @@
-import { dmlToEntitySchema, createRepository, createModuleOrm } from "@meridian/framework-utils"
-import type { LoaderOptions, MeridianConfig } from "@meridian/types"
+import { dmlToEntitySchema, createRepository, createModuleOrm } from "@meridianjs/framework-utils"
+import type { LoaderOptions, MeridianConfig } from "@meridianjs/types"
 import IssueModel from "../models/issue.js"
 import CommentModel from "../models/comment.js"
 import AttachmentModel from "../models/attachment.js"

@@ -1,4 +1,4 @@
-import type { ILogger } from "@meridian/types"
+import type { ILogger } from "@meridianjs/types"
 
 export class ConsoleLogger implements ILogger {
   constructor(private readonly prefix: string = "meridian") {}

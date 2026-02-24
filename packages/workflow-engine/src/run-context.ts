@@ -1,5 +1,5 @@
 import { AsyncLocalStorage } from "node:async_hooks"
-import type { MeridianContainer } from "@meridian/types"
+import type { MeridianContainer } from "@meridianjs/types"
 
 export interface WorkflowRunContextStore {
   container: MeridianContainer

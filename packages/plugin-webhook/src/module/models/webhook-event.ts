@@ -1,4 +1,4 @@
-import { model } from "@meridian/framework-utils"
+import { model } from "@meridianjs/framework-utils"
 
 export const WebhookEvent = model.define("webhook_event", {
   id: model.id(),

@@ -1,4 +1,4 @@
-import { model } from "@meridian/framework-utils"
+import { model } from "@meridianjs/framework-utils"
 
 const Workspace = model.define("workspace", {
   id: model.id().primaryKey(),

@@ -7,7 +7,7 @@ import {
   type AwilixContainer,
   type Resolver,
 } from "awilix"
-import type { MeridianContainer } from "@meridian/types"
+import type { MeridianContainer } from "@meridianjs/types"
 
 /**
  * Wraps an Awilix container into a MeridianContainer.

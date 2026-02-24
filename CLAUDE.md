@@ -9,21 +9,21 @@ Open-source project management framework (Asana/Jira-equivalent), Medusa.js-insp
 ```
 meridian/
 ├── packages/
-│   ├── types/                 @meridian/types            — all shared TS interfaces
-│   ├── framework-utils/       @meridian/framework-utils  — DML, MeridianService, Module(), defineLink()
-│   ├── framework/             @meridian/framework        — bootstrap, DI, loaders, Express server
-│   ├── event-bus-local/       @meridian/event-bus-local  — Node EventEmitter IEventBus (dev)
-│   ├── workflow-engine/       @meridian/workflow-engine  — DAG runner, createStep/createWorkflow, LIFO compensation
+│   ├── types/                 @meridianjs/types            — all shared TS interfaces
+│   ├── framework-utils/       @meridianjs/framework-utils  — DML, MeridianService, Module(), defineLink()
+│   ├── framework/             @meridianjs/framework        — bootstrap, DI, loaders, Express server
+│   ├── event-bus-local/       @meridianjs/event-bus-local  — Node EventEmitter IEventBus (dev)
+│   ├── workflow-engine/       @meridianjs/workflow-engine  — DAG runner, createStep/createWorkflow, LIFO compensation
 │   └── modules/
-│       ├── user/              @meridian/user             — User, Team models
-│       ├── workspace/         @meridian/workspace        — Workspace model (multi-tenant)
-│       ├── auth/              @meridian/auth             — JWT register/login, authenticateJWT middleware
-│       ├── project/           @meridian/project          — Project, Label, Milestone
-│       ├── issue/             @meridian/issue            — Issue, Comment
-│       ├── sprint/            @meridian/sprint           — Sprint/Cycle
-│       └── activity/          @meridian/activity         — Activity audit log
+│       ├── user/              @meridianjs/user             — User, Team models
+│       ├── workspace/         @meridianjs/workspace        — Workspace model (multi-tenant)
+│       ├── auth/              @meridianjs/auth             — JWT register/login, authenticateJWT middleware
+│       ├── project/           @meridianjs/project          — Project, Label, Milestone
+│       ├── issue/             @meridianjs/issue            — Issue, Comment
+│       ├── sprint/            @meridianjs/sprint           — Sprint/Cycle
+│       └── activity/          @meridianjs/activity         — Activity audit log
 └── apps/
-    └── test-app/              @meridian/test-app         — integration test app
+    └── test-app/              @meridianjs/test-app         — integration test app
 ```
 
 ---
@@ -90,7 +90,7 @@ Each file exports named HTTP method handlers (`GET`, `POST`, `PUT`, `PATCH`, `DE
 ### Middleware Registration
 ```typescript
 // src/api/middlewares.ts
-import { authenticateJWT } from "@meridian/auth"
+import { authenticateJWT } from "@meridianjs/auth"
 export default {
   routes: [
     { matcher: "/admin", middlewares: [authenticateJWT] },
@@ -104,10 +104,10 @@ export default {
 export default defineConfig({
   projectConfig: { databaseUrl, jwtSecret, httpPort: 9000 },
   modules: [
-    { resolve: "@meridian/event-bus-local" },
-    { resolve: "@meridian/user" },
-    { resolve: "@meridian/workspace" },
-    { resolve: "@meridian/auth" },
+    { resolve: "@meridianjs/event-bus-local" },
+    { resolve: "@meridianjs/user" },
+    { resolve: "@meridianjs/workspace" },
+    { resolve: "@meridianjs/auth" },
     { resolve: "./src/modules/my-custom-module/index.ts" }, // local module
   ],
 })
@@ -171,7 +171,7 @@ import WorkspaceModel from "./models/workspace.js"
 import defaultLoader from "./loaders/default.js"
 ```
 
-### 6. `@meridian/framework` is ESM-only
+### 6. `@meridianjs/framework` is ESM-only
 Its `package.json` has `"type": "module"` and tsup uses `--format esm` only. Do not add CJS output.
 
 ### 7. ORM: per-module instances
@@ -198,7 +198,7 @@ class MyService extends MeridianService({ MyModel }) {
 npx turbo run build
 
 # Build a single package (and its deps)
-npx turbo run build --filter=@meridian/auth
+npx turbo run build --filter=@meridianjs/auth
 
 # Run test-app (requires PostgreSQL)
 npm run dev -w apps/test-app
@@ -222,7 +222,7 @@ POST /admin/hello  → { module: "HelloModule", status: "active" }
 ```
 
 ### Phase 2 — Auth + User + Workspace ✅ COMPLETE
-MikroORM integration, `@meridian/user`, `@meridian/workspace`, `@meridian/auth` modules, JWT authentication.
+MikroORM integration, `@meridianjs/user`, `@meridianjs/workspace`, `@meridianjs/auth` modules, JWT authentication.
 
 Requires: PostgreSQL running, `meridian_test` database created (`createdb meridian_test`).
 
@@ -252,7 +252,7 @@ curl http://localhost:9000/admin/users -H "Authorization: Bearer <token>"
 ```
 
 ### Phase 3 — Project + Issue Modules ✅ COMPLETE
-`@meridian/project` (Project/Label/Milestone), `@meridian/issue` (Issue/Comment), `@meridian/sprint`, `@meridian/activity`. 3 module links registered. Full CRUD routes with activity logging.
+`@meridianjs/project` (Project/Label/Milestone), `@meridianjs/issue` (Issue/Comment), `@meridianjs/sprint`, `@meridianjs/activity`. 3 module links registered. Full CRUD routes with activity logging.
 
 DML enhanced: `.default()` added to TextProperty, EnumProperty, NumberProperty.
 
@@ -271,9 +271,9 @@ Module links (src/links/): project-workspace, issue-project, issue-sprint.
 
 Link files import the module default and reference `.linkable!.table`:
 ```typescript
-import { defineLink } from "@meridian/framework-utils"
-import WorkspaceModule from "@meridian/workspace"
-import ProjectModule from "@meridian/project"
+import { defineLink } from "@meridianjs/framework-utils"
+import WorkspaceModule from "@meridianjs/workspace"
+import ProjectModule from "@meridianjs/project"
 
 export default defineLink(
   WorkspaceModule.linkable!.workspace,
@@ -283,7 +283,7 @@ export default defineLink(
 This requires the `exports` field to use nested type conditions (see Critical Rule #4).
 
 ### Phase 4 — Workflow Engine ✅ COMPLETE
-`@meridian/workflow-engine` package with DAG runner + LIFO saga compensation.
+`@meridianjs/workflow-engine` package with DAG runner + LIFO saga compensation.
 
 Core API:
 - `createStep(name, invoke, compensate?)` — step factory; compensation runs on rollback
@@ -318,11 +318,11 @@ if (transaction_status === "reverted") {
 ```
 
 ### Phase 5 — Event Bus + Subscribers ✅ COMPLETE
-`@meridian/event-bus-redis` (BullMQ + ioredis) and `@meridian/notification` module. All workflows emit domain events; subscribers create notification records asynchronously.
+`@meridianjs/event-bus-redis` (BullMQ + ioredis) and `@meridianjs/notification` module. All workflows emit domain events; subscribers create notification records asynchronously.
 
 New packages:
-- `@meridian/event-bus-redis` — BullMQ queue `meridian:events`; Worker fans out to handlers by event name. 3 retries with exponential backoff. Switch from LocalEventBus by changing one line in `meridian.config.ts`.
-- `@meridian/notification` — Notification model + service with `createNotification`, `listNotificationsForUser`, `markAsRead`, `markAllAsRead`.
+- `@meridianjs/event-bus-redis` — BullMQ queue `meridian:events`; Worker fans out to handlers by event name. 3 retries with exponential backoff. Switch from LocalEventBus by changing one line in `meridian.config.ts`.
+- `@meridianjs/notification` — Notification model + service with `createNotification`, `listNotificationsForUser`, `markAsRead`, `markAllAsRead`.
 
 Shared step `src/workflows/emit-event.ts` — `emitEventStep` resolves eventBus from container. No compensation (fire-and-forget).
 
@@ -337,10 +337,10 @@ Notification routes:
 - `POST /admin/notifications/read-all` — mark all as read
 
 ### Phase 6 — Scheduler (pending)
-Planned: `@meridian/job-queue-redis` (BullMQ cron), `src/jobs/` file-based job loading.
+Planned: `@meridianjs/job-queue-redis` (BullMQ cron), `src/jobs/` file-based job loading.
 
 ### Phase 7 — Admin UI (pending)
-Planned: `@meridian/ui-design-system` (Radix + Tailwind), `@meridian/admin-dashboard` (Vite + React + TanStack Query), Kanban board, sprint planning.
+Planned: `@meridianjs/ui-design-system` (Radix + Tailwind), `@meridianjs/admin-dashboard` (Vite + React + TanStack Query), Kanban board, sprint planning.
 
 ### Phase 8 — CLI (`create-meridian-app`) (pending)
 Planned: `npx create-meridian-app my-project`, `meridian dev/build/db:migrate/generate`.

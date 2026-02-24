@@ -1,4 +1,4 @@
-import { model } from "@meridian/framework-utils"
+import { model } from "@meridianjs/framework-utils"
 
 const TaskList = model.define("task_list", {
   id: model.id().primaryKey(),

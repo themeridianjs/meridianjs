@@ -158,7 +158,7 @@ export interface AuthenticatedUser {
   roles: string[]
 }
 
-// Augmented Express request — actual implementation in @meridian/framework
+// Augmented Express request — actual implementation in @meridianjs/framework
 export interface MeridianRequestBase {
   scope: MeridianContainer
   user?: AuthenticatedUser

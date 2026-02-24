@@ -1,4 +1,4 @@
-import { Module } from "@meridian/framework-utils"
+import { Module } from "@meridianjs/framework-utils"
 import { AuthModuleService } from "./service.js"
 
 export const AUTH_MODULE = "authModuleService"

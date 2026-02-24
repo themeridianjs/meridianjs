@@ -1,4 +1,4 @@
-import type { MeridianContainer } from "@meridian/types"
+import type { MeridianContainer } from "@meridianjs/types"
 import { WorkflowResponse } from "./workflow-response.js"
 import { workflowRunContext, type WorkflowRunContextStore } from "./run-context.js"
 

@@ -1,4 +1,4 @@
-import { Module } from "@meridian/framework-utils"
+import { Module } from "@meridianjs/framework-utils"
 import { ActivityModuleService } from "./service.js"
 import ActivityModel from "./models/activity.js"
 import defaultLoader from "./loaders/default.js"
