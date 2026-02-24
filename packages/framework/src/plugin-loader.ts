@@ -116,7 +116,13 @@ async function autoScanPlugin(
   container: MeridianContainer,
   logger: ILogger
 ): Promise<void> {
-  const server = container.resolve<any>("server")
+  // server may not be registered during db:migrate — only load routes when available
+  let server: any = null
+  try {
+    server = container.resolve<any>("server")
+  } catch {
+    // running in migration/schema-only mode — skip route loading
+  }
 
   const candidates = [
     scanRoot,                          // pluginRoot already points to compiled dir
@@ -128,9 +134,9 @@ async function autoScanPlugin(
     const apiDir = path.join(candidate, "api")
     try {
       await fs.access(apiDir)
-      // Found a valid candidate — scan all three sub-dirs in parallel
+      // Found a valid candidate — scan all sub-dirs in parallel
       await Promise.all([
-        loadRoutes(server, container, apiDir),
+        server ? loadRoutes(server, container, apiDir) : Promise.resolve(),
         loadSubscribers(container, path.join(candidate, "subscribers")),
         loadJobs(container, path.join(candidate, "jobs")),
         loadLinks(container, path.join(candidate, "links")),
