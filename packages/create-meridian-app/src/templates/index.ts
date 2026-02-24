@@ -7,6 +7,7 @@ export interface ProjectTemplateVars {
   name: string          // e.g. "my-app"
   databaseUrl: string   // e.g. "postgresql://..."
   httpPort: number
+  dashboard: boolean
 }
 
 // ─── Project-level files ───────────────────────────────────────────────────
@@ -36,6 +37,7 @@ export function renderPackageJson(vars: ProjectTemplateVars): string {
         "@meridianjs/project": "latest",
         "@meridianjs/issue": "latest",
         "dotenv": "^16.0.0",
+        ...(vars.dashboard ? { "@meridianjs/admin-dashboard": "latest" } : {}),
       },
       devDependencies: {
         "create-meridian-app": "latest",
@@ -202,10 +204,10 @@ npm run dev
 
 | Command | Description |
 |---|---|
-| \`npm run dev\` | Start development server with hot reload |
+| \`npm run dev\` | Start API server${vars.dashboard ? " + admin dashboard" : ""} |
 | \`npm run build\` | Type-check the project |
 | \`npm run db:migrate\` | Synchronize the database schema |
-| \`npm run db:generate <name>\` | Generate a new migration file |
+| \`npm run db:generate <name>\` | Generate a new migration file |${vars.dashboard ? "\n| `meridian serve-dashboard` | Serve the admin dashboard standalone |" : ""}
 
 ## Project structure
 

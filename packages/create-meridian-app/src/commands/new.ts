@@ -74,6 +74,12 @@ export async function runNew(projectName?: string): Promise<void> {
       },
       {
         type: "confirm",
+        name: "dashboard",
+        message: "Install admin dashboard?",
+        initial: true,
+      },
+      {
+        type: "confirm",
         name: "installDeps",
         message: "Install dependencies now?",
         initial: true,
@@ -86,6 +92,7 @@ export async function runNew(projectName?: string): Promise<void> {
     name,
     databaseUrl: answers.databaseUrl as string,
     httpPort: answers.httpPort as number,
+    dashboard: answers.dashboard as boolean,
   }
 
   // ── 4. Scaffold files ───────────────────────────────────────────────────

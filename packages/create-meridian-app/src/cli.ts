@@ -3,10 +3,11 @@
  * meridian CLI
  *
  * Sub-commands:
- *   meridian dev                      — Start the development server
+ *   meridian dev                      — Start the development server (+ dashboard if installed)
  *   meridian build                    — Type-check the project
  *   meridian db:migrate               — Synchronize database schema
  *   meridian db:generate <name>       — Generate a migration file
+ *   meridian serve-dashboard          — Serve the admin dashboard on port 5174
  *   meridian generate module <name>   — Scaffold a new module
  *   meridian generate workflow <name> — Scaffold a new workflow
  *   meridian new [project-name]       — Create a new project (same as npx create-meridian-app)
@@ -19,6 +20,7 @@ import { runBuild } from "./commands/build.js"
 import { runDbMigrate } from "./commands/db-migrate.js"
 import { runDbGenerate } from "./commands/db-generate.js"
 import { generateModule, generateWorkflow, generatePlugin } from "./commands/generate/index.js"
+import { runServeDashboard } from "./commands/serve-dashboard.js"
 
 const program = new Command()
 
@@ -77,6 +79,18 @@ program
   .description("Generate a new migration file")
   .action((name: string) => {
     runDbGenerate(name).catch((err: unknown) => {
+      console.error(err)
+      process.exit(1)
+    })
+  })
+
+// ── serve-dashboard ───────────────────────────────────────────────────────
+program
+  .command("serve-dashboard")
+  .description("Serve the admin dashboard as a static site")
+  .option("-p, --port <port>", "Port to serve on", "5174")
+  .action((options) => {
+    runServeDashboard(Number(options.port)).catch((err: unknown) => {
       console.error(err)
       process.exit(1)
     })

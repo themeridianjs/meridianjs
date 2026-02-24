@@ -3,6 +3,7 @@ import { existsSync } from "node:fs"
 import chalk from "chalk"
 import { execa } from "execa"
 import { findProjectRoot } from "../utils.js"
+import { startDashboardServer } from "./serve-dashboard.js"
 
 export async function runDev(): Promise<void> {
   const rootDir = findProjectRoot()
@@ -17,30 +18,46 @@ export async function runDev(): Promise<void> {
     process.exit(1)
   }
 
-  console.log(chalk.dim(`  → Starting dev server from ${rootDir}`))
+  const dashboardDist = path.join(rootDir, "node_modules", "@meridianjs", "admin-dashboard", "dist")
+  const hasDashboard = existsSync(dashboardDist)
+  const dashPort = Number(process.env.DASHBOARD_PORT ?? 5174)
+
+  // Start dashboard server if installed
+  let dashServer: import("node:http").Server | null = null
+  if (hasDashboard) {
+    dashServer = await startDashboardServer(dashboardDist, dashPort)
+    console.log(chalk.dim(`  → API server`) + chalk.dim(` + `) + chalk.dim(`admin dashboard on `) + chalk.cyan(`http://localhost:${dashPort}`))
+  } else {
+    console.log(chalk.dim(`  → Starting API server from ${rootDir}`))
+  }
   console.log()
 
-  // Run src/main.ts with tsx for TypeScript support + hot reload via chokidar-style restart
-  // tsx itself handles ESM + TypeScript; for watch mode we rely on tsx --watch
-  const result = await execa(
+  const apiProc = execa(
     "node",
     ["--import", "tsx/esm", mainTs],
     {
       cwd: rootDir,
       stdio: "inherit",
-      env: {
-        ...process.env,
-        NODE_ENV: process.env.NODE_ENV ?? "development",
-        FORCE_COLOR: "1",
-      },
+      env: { ...process.env, NODE_ENV: process.env.NODE_ENV ?? "development", FORCE_COLOR: "1" },
     }
-  ).catch((err: any) => {
-    // SIGINT / SIGTERM are normal exits when user presses Ctrl+C
+  )
+
+  const shutdown = (signal: NodeJS.Signals) => {
+    dashServer?.close()
+    apiProc.kill(signal)
+    process.exit(0)
+  }
+  process.on("SIGINT", () => shutdown("SIGINT"))
+  process.on("SIGTERM", () => shutdown("SIGTERM"))
+
+  await apiProc.catch((err: any) => {
     if (err.signal === "SIGINT" || err.signal === "SIGTERM") {
+      dashServer?.close()
       process.exit(0)
     }
     throw err
   })
 
-  process.exit(result.exitCode ?? 0)
+  dashServer?.close()
+  process.exit(apiProc.exitCode ?? 0)
 }
