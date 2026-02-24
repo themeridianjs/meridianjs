@@ -54,6 +54,7 @@ const acceptSchema = z.object({
 export const POST = async (req: any, res: Response) => {
   const invitationService = req.scope.resolve("invitationModuleService") as any
   const authService = req.scope.resolve("authModuleService") as any
+  const workspaceMemberService = req.scope.resolve("workspaceMemberModuleService") as any
 
   // Look up invitation
   const [invitations] = await invitationService.listAndCountInvitations(
@@ -95,6 +96,9 @@ export const POST = async (req: any, res: Response) => {
     last_name: parsed.data.last_name,
     role: invitation.role,
   })
+
+  // Add user as a workspace member with the invited role
+  await workspaceMemberService.ensureMember(invitation.workspace_id, authResult.user.id, invitation.role)
 
   // Mark invitation as accepted
   await invitationService.updateInvitation(invitation.id, { status: "accepted" })

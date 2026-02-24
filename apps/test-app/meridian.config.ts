@@ -22,7 +22,11 @@ export default defineConfig({
     // Local test module (Phase 1 smoke test)
     { resolve: "./src/modules/hello-module/index.ts" },
     // Invitation module
-    { resolve: "./src/modules/invitation/index.ts" },
+    { resolve: "@meridianjs/invitation" },
+    // Access control modules
+    { resolve: "@meridianjs/workspace-member" },
+    { resolve: "@meridianjs/team-member" },
+    { resolve: "@meridianjs/project-member" },
   ],
   plugins: [
     // Default meridian routes/workflows/links/subscribers

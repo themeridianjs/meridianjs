@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { api } from "../client"
+import type { User } from "./useUsers"
 
 export interface Workspace {
   id: string
@@ -97,6 +98,155 @@ export function useRevokeInvitation(workspaceId: string) {
       api.delete(`/admin/workspaces/${workspaceId}/invitations/${inviteId}`),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: invitationKeys.list(workspaceId) })
+    },
+  })
+}
+
+// ── Workspace Members ─────────────────────────────────────────────────────────
+
+export interface WorkspaceMember {
+  id: string
+  user_id: string
+  role: "admin" | "member"
+  user: User | null
+}
+
+const memberKeys = {
+  list: (workspaceId: string) => ["workspaces", workspaceId, "members"] as const,
+}
+
+export function useWorkspaceMembers(workspaceId: string) {
+  return useQuery({
+    queryKey: memberKeys.list(workspaceId),
+    queryFn: () =>
+      api.get<{ members: WorkspaceMember[]; count: number }>(
+        `/admin/workspaces/${workspaceId}/members`
+      ),
+    select: (data) => data.members,
+    enabled: !!workspaceId,
+  })
+}
+
+export function useUpdateWorkspaceMemberRole(workspaceId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ userId, role }: { userId: string; role: "admin" | "member" }) =>
+      api.patch(`/admin/workspaces/${workspaceId}/members/${userId}`, { role }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: memberKeys.list(workspaceId) })
+    },
+  })
+}
+
+export function useRemoveWorkspaceMember(workspaceId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (userId: string) =>
+      api.delete(`/admin/workspaces/${workspaceId}/members/${userId}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: memberKeys.list(workspaceId) })
+    },
+  })
+}
+
+// ── Teams ─────────────────────────────────────────────────────────────────────
+
+export interface Team {
+  id: string
+  workspace_id: string
+  name: string
+  description: string | null
+  icon: string | null
+  member_count: number
+}
+
+const teamKeys = {
+  list: (workspaceId: string) => ["workspaces", workspaceId, "teams"] as const,
+  members: (workspaceId: string, teamId: string) =>
+    ["workspaces", workspaceId, "teams", teamId, "members"] as const,
+}
+
+export function useTeams(workspaceId: string) {
+  return useQuery({
+    queryKey: teamKeys.list(workspaceId),
+    queryFn: () =>
+      api.get<{ teams: Team[]; count: number }>(`/admin/workspaces/${workspaceId}/teams`),
+    select: (data) => data.teams,
+    enabled: !!workspaceId,
+  })
+}
+
+export function useCreateTeam(workspaceId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: { name: string; description?: string; icon?: string }) =>
+      api.post<{ team: Team }>(`/admin/workspaces/${workspaceId}/teams`, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: teamKeys.list(workspaceId) })
+    },
+  })
+}
+
+export function useUpdateTeam(workspaceId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ teamId, ...data }: { teamId: string; name?: string; description?: string; icon?: string }) =>
+      api.put<{ team: Team }>(`/admin/workspaces/${workspaceId}/teams/${teamId}`, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: teamKeys.list(workspaceId) })
+    },
+  })
+}
+
+export function useDeleteTeam(workspaceId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (teamId: string) =>
+      api.delete(`/admin/workspaces/${workspaceId}/teams/${teamId}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: teamKeys.list(workspaceId) })
+    },
+  })
+}
+
+export interface TeamMemberEntry {
+  id: string
+  user_id: string
+  user: User | null
+}
+
+export function useTeamMembers(workspaceId: string, teamId: string) {
+  return useQuery({
+    queryKey: teamKeys.members(workspaceId, teamId),
+    queryFn: () =>
+      api.get<{ members: TeamMemberEntry[]; count: number }>(
+        `/admin/workspaces/${workspaceId}/teams/${teamId}/members`
+      ),
+    select: (data) => data.members,
+    enabled: !!(workspaceId && teamId),
+  })
+}
+
+export function useAddTeamMember(workspaceId: string, teamId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (userId: string) =>
+      api.post(`/admin/workspaces/${workspaceId}/teams/${teamId}/members`, { user_id: userId }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: teamKeys.members(workspaceId, teamId) })
+      qc.invalidateQueries({ queryKey: teamKeys.list(workspaceId) })
+    },
+  })
+}
+
+export function useRemoveTeamMember(workspaceId: string, teamId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (userId: string) =>
+      api.delete(`/admin/workspaces/${workspaceId}/teams/${teamId}/members/${userId}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: teamKeys.members(workspaceId, teamId) })
+      qc.invalidateQueries({ queryKey: teamKeys.list(workspaceId) })
     },
   })
 }

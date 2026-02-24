@@ -12,13 +12,15 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { CreateProjectDialog } from "@/components/projects/CreateProjectDialog"
-import { Plus, MoreHorizontal, Layers, GitBranch, Trash2, Search } from "lucide-react"
+import { ProjectAccessDialog } from "@/components/projects/ProjectAccessDialog"
+import { Plus, MoreHorizontal, Layers, GitBranch, Trash2, Search, Lock } from "lucide-react"
 import { toast } from "sonner"
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
 
 export function ProjectsPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [accessProject, setAccessProject] = useState<{ id: string; name: string } | null>(null)
   const [search, setSearch] = useState("")
   const { workspace } = useParams<{ workspace: string }>()
   const { data: projects, isLoading } = useProjects()
@@ -175,6 +177,12 @@ export function ProjectsPage() {
                         <GitBranch className="h-4 w-4" />
                         View issues
                       </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => setAccessProject({ id: project.id, name: project.name })}
+                      >
+                        <Lock className="h-4 w-4" />
+                        Manage access
+                      </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
                         className="text-destructive focus:text-destructive"
@@ -214,6 +222,15 @@ export function ProjectsPage() {
       </div>
 
       <CreateProjectDialog open={dialogOpen} onClose={() => setDialogOpen(false)} />
+
+      {accessProject && (
+        <ProjectAccessDialog
+          open={!!accessProject}
+          onClose={() => setAccessProject(null)}
+          projectId={accessProject.id}
+          projectName={accessProject.name}
+        />
+      )}
     </div>
   )
 }

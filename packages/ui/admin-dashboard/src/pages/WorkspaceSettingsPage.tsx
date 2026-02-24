@@ -5,9 +5,18 @@ import {
   useInvitations,
   useCreateInvitation,
   useRevokeInvitation,
+  useWorkspaceMembers,
+  useUpdateWorkspaceMemberRole,
+  useRemoveWorkspaceMember,
+  useTeams,
+  useCreateTeam,
+  useDeleteTeam,
+  useTeamMembers,
+  useAddTeamMember,
+  useRemoveTeamMember,
   type Invitation,
+  type WorkspaceMember,
 } from "@/api/hooks/useWorkspaces"
-import { useUsers } from "@/api/hooks/useUsers"
 import { useAuth } from "@/stores/auth"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -26,9 +35,31 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { toast } from "sonner"
 import { format } from "date-fns"
-import { Users, Copy, Check, Plus, Link2, X, ShieldCheck, UserRound } from "lucide-react"
+import {
+  Users,
+  Copy,
+  Check,
+  Plus,
+  Link2,
+  X,
+  ShieldCheck,
+  UserRound,
+  MoreHorizontal,
+  Users2,
+  Trash2,
+  ChevronDown,
+  ChevronRight,
+  UserPlus,
+} from "lucide-react"
 import { cn } from "@/lib/utils"
 
 // ── Copy button ───────────────────────────────────────────────────────────────
@@ -67,7 +98,6 @@ function InviteMemberDialog({ open, onClose, workspaceId }: InviteMemberDialogPr
   const [createdInvitation, setCreatedInvitation] = useState<Invitation | null>(null)
   const createInvitation = useCreateInvitation(workspaceId)
 
-  // Reset when dialog opens
   useEffect(() => {
     if (open) {
       setEmail("")
@@ -102,7 +132,6 @@ function InviteMemberDialog({ open, onClose, workspaceId }: InviteMemberDialogPr
         </DialogHeader>
 
         {inviteUrl ? (
-          /* ── Success state: show invite link ── */
           <div className="space-y-4 pt-1">
             <p className="text-sm text-muted-foreground">
               Share this link with{" "}
@@ -132,7 +161,6 @@ function InviteMemberDialog({ open, onClose, workspaceId }: InviteMemberDialogPr
             </div>
           </div>
         ) : (
-          /* ── Form state ── */
           <form onSubmit={handleSubmit} className="space-y-4 pt-1">
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">
@@ -180,11 +208,7 @@ function InviteMemberDialog({ open, onClose, workspaceId }: InviteMemberDialogPr
               <Button type="button" variant="outline" size="sm" onClick={onClose}>
                 Cancel
               </Button>
-              <Button
-                type="submit"
-                size="sm"
-                disabled={createInvitation.isPending}
-              >
+              <Button type="submit" size="sm" disabled={createInvitation.isPending}>
                 {createInvitation.isPending ? "Creating…" : "Create invitation"}
               </Button>
             </div>
@@ -203,12 +227,9 @@ function InvitationRow({ invitation, workspaceId }: { invitation: Invitation; wo
 
   return (
     <div className="flex items-center gap-3 px-6 py-3.5 hover:bg-[#f9fafb] dark:hover:bg-muted/30 transition-colors group">
-      {/* Icon */}
       <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center shrink-0">
         <Link2 className="h-3.5 w-3.5 text-muted-foreground" />
       </div>
-
-      {/* Info */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <p className="text-sm font-medium truncate">
@@ -230,8 +251,6 @@ function InvitationRow({ invitation, workspaceId }: { invitation: Invitation; wo
           <CopyButton value={inviteUrl} />
         </div>
       </div>
-
-      {/* Date + revoke */}
       <div className="flex items-center gap-3 shrink-0">
         <span className="text-xs text-muted-foreground hidden sm:block">
           {format(new Date(invitation.created_at), "MMM d")}
@@ -285,14 +304,12 @@ function GeneralTab({ workspaceId }: { workspaceId: string }) {
 
   return (
     <>
-      {/* Section header */}
       <div className="px-6 py-2 border-b border-border bg-muted/20">
         <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
           Workspace details
         </span>
       </div>
 
-      {/* Name */}
       <div className="grid grid-cols-[180px_1fr] items-center gap-4 px-6 py-3.5 border-b border-border">
         <span className="text-sm text-muted-foreground">Name</span>
         {isLoading ? (
@@ -319,7 +336,6 @@ function GeneralTab({ workspaceId }: { workspaceId: string }) {
         )}
       </div>
 
-      {/* Slug */}
       <div className="grid grid-cols-[180px_1fr] items-center gap-4 px-6 py-3.5 border-b border-border">
         <span className="text-sm text-muted-foreground">URL slug</span>
         {isLoading ? (
@@ -332,7 +348,6 @@ function GeneralTab({ workspaceId }: { workspaceId: string }) {
         )}
       </div>
 
-      {/* Plan */}
       <div className="grid grid-cols-[180px_1fr] items-center gap-4 px-6 py-3.5 border-b border-border">
         <span className="text-sm text-muted-foreground">Plan</span>
         {isLoading ? (
@@ -342,7 +357,6 @@ function GeneralTab({ workspaceId }: { workspaceId: string }) {
         )}
       </div>
 
-      {/* Created */}
       <div className="grid grid-cols-[180px_1fr] items-center gap-4 px-6 py-3.5">
         <span className="text-sm text-muted-foreground">Created</span>
         {isLoading ? (
@@ -362,8 +376,11 @@ function GeneralTab({ workspaceId }: { workspaceId: string }) {
 // ── Members tab ───────────────────────────────────────────────────────────────
 
 function MembersTab({ workspaceId, onInvite }: { workspaceId: string; onInvite: () => void }) {
-  const { data: users, isLoading: usersLoading } = useUsers()
+  const { data: members, isLoading: membersLoading } = useWorkspaceMembers(workspaceId)
   const { data: invitations, isLoading: invitationsLoading } = useInvitations(workspaceId)
+  const updateRole = useUpdateWorkspaceMemberRole(workspaceId)
+  const removeMember = useRemoveWorkspaceMember(workspaceId)
+  const { user } = useAuth()
 
   const pending = invitations?.filter((i) => i.status === "pending") ?? []
 
@@ -373,15 +390,15 @@ function MembersTab({ workspaceId, onInvite }: { workspaceId: string; onInvite: 
       <div className="px-6 py-2 border-b border-border bg-muted/20 flex items-center justify-between">
         <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
           Members
-          {!usersLoading && users && (
+          {!membersLoading && members && (
             <span className="ml-2 font-normal normal-case tracking-normal">
-              · {users.length}
+              · {members.length}
             </span>
           )}
         </span>
       </div>
 
-      {usersLoading ? (
+      {membersLoading ? (
         <div className="divide-y divide-border">
           {[1, 2, 3].map((i) => (
             <div key={i} className="flex items-center gap-3 px-6 py-3.5">
@@ -393,32 +410,100 @@ function MembersTab({ workspaceId, onInvite }: { workspaceId: string; onInvite: 
             </div>
           ))}
         </div>
-      ) : !users?.length ? (
+      ) : !members?.length ? (
         <div className="flex flex-col items-center justify-center py-10 text-center">
           <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center mb-3">
             <Users className="h-5 w-5 text-muted-foreground" />
           </div>
           <p className="text-sm font-medium mb-1">No members yet</p>
+          <button
+            onClick={onInvite}
+            className="text-sm text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
+          >
+            Invite someone
+          </button>
         </div>
       ) : (
         <div className="divide-y divide-border">
-          {users.map((user) => {
-            const first = user.first_name ?? ""
-            const last = user.last_name ?? ""
-            const displayName = `${first} ${last}`.trim() || user.email
-            const initials = (first[0] ?? last[0] ?? user.email?.[0] ?? "U").toUpperCase()
+          {members.map((m) => {
+            const u = m.user
+            const first = u?.first_name ?? ""
+            const last = u?.last_name ?? ""
+            const displayName = `${first} ${last}`.trim() || u?.email || "Unknown"
+            const initials = (first[0] ?? last[0] ?? u?.email?.[0] ?? "U").toUpperCase()
+            const isCurrentUser = u?.id === user?.id
 
             return (
-              <div key={user.id} className="flex items-center gap-3 px-6 py-3.5 hover:bg-[#f9fafb] dark:hover:bg-muted/30 transition-colors">
+              <div key={m.id} className="flex items-center gap-3 px-6 py-3.5 hover:bg-[#f9fafb] dark:hover:bg-muted/30 transition-colors group">
                 <Avatar className="h-7 w-7 shrink-0">
                   <AvatarFallback className="text-[11px] font-medium">
                     {initials}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{displayName}</p>
-                  <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-medium truncate">{displayName}</p>
+                    {isCurrentUser && (
+                      <span className="text-[11px] text-muted-foreground">(you)</span>
+                    )}
+                  </div>
+                  {u?.email && (
+                    <p className="text-xs text-muted-foreground truncate">{u.email}</p>
+                  )}
                 </div>
+
+                {/* Role badge */}
+                <span className={cn(
+                  "inline-flex items-center text-[11px] px-1.5 py-0.5 rounded font-medium shrink-0",
+                  m.role === "admin"
+                    ? "bg-indigo/10 text-indigo"
+                    : "bg-muted text-muted-foreground"
+                )}>
+                  {m.role === "admin" ? "Admin" : "Member"}
+                </span>
+
+                {/* Actions */}
+                {!isCurrentUser && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-40">
+                      <DropdownMenuItem
+                        onClick={() =>
+                          updateRole.mutate(
+                            { userId: m.user_id, role: m.role === "admin" ? "member" : "admin" },
+                            {
+                              onSuccess: () => toast.success("Role updated"),
+                              onError: () => toast.error("Failed to update role"),
+                            }
+                          )
+                        }
+                      >
+                        {m.role === "admin" ? (
+                          <><UserRound className="h-3.5 w-3.5 mr-2" />Make member</>
+                        ) : (
+                          <><ShieldCheck className="h-3.5 w-3.5 mr-2" />Make admin</>
+                        )}
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        className="text-destructive focus:text-destructive"
+                        onClick={() =>
+                          removeMember.mutate(m.user_id, {
+                            onSuccess: () => toast.success("Member removed"),
+                            onError: () => toast.error("Failed to remove member"),
+                          })
+                        }
+                      >
+                        <Trash2 className="h-3.5 w-3.5 mr-2" />
+                        Remove
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
               </div>
             )
           })}
@@ -477,12 +562,282 @@ function MembersTab({ workspaceId, onInvite }: { workspaceId: string; onInvite: 
   )
 }
 
+// ── Team member list (inline, expandable) ────────────────────────────────────
+
+function TeamMemberList({
+  workspaceId,
+  teamId,
+  allMembers,
+}: {
+  workspaceId: string
+  teamId: string
+  allMembers: WorkspaceMember[]
+}) {
+  const { data: teamMembers, isLoading } = useTeamMembers(workspaceId, teamId)
+  const addMember = useAddTeamMember(workspaceId, teamId)
+  const removeMember = useRemoveTeamMember(workspaceId, teamId)
+  const [addingUserId, setAddingUserId] = useState("")
+
+  const memberUserIds = new Set(teamMembers?.map((m) => m.user_id) ?? [])
+  const available = allMembers.filter((m) => !memberUserIds.has(m.user_id))
+
+  return (
+    <div className="bg-muted/10 border-t border-border">
+      {isLoading ? (
+        <div className="px-8 py-3">
+          <Skeleton className="h-3 w-40" />
+        </div>
+      ) : teamMembers?.length === 0 ? (
+        <p className="px-8 py-3 text-xs text-muted-foreground">No members in this team yet.</p>
+      ) : (
+        <div className="divide-y divide-border/50">
+          {teamMembers?.map((m) => {
+            const u = m.user
+            const first = u?.first_name ?? ""
+            const last = u?.last_name ?? ""
+            const displayName = `${first} ${last}`.trim() || u?.email || "Unknown"
+            const initials = (first[0] ?? last[0] ?? u?.email?.[0] ?? "U").toUpperCase()
+
+            return (
+              <div key={m.id} className="flex items-center gap-3 px-8 py-2.5 group hover:bg-muted/20 transition-colors">
+                <Avatar className="h-6 w-6 shrink-0">
+                  <AvatarFallback className="text-[10px] font-medium">{initials}</AvatarFallback>
+                </Avatar>
+                <span className="flex-1 text-sm truncate">{displayName}</span>
+                <button
+                  onClick={() =>
+                    removeMember.mutate(m.user_id, {
+                      onSuccess: () => toast.success("Removed from team"),
+                      onError: () => toast.error("Failed to remove"),
+                    })
+                  }
+                  className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
+                  title="Remove from team"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Add member to team */}
+      {available.length > 0 && (
+        <div className="px-8 py-2.5 flex items-center gap-2 border-t border-border/50">
+          <UserPlus className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+          <Select value={addingUserId} onValueChange={setAddingUserId}>
+            <SelectTrigger className="h-7 text-xs flex-1 max-w-[200px]">
+              <SelectValue placeholder="Add member…" />
+            </SelectTrigger>
+            <SelectContent>
+              {available.map((m) => {
+                const u = m.user
+                const first = u?.first_name ?? ""
+                const last = u?.last_name ?? ""
+                const displayName = `${first} ${last}`.trim() || u?.email || "Unknown"
+                return (
+                  <SelectItem key={m.user_id} value={m.user_id}>
+                    {displayName}
+                  </SelectItem>
+                )
+              })}
+            </SelectContent>
+          </Select>
+          {addingUserId && (
+            <Button
+              size="sm"
+              className="h-7 text-xs px-2"
+              disabled={addMember.isPending}
+              onClick={() =>
+                addMember.mutate(addingUserId, {
+                  onSuccess: () => {
+                    toast.success("Added to team")
+                    setAddingUserId("")
+                  },
+                  onError: () => toast.error("Failed to add"),
+                })
+              }
+            >
+              Add
+            </Button>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Teams tab ─────────────────────────────────────────────────────────────────
+
+function TeamsTab({ workspaceId }: { workspaceId: string }) {
+  const { data: teams, isLoading } = useTeams(workspaceId)
+  const { data: members } = useWorkspaceMembers(workspaceId)
+  const createTeam = useCreateTeam(workspaceId)
+  const deleteTeam = useDeleteTeam(workspaceId)
+  const [expanded, setExpanded] = useState<Set<string>>(new Set())
+  const [creating, setCreating] = useState(false)
+  const [newTeamName, setNewTeamName] = useState("")
+
+  const toggle = (teamId: string) => {
+    setExpanded((prev) => {
+      const next = new Set(prev)
+      next.has(teamId) ? next.delete(teamId) : next.add(teamId)
+      return next
+    })
+  }
+
+  const handleCreate = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newTeamName.trim()) return
+    createTeam.mutate(
+      { name: newTeamName.trim() },
+      {
+        onSuccess: () => {
+          toast.success("Team created")
+          setNewTeamName("")
+          setCreating(false)
+        },
+        onError: () => toast.error("Failed to create team"),
+      }
+    )
+  }
+
+  return (
+    <>
+      <div className="px-6 py-2 border-b border-border bg-muted/20 flex items-center justify-between">
+        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+          Teams
+          {!isLoading && teams && (
+            <span className="ml-2 font-normal normal-case tracking-normal">
+              · {teams.length}
+            </span>
+          )}
+        </span>
+        <button
+          onClick={() => setCreating(true)}
+          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <Plus className="h-3 w-3" />
+          New team
+        </button>
+      </div>
+
+      {/* Create form */}
+      {creating && (
+        <div className="px-6 py-3 border-b border-border bg-muted/5">
+          <form onSubmit={handleCreate} className="flex items-center gap-2">
+            <Input
+              autoFocus
+              placeholder="Team name"
+              value={newTeamName}
+              onChange={(e) => setNewTeamName(e.target.value)}
+              className="h-8 text-sm flex-1 max-w-[240px]"
+            />
+            <Button type="submit" size="sm" className="h-8" disabled={!newTeamName.trim() || createTeam.isPending}>
+              {createTeam.isPending ? "Creating…" : "Create"}
+            </Button>
+            <Button type="button" variant="ghost" size="sm" className="h-8" onClick={() => { setCreating(false); setNewTeamName("") }}>
+              Cancel
+            </Button>
+          </form>
+        </div>
+      )}
+
+      {isLoading ? (
+        <div className="divide-y divide-border">
+          {[1, 2].map((i) => (
+            <div key={i} className="flex items-center gap-3 px-6 py-3.5">
+              <Skeleton className="h-7 w-7 rounded-lg shrink-0" />
+              <Skeleton className="h-3.5 w-32" />
+            </div>
+          ))}
+        </div>
+      ) : !teams?.length ? (
+        <div className="flex flex-col items-center justify-center py-10 text-center">
+          <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center mb-3">
+            <Users2 className="h-5 w-5 text-muted-foreground" />
+          </div>
+          <p className="text-sm font-medium mb-1">No teams yet</p>
+          <p className="text-sm text-muted-foreground mb-3">
+            Teams make it easy to grant project access to groups of people.
+          </p>
+          <Button variant="outline" size="sm" onClick={() => setCreating(true)}>
+            Create a team
+          </Button>
+        </div>
+      ) : (
+        <div className="divide-y divide-border">
+          {teams.map((team) => {
+            const isExpanded = expanded.has(team.id)
+            return (
+              <div key={team.id}>
+                <div className="flex items-center gap-3 px-6 py-3.5 hover:bg-[#f9fafb] dark:hover:bg-muted/30 transition-colors group">
+                  <button
+                    onClick={() => toggle(team.id)}
+                    className="text-muted-foreground hover:text-foreground shrink-0 transition-colors"
+                  >
+                    {isExpanded
+                      ? <ChevronDown className="h-4 w-4" />
+                      : <ChevronRight className="h-4 w-4" />}
+                  </button>
+                  <div className="h-7 w-7 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                    <Users2 className="h-3.5 w-3.5 text-muted-foreground" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{team.name}</p>
+                    {team.description && (
+                      <p className="text-xs text-muted-foreground truncate">{team.description}</p>
+                    )}
+                  </div>
+                  <span className="text-xs text-muted-foreground shrink-0">
+                    {team.member_count} {team.member_count === 1 ? "member" : "members"}
+                  </span>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-36">
+                      <DropdownMenuItem
+                        className="text-destructive focus:text-destructive"
+                        onClick={() =>
+                          deleteTeam.mutate(team.id, {
+                            onSuccess: () => toast.success("Team deleted"),
+                            onError: () => toast.error("Failed to delete team"),
+                          })
+                        }
+                      >
+                        <Trash2 className="h-3.5 w-3.5 mr-2" />
+                        Delete team
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+
+                {isExpanded && (
+                  <TeamMemberList
+                    workspaceId={workspaceId}
+                    teamId={team.id}
+                    allMembers={members ?? []}
+                  />
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </>
+  )
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export function WorkspaceSettingsPage() {
   const { workspace: wsRef } = useAuth()
   const workspaceId = wsRef?.id ?? ""
-  const [activeTab, setActiveTab] = useState<"general" | "members">("general")
+  const [activeTab, setActiveTab] = useState<"general" | "members" | "teams">("general")
   const [inviteOpen, setInviteOpen] = useState(false)
 
   return (
@@ -492,7 +847,7 @@ export function WorkspaceSettingsPage() {
         {/* Tab nav row */}
         <div className="flex items-center justify-between border-b border-border px-2">
           <div className="flex">
-            {(["general", "members"] as const).map((tab) => (
+            {(["general", "members", "teams"] as const).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -521,6 +876,7 @@ export function WorkspaceSettingsPage() {
         {activeTab === "members" && (
           <MembersTab workspaceId={workspaceId} onInvite={() => setInviteOpen(true)} />
         )}
+        {activeTab === "teams" && <TeamsTab workspaceId={workspaceId} />}
       </div>
 
       <InviteMemberDialog
