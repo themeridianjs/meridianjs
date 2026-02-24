@@ -94,7 +94,10 @@ export async function bootstrap(opts: BootstrapOptions): Promise<MeridianApp> {
   await loadMiddlewares(server, container, path.join(rootDir, "src", "api"))
 
   // ── 7. Load plugins ────────────────────────────────────────────────────────
-  await loadPlugins(container, config.plugins ?? [], rootDir)
+  // Pass server directly — container.register({ server }) auto-classifies the
+  // Express app as asFunction (callable), so container.resolve('server') would
+  // call the app instead of returning it. Explicit param avoids that entirely.
+  await loadPlugins(container, config.plugins ?? [], rootDir, server)
 
   // ── 8. Load module links ───────────────────────────────────────────────────
   await loadLinks(container, path.join(rootDir, "src", "links"))

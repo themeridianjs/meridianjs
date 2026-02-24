@@ -38,7 +38,8 @@ import type {
 export async function loadPlugins(
   container: MeridianContainer,
   plugins: PluginConfig[],
-  rootDir: string
+  rootDir: string,
+  server?: any
 ): Promise<void> {
   const logger = container.resolve<ILogger>("logger")
 
@@ -100,7 +101,7 @@ export async function loadPlugins(
 
     // ── 5. Auto-scan routes / subscribers / jobs ────────────────────────────
     if (scanRoot) {
-      await autoScanPlugin(scanRoot, container, logger)
+      await autoScanPlugin(scanRoot, container, logger, server)
     }
 
     logger.info(`Plugin loaded: ${plugin.resolve}`)
@@ -114,16 +115,9 @@ export async function loadPlugins(
 async function autoScanPlugin(
   scanRoot: string,
   container: MeridianContainer,
-  logger: ILogger
+  logger: ILogger,
+  server?: any
 ): Promise<void> {
-  // server may not be registered during db:migrate — only load routes when available
-  let server: any = null
-  try {
-    server = container.resolve<any>("server")
-  } catch {
-    // running in migration/schema-only mode — skip route loading
-  }
-
   const candidates = [
     scanRoot,                          // pluginRoot already points to compiled dir
     path.join(scanRoot, "dist"),       // package root → try dist/ first
