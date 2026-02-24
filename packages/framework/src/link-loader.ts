@@ -52,15 +52,25 @@ export async function loadLinks(
     }
   }
 
-  const linkService = new LinkService(definitions, container, logger)
-  const queryService = new QueryService(definitions, container, logger)
+  // Merge with any link definitions already registered (e.g. from plugins)
+  let existingDefs: LinkDefinition[] = []
+  try {
+    const existingLink = container.resolve("link") as any
+    existingDefs = existingLink.getDefinitions?.() ?? []
+  } catch {
+    // No prior link service — start fresh
+  }
+  const allDefs = [...existingDefs, ...definitions]
+
+  const linkService = new LinkService(allDefs, container, logger)
+  const queryService = new QueryService(allDefs, container, logger)
 
   container.register({
     link: linkService,
     query: queryService,
   })
 
-  logger.info(`Loaded ${definitions.length} module link(s)`)
+  logger.info(`Loaded ${allDefs.length} module link(s)`)
 }
 
 function registerEmptyServices(container: MeridianContainer): void {

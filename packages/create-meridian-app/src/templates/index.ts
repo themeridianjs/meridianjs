@@ -37,8 +37,8 @@ export function renderPackageJson(vars: ProjectTemplateVars): string {
         "@meridianjs/auth": "latest",
         "@meridianjs/project": "latest",
         "@meridianjs/issue": "latest",
+        "@meridianjs/meridian": "latest",
         "dotenv": "^16.0.0",
-        "zod": "^3.24.0",
         ...(vars.dashboard ? { "@meridianjs/admin-dashboard": "latest" } : {}),
       },
       devDependencies: {
@@ -100,6 +100,9 @@ export default defineConfig({
     { resolve: "@meridianjs/auth" },
     { resolve: "@meridianjs/project" },
     { resolve: "@meridianjs/issue" },
+  ],
+  plugins: [
+    { resolve: "@meridianjs/meridian" },
   ],
 })
 `

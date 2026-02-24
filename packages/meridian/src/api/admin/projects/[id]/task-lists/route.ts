@@ -1,0 +1,17 @@
+import type { Response } from "express"
+
+export const GET = async (req: any, res: Response) => {
+  const issueService = req.scope.resolve("issueModuleService") as any
+  const taskLists = await issueService.listTaskListsByProject(req.params.id)
+  res.json({ task_lists: taskLists, count: taskLists.length })
+}
+
+export const POST = async (req: any, res: Response) => {
+  const { name, description } = req.body
+  if (!name?.trim()) { res.status(400).json({ error: { message: "name is required" } }); return }
+  const issueService = req.scope.resolve("issueModuleService") as any
+  const taskList = await issueService.createTaskList({
+    name: name.trim(), description: description?.trim() || undefined, project_id: req.params.id,
+  })
+  res.status(201).json({ task_list: taskList })
+}

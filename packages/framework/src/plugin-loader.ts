@@ -6,6 +6,7 @@ import { loadModules } from "./module-loader.js"
 import { loadRoutes } from "./route-loader.js"
 import { loadSubscribers } from "./subscriber-loader.js"
 import { loadJobs } from "./job-loader.js"
+import { loadLinks } from "./link-loader.js"
 import type {
   PluginConfig,
   MeridianContainer,
@@ -132,6 +133,7 @@ async function autoScanPlugin(
         loadRoutes(server, container, apiDir),
         loadSubscribers(container, path.join(candidate, "subscribers")),
         loadJobs(container, path.join(candidate, "jobs")),
+        loadLinks(container, path.join(candidate, "links")),
       ])
       logger.debug(`Plugin auto-scanned from: ${candidate}`)
       return
