@@ -54,3 +54,14 @@ export function useRegister() {
     },
   })
 }
+
+export function useRegisterViaInvite(token: string) {
+  const { login } = useAuth()
+  return useMutation({
+    mutationFn: (data: RegisterInput) =>
+      api.post<AuthResponse>(`/auth/invite/${token}`, data),
+    onSuccess: (data) => {
+      login(data.user, data.token)
+    },
+  })
+}

@@ -16,6 +16,8 @@ import { IssueDetailPage } from "@/pages/IssueDetailPage"
 import { IssueNewPage } from "@/pages/IssueNewPage"
 import { NotificationsPage } from "@/pages/NotificationsPage"
 import { SprintsPage } from "@/pages/SprintsPage"
+import { WorkspaceSettingsPage } from "@/pages/WorkspaceSettingsPage"
+import { InviteAcceptPage } from "@/pages/InviteAcceptPage"
 
 function RequireAuth({ children }: { children: ReactNode }) {
   const { isAuthenticated } = useAuth()
@@ -33,6 +35,11 @@ function RedirectIfAuth({ children }: { children: ReactNode }) {
   // First-time setup: redirect /login → /register when no users exist yet
   if (setupStatus?.needsSetup && location.pathname === "/login") {
     return <Navigate to="/register" replace />
+  }
+
+  // After first setup, /register is invite-only — redirect direct visitors to /login
+  if (setupStatus && !setupStatus.needsSetup && location.pathname === "/register") {
+    return <Navigate to="/login" replace />
   }
 
   return <>{children}</>
@@ -73,7 +80,7 @@ function WorkspaceLayout() {
   const { workspace: slugParam } = useParams<{ workspace: string }>()
   const { workspace, setWorkspace } = useAuth()
   const navigate = useNavigate()
-  const { data: workspaces, isLoading } = useWorkspaces()
+  const { data: workspaces, isLoading, isFetching } = useWorkspaces()
 
   useEffect(() => {
     if (isLoading || !workspaces) return
@@ -84,13 +91,13 @@ function WorkspaceLayout() {
       }
     } else if (workspaces.length > 0) {
       navigate(`/${workspaces[0].slug}/projects`, { replace: true })
-    } else if (!workspace) {
-      // Only redirect to /setup when no workspace is in context.
-      // Guards against the race where stale empty data arrives during
-      // query refetch immediately after workspace creation.
+    } else if (!workspace && !isFetching) {
+      // Only redirect to /setup when no workspace is in context AND we're not
+      // mid-refetch. Guards against the race where stale empty data arrives
+      // during query refetch immediately after workspace creation.
       navigate("/setup", { replace: true })
     }
-  }, [workspaces, slugParam, isLoading, workspace?.id, navigate, setWorkspace])
+  }, [workspaces, slugParam, isLoading, isFetching, workspace?.id, navigate, setWorkspace])
 
   if (isLoading || !workspace || workspace.slug !== slugParam) {
     return (
@@ -128,6 +135,9 @@ export function App() {
           </RedirectIfAuth>
         }
       />
+
+      {/* Invite accept — fully public, no auth required */}
+      <Route path="/invite/:token" element={<InviteAcceptPage />} />
 
       {/* Workspace setup — auth required, no workspace needed */}
       <Route
@@ -168,6 +178,7 @@ export function App() {
           <Route path="sprints" element={<SprintsPage />} />
         </Route>
         <Route path="notifications" element={<NotificationsPage />} />
+        <Route path="settings" element={<WorkspaceSettingsPage />} />
       </Route>
 
       {/* Fallback */}

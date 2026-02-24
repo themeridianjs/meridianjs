@@ -9,6 +9,15 @@ const registerSchema = z.object({
 })
 
 export const POST = async (req: any, res: Response) => {
+  // After the super-admin is created, registration is invite-only.
+  // Direct calls to this endpoint are rejected; use POST /auth/invite/:token instead.
+  const userService = req.scope.resolve("userModuleService") as any
+  const userCount = await userService.countUsers()
+  if (userCount > 0) {
+    res.status(403).json({ error: { message: "Registration is invite-only. Use an invitation link to join." } })
+    return
+  }
+
   const result = registerSchema.safeParse(req.body)
   if (!result.success) {
     res.status(400).json({

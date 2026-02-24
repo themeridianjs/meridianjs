@@ -21,10 +21,10 @@ export default defineConfig({
     { resolve: "@meridianjs/notification" },
     // Local test module (Phase 1 smoke test)
     { resolve: "./src/modules/hello-module/index.ts" },
+    // Invitation module
+    { resolve: "./src/modules/invitation/index.ts" },
   ],
   plugins: [
-    // Phase 9 reference plugin: webhook receiver
-    { resolve: "@meridianjs/plugin-webhook" },
     // Default meridian routes/workflows/links/subscribers
     { resolve: "@meridianjs/meridian" },
   ],
