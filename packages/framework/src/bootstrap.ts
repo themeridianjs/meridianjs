@@ -133,9 +133,11 @@ export async function bootstrap(opts: BootstrapOptions): Promise<MeridianApp> {
 
     async stop() {
       logger.info("Shutting down Meridian server...")
-      await new Promise<void>((resolve, reject) => {
-        httpServer.close((err) => (err ? reject(err) : resolve()))
-      })
+      if (httpServer.listening) {
+        await new Promise<void>((resolve, reject) => {
+          httpServer.close((err) => (err ? reject(err) : resolve()))
+        })
+      }
       try {
         const bus = container.resolve<IEventBus>("eventBus")
         await bus.close?.()
