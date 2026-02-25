@@ -428,3 +428,34 @@ export const config: SubscriberConfig = {
 }
 `
 }
+
+export function renderJob(name: string, schedule: string): string {
+  return `import type { JobConfig } from "@meridianjs/types"
+
+export default async function handler({ container }: { container: any }): Promise<void> {
+  const logger = container.resolve("logger") as any
+  logger.info("Running job: ${name}")
+
+  // Add job logic here
+}
+
+export const config: JobConfig = {
+  name: "${name}",
+  schedule: "${schedule}", // cron expression
+}
+`
+}
+
+export function renderRoute(methods: string[]): string {
+  const handlers = methods.map((m) => {
+    const upper = m.toUpperCase()
+    return `export const ${upper} = async (req: any, res: Response) => {
+  // Handle ${upper} request
+  res.json({ ok: true })
+}`
+  })
+  return `import type { Response } from "express"
+
+${handlers.join("\n\n")}
+`
+}

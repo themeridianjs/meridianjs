@@ -3,6 +3,7 @@ import { useEffect, type ReactNode } from "react"
 import { useAuth } from "@/stores/auth"
 import { useWorkspaces } from "@/api/hooks/useWorkspaces"
 import { useSetupStatus } from "@/api/hooks/useAuth"
+import { useRealtimeEvents } from "@/hooks/useRealtimeEvents"
 import { AppShell } from "@/components/layout/AppShell"
 import { ProjectLayout } from "@/components/layout/ProjectLayout"
 import { CommandPalette } from "@/components/CommandPalette"
@@ -79,6 +80,7 @@ function WorkspaceRedirect() {
 function WorkspaceLayout() {
   const { workspace: slugParam } = useParams<{ workspace: string }>()
   const { workspace, setWorkspace } = useAuth()
+  useRealtimeEvents()
   const navigate = useNavigate()
   const { data: workspaces, isLoading, isFetching } = useWorkspaces()
 

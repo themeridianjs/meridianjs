@@ -12,14 +12,17 @@ import type { MeridianConfig, MeridianContainer } from "@meridianjs/types"
  * attached by the framework before any middleware runs).
  */
 export function authenticateJWT(req: any, res: Response, next: NextFunction): void {
+  // Accept token from Authorization header (standard) or ?token= query param
+  // (used by SSE connections since EventSource cannot set custom headers)
   const authHeader = req.headers.authorization as string | undefined
+  const token = authHeader?.startsWith("Bearer ")
+    ? authHeader.substring(7)
+    : (req.query?.token as string | undefined)
 
-  if (!authHeader?.startsWith("Bearer ")) {
+  if (!token) {
     res.status(401).json({ error: { message: "Unauthorized — Bearer token required" } })
     return
   }
-
-  const token = authHeader.substring(7)
 
   let config: MeridianConfig
   try {

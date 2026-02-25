@@ -1,3 +1,6 @@
 export { generateModule } from "./module.js"
 export { generateWorkflow } from "./workflow.js"
 export { generatePlugin } from "./plugin.js"
+export { generateSubscriber } from "./subscriber.js"
+export { generateJob } from "./job.js"
+export { generateRoute } from "./route.js"

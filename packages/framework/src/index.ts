@@ -30,3 +30,6 @@ export { authRateLimit, apiRateLimit } from "./rate-limit.js"
 
 // Input validation
 export { validate } from "./validate.js"
+
+// SSE real-time updates
+export { SseManager, sseManager } from "./sse-manager.js"

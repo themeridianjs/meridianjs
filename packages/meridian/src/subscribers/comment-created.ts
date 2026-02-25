@@ -1,4 +1,5 @@
 import type { SubscriberArgs, SubscriberConfig } from "@meridianjs/types"
+import { sseManager } from "@meridianjs/framework"
 
 interface CommentCreatedData {
   comment_id: string
@@ -30,6 +31,11 @@ export default async function handler({ event, container }: SubscriberArgs<Comme
       workspace_id: issue.workspace_id,
     })
   ))
+
+  sseManager.broadcast(issue.workspace_id, "comment.created", {
+    comment_id: data.comment_id,
+    issue_id: data.issue_id,
+  })
 }
 
 export const config: SubscriberConfig = { event: "comment.created" }

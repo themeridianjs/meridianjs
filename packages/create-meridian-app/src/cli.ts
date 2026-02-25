@@ -19,7 +19,14 @@ import { runDev } from "./commands/dev.js"
 import { runBuild } from "./commands/build.js"
 import { runDbMigrate } from "./commands/db-migrate.js"
 import { runDbGenerate } from "./commands/db-generate.js"
-import { generateModule, generateWorkflow, generatePlugin } from "./commands/generate/index.js"
+import {
+  generateModule,
+  generateWorkflow,
+  generatePlugin,
+  generateSubscriber,
+  generateJob,
+  generateRoute,
+} from "./commands/generate/index.js"
 import { runServeDashboard } from "./commands/serve-dashboard.js"
 import { runUserCreate } from "./commands/user-create.js"
 
@@ -146,6 +153,39 @@ generateCmd
   .description("Scaffold a local plugin in src/plugins/")
   .action((name: string) => {
     generatePlugin(name).catch((err: unknown) => {
+      console.error(err)
+      process.exit(1)
+    })
+  })
+
+generateCmd
+  .command("subscriber <event>")
+  .description("Scaffold a new event subscriber in src/subscribers/")
+  .action((event: string) => {
+    generateSubscriber(event).catch((err: unknown) => {
+      console.error(err)
+      process.exit(1)
+    })
+  })
+
+generateCmd
+  .command("job <name>")
+  .description("Scaffold a new scheduled job in src/jobs/")
+  .option("-s, --schedule <cron>", "Cron schedule expression", "0 * * * *")
+  .action((name: string, options) => {
+    generateJob(name, options.schedule).catch((err: unknown) => {
+      console.error(err)
+      process.exit(1)
+    })
+  })
+
+generateCmd
+  .command("route <path>")
+  .description("Scaffold a new API route file")
+  .option("-m, --methods <methods>", "Comma-separated HTTP methods", "GET,POST")
+  .action((routePath: string, options) => {
+    const methods = (options.methods as string).split(",").map((m: string) => m.trim())
+    generateRoute(routePath, methods).catch((err: unknown) => {
       console.error(err)
       process.exit(1)
     })

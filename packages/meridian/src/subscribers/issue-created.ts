@@ -1,4 +1,5 @@
 import type { SubscriberArgs, SubscriberConfig } from "@meridianjs/types"
+import { sseManager } from "@meridianjs/framework"
 
 interface IssueCreatedData {
   issue_id: string
@@ -24,6 +25,11 @@ export default async function handler({ event, container }: SubscriberArgs<Issue
       workspace_id: data.workspace_id,
     })
   ))
+
+  sseManager.broadcast(data.workspace_id, "issue.created", {
+    issue_id: data.issue_id,
+    project_id: data.project_id,
+  })
 }
 
 export const config: SubscriberConfig = { event: "issue.created" }
