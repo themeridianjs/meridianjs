@@ -36,6 +36,20 @@ export function startDashboardServer(
     const server = http.createServer((req, res) => {
       const urlPath = (req.url ?? "/").split("?")[0]
 
+      // Proxy /uploads/* requests to the API server so file attachments are served correctly
+      if (urlPath.startsWith("/uploads/")) {
+        const proxyReq = http.request(
+          { host: apiHost, port: apiPort, path: req.url, method: req.method, headers: req.headers },
+          (proxyRes) => {
+            res.writeHead(proxyRes.statusCode ?? 200, proxyRes.headers)
+            proxyRes.pipe(res)
+          }
+        )
+        proxyReq.on("error", () => { res.writeHead(502); res.end("Bad Gateway") })
+        req.pipe(proxyReq)
+        return
+      }
+
       // Resolve file path; fall back to index.html for unknown paths (SPA routing)
       let filePath = path.join(distDir, urlPath === "/" ? "index.html" : urlPath)
       if (!existsSync(filePath) || fs.statSync(filePath).isDirectory()) {

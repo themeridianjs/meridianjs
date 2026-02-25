@@ -119,14 +119,14 @@ function InviteMemberDialog({ open, onClose, workspaceId }: InviteMemberDialogPr
           setCreatedInvitation(data.invitation)
           toast.success("Invitation created")
         },
-        onError: () => toast.error("Failed to create invitation"),
+        onError: (err: Error) => toast.error(err.message || "Failed to create invitation"),
       }
     )
   }
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="sm:max-w-[440px]">
+      <DialogContent className="sm:max-w-[520px]">
         <DialogHeader>
           <DialogTitle>Invite member</DialogTitle>
         </DialogHeader>
@@ -144,9 +144,9 @@ function InviteMemberDialog({ open, onClose, workspaceId }: InviteMemberDialogPr
               <span className="font-medium text-foreground capitalize">{createdInvitation?.role}</span>.
             </p>
 
-            <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg border border-border overflow-hidden">
-              <Link2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-              <span className="text-xs font-mono text-foreground flex-1 min-w-0 truncate">{inviteUrl}</span>
+            <div className="flex items-start gap-2 p-3 bg-muted/50 rounded-lg border border-border">
+              <Link2 className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5" />
+              <span className="text-xs font-mono text-foreground flex-1 min-w-0 break-all">{inviteUrl}</span>
               <CopyButton value={inviteUrl} className="shrink-0" />
             </div>
 

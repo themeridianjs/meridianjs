@@ -18,6 +18,15 @@ export const POST = async (req: any, res: Response) => {
     return
   }
 
+  if (email?.trim()) {
+    const userService = req.scope.resolve("userModuleService") as any
+    const [existing] = await userService.listAndCountUsers({ email: email.trim().toLowerCase() }, { limit: 1 })
+    if (existing.length > 0) {
+      res.status(409).json({ error: { message: `A user with email ${email.trim()} already exists. They can be added directly as a workspace member.` } })
+      return
+    }
+  }
+
   const { result, errors, transaction_status } = await createInvitationWorkflow(req.scope).run({
     input: {
       workspace_id: req.params.id,
