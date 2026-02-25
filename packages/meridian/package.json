@@ -20,6 +20,7 @@
     "prepublishOnly": "cd ../.. && npm run check:routes && cd packages/meridian && npm run build"
   },
   "dependencies": {
+    "@meridianjs/framework": "^0.1.0",
     "@meridianjs/framework-utils": "^0.1.0",
     "@meridianjs/workflow-engine": "^0.1.0",
     "@meridianjs/types": "^0.1.1",

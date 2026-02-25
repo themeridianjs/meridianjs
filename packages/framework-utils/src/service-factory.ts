@@ -28,6 +28,7 @@ export function MeridianService(
 
     constructor(container: MeridianContainer) {
       this.#container = container
+      const hasCustomMethod = (name: string) => typeof (this as any)[name] === "function"
       for (const [modelName, _modelDef] of Object.entries(models)) {
         const pluralName = `${modelName}s`
         const repoToken = `${modelName.charAt(0).toLowerCase()}${modelName.slice(1)}Repository`
@@ -35,63 +36,84 @@ export function MeridianService(
         const capitalizedPlural = `${pluralName.charAt(0).toUpperCase()}${pluralName.slice(1)}`
 
         // list{Model}s(filters?, options?) → T[]
-        this[`list${capitalizedPlural}`] = async (
-          filters: Record<string, unknown> = {},
-          options: Record<string, unknown> = {}
-        ) => {
-          const repo = this.#container.resolve<Repository>(repoToken)
-          return repo.find(filters, options)
+        const listMethod = `list${capitalizedPlural}`
+        if (!hasCustomMethod(listMethod)) {
+          this[listMethod] = async (
+            filters: Record<string, unknown> = {},
+            options: Record<string, unknown> = {}
+          ) => {
+            const repo = this.#container.resolve<Repository>(repoToken)
+            return repo.find(filters, options)
+          }
         }
 
         // listAndCount{Model}s(filters?, options?) → [T[], number]
-        this[`listAndCount${capitalizedPlural}`] = async (
-          filters: Record<string, unknown> = {},
-          options: Record<string, unknown> = {}
-        ) => {
-          const repo = this.#container.resolve<Repository>(repoToken)
-          return repo.findAndCount(filters, options)
+        const listAndCountMethod = `listAndCount${capitalizedPlural}`
+        if (!hasCustomMethod(listAndCountMethod)) {
+          this[listAndCountMethod] = async (
+            filters: Record<string, unknown> = {},
+            options: Record<string, unknown> = {}
+          ) => {
+            const repo = this.#container.resolve<Repository>(repoToken)
+            return repo.findAndCount(filters, options)
+          }
         }
 
         // retrieve{Model}(id) → T
-        this[`retrieve${capitalized}`] = async (id: string) => {
-          const repo = this.#container.resolve<Repository>(repoToken)
-          return repo.findOneOrFail({ id })
+        const retrieveMethod = `retrieve${capitalized}`
+        if (!hasCustomMethod(retrieveMethod)) {
+          this[retrieveMethod] = async (id: string) => {
+            const repo = this.#container.resolve<Repository>(repoToken)
+            return repo.findOneOrFail({ id })
+          }
         }
 
         // create{Model}(data) → T
-        this[`create${capitalized}`] = async (data: Record<string, unknown>) => {
-          const repo = this.#container.resolve<Repository>(repoToken)
-          const entity = repo.create(data)
-          await repo.persistAndFlush(entity)
-          return entity
+        const createMethod = `create${capitalized}`
+        if (!hasCustomMethod(createMethod)) {
+          this[createMethod] = async (data: Record<string, unknown>) => {
+            const repo = this.#container.resolve<Repository>(repoToken)
+            const entity = repo.create(data)
+            await repo.persistAndFlush(entity)
+            return entity
+          }
         }
 
         // update{Model}(id, data) → T
-        this[`update${capitalized}`] = async (
-          id: string,
-          data: Record<string, unknown>
-        ) => {
-          const repo = this.#container.resolve<Repository>(repoToken)
-          const entity = await repo.findOneOrFail({ id })
-          Object.assign(entity as object, data)
-          await repo.flush()
-          return entity
+        const updateMethod = `update${capitalized}`
+        if (!hasCustomMethod(updateMethod)) {
+          this[updateMethod] = async (
+            id: string,
+            data: Record<string, unknown>
+          ) => {
+            const repo = this.#container.resolve<Repository>(repoToken)
+            const entity = await repo.findOneOrFail({ id })
+            Object.assign(entity as object, data)
+            await repo.flush()
+            return entity
+          }
         }
 
         // delete{Model}(id) → void
-        this[`delete${capitalized}`] = async (id: string) => {
-          const repo = this.#container.resolve<Repository>(repoToken)
-          const entity = await repo.findOneOrFail({ id })
-          await repo.removeAndFlush(entity)
+        const deleteMethod = `delete${capitalized}`
+        if (!hasCustomMethod(deleteMethod)) {
+          this[deleteMethod] = async (id: string) => {
+            const repo = this.#container.resolve<Repository>(repoToken)
+            const entity = await repo.findOneOrFail({ id })
+            await repo.removeAndFlush(entity)
+          }
         }
 
         // softDelete{Model}(id) → T  (sets deleted_at)
-        this[`softDelete${capitalized}`] = async (id: string) => {
-          const repo = this.#container.resolve<Repository>(repoToken)
-          const entity = await repo.findOneOrFail({ id }) as any
-          entity.deleted_at = new Date()
-          await repo.flush()
-          return entity
+        const softDeleteMethod = `softDelete${capitalized}`
+        if (!hasCustomMethod(softDeleteMethod)) {
+          this[softDeleteMethod] = async (id: string) => {
+            const repo = this.#container.resolve<Repository>(repoToken)
+            const entity = await repo.findOneOrFail({ id }) as any
+            entity.deleted_at = new Date()
+            await repo.flush()
+            return entity
+          }
         }
       }
     }

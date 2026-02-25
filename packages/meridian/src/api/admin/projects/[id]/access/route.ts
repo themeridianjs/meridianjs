@@ -6,12 +6,21 @@ export const GET = async (req: any, res: Response) => {
   const userService = req.scope.resolve("userModuleService") as any
   const teamMemberService = req.scope.resolve("teamMemberModuleService") as any
 
-  const projectId = req.params.id
+  const projectRef = req.params.id
+  const project =
+    (await projectService.retrieveProject(projectRef).catch(() => null)) ??
+    (await projectService.retrieveProjectByIdentifier?.(projectRef).catch(() => null))
+
+  if (!project) {
+    res.status(404).json({ error: { message: `Project "${projectRef}" not found` } })
+    return
+  }
+
+  const projectId = project.id
 
   // Ensure the project owner is always a project member (handles projects created
   // before ensureProjectMember was introduced, and acts as a defensive guarantee)
   try {
-    const project = await projectService.retrieveProject(projectId)
     if (project?.owner_id) {
       await projectMemberService.ensureProjectMember(projectId, project.owner_id, "manager")
     }
