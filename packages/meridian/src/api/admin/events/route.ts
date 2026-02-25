@@ -2,17 +2,33 @@ import type { Response } from "express"
 import { sseManager } from "@meridianjs/framework"
 
 /**
- * GET /admin/events?token=<jwt>
+ * GET /admin/events?token=<jwt>&workspaceId=<id>
  *
- * SSE stream scoped to the authenticated user's workspace.
- * Uses a query-param token because EventSource does not support custom headers.
- * authenticateJWT middleware accepts ?token= as fallback and populates req.user.
+ * SSE stream scoped to the given workspace.
+ * Uses query params because EventSource cannot set custom headers.
+ * - token: validated by authenticateJWT middleware (sets req.user)
+ * - workspaceId: passed explicitly because the JWT always has workspaceId=null
+ *   (tokens are issued at auth time, not workspace-selection time)
+ *
+ * Validates that req.user is a member of the requested workspace before subscribing.
  */
-export const GET = (req: any, res: Response) => {
-  const workspaceId: string = req.user?.workspaceId
+export const GET = async (req: any, res: Response) => {
+  const workspaceId = req.query.workspaceId as string | undefined
 
   if (!workspaceId) {
-    res.status(400).json({ error: { message: "No workspace associated with this token" } })
+    res.status(400).json({ error: { message: "workspaceId query param required" } })
+    return
+  }
+
+  // Validate the user actually belongs to this workspace
+  const workspaceMemberService = req.scope.resolve("workspaceMemberModuleService") as any
+  const [members] = await workspaceMemberService.listAndCountWorkspaceMembers(
+    { workspace_id: workspaceId, user_id: req.user.id },
+    { limit: 1 }
+  )
+
+  if (members.length === 0) {
+    res.status(403).json({ error: { message: "You are not a member of this workspace" } })
     return
   }
 

@@ -17,7 +17,7 @@ export function useRealtimeEvents(): void {
   useEffect(() => {
     if (!token || !workspace) return
 
-    const es = createEventSource(token)
+    const es = createEventSource(token, workspace.id)
     esRef.current = es
 
     const invalidate = (keys: unknown[][]) => {
