@@ -1,6 +1,6 @@
 {
   "name": "@meridianjs/meridian",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Default API routes, workflows, links, and subscribers for Meridian applications",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -17,7 +17,7 @@
     "dev": "tsc --outDir dist --watch",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "cd ../.. && npm run check:routes && cd packages/meridian && npm run build"
   },
   "dependencies": {
     "@meridianjs/framework-utils": "^0.1.0",

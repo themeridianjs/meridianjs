@@ -233,7 +233,16 @@ class MyService extends MeridianService({ MyModel }) {
 }
 ```
 
-### 9. All modules are npm packages
+### 9. Routes written in test-app must also be added to `@meridianjs/meridian`
+Any route file created under `apps/test-app/src/api/` (except test-app-only routes like `admin/hello/`) **must** have a matching file in `packages/meridian/src/api/`. The test-app is for integration testing — scaffolded user projects get all routes from the plugin.
+
+Before publishing `@meridianjs/meridian`, always run:
+```bash
+npm run check:routes
+```
+This script diffs test-app routes against the plugin and exits with code 1 if any are missing. It is also wired into `prepublishOnly` so `npm publish` will fail automatically if there are gaps.
+
+### 10. All modules are npm packages
 The `apps/test-app/` is **only for integration testing**. All reusable modules, plugins, and UI packages live under `packages/` and are published to npm under `@meridianjs/`. Never create local modules in `test-app/src/modules/` for features meant to ship.
 
 ---
