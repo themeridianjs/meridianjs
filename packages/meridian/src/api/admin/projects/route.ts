@@ -8,11 +8,51 @@ export const GET = async (req: any, res: Response) => {
   const filters: Record<string, unknown> = {}
   if (req.query.workspace_id) filters.workspace_id = req.query.workspace_id
   if (req.query.status) filters.status = req.query.status
-  const [projects, count] = await projectService.listAndCountProjects(filters, { limit, offset })
+
+  const roles: string[] = req.user?.roles ?? []
+  const isPrivileged = roles.includes("super-admin") || roles.includes("admin")
+
+  if (isPrivileged) {
+    const [projects, count] = await projectService.listAndCountProjects(filters, { limit, offset })
+    res.json({ projects, count, limit, offset })
+    return
+  }
+
+  const workspaceMemberService = req.scope.resolve("workspaceMemberModuleService") as any
+  const teamMemberService = req.scope.resolve("teamMemberModuleService") as any
+  const projectMemberService = req.scope.resolve("projectMemberModuleService") as any
+  const userId = req.user?.id
+
+  // Workspace admins see all projects in their workspace
+  if (filters.workspace_id) {
+    const membership = await workspaceMemberService.getMembership(filters.workspace_id as string, userId)
+    if (!membership) {
+      res.status(403).json({ error: { message: "Forbidden — not a member of this workspace" } })
+      return
+    }
+    if (membership.role === "admin") {
+      const [projects, count] = await projectService.listAndCountProjects(filters, { limit, offset })
+      res.json({ projects, count, limit, offset })
+      return
+    }
+  }
+
+  // Members: filter by explicit project access
+  const userTeamIds = await teamMemberService.getUserTeamIds(userId)
+  const accessibleProjectIds = await projectMemberService.getAccessibleProjectIds(userId, userTeamIds)
+
+  if (accessibleProjectIds.length === 0) {
+    res.json({ projects: [], count: 0, limit, offset })
+    return
+  }
+
+  const memberFilters: Record<string, unknown> = { ...filters, id: accessibleProjectIds }
+  const [projects, count] = await projectService.listAndCountProjects(memberFilters, { limit, offset })
   res.json({ projects, count, limit, offset })
 }
 
 export const POST = async (req: any, res: Response) => {
+  const projectMemberService = req.scope.resolve("projectMemberModuleService") as any
   const { name, description, workspace_id, visibility, icon, color, identifier, initial_statuses } = req.body
   if (!name || !workspace_id) {
     res.status(400).json({ error: { message: "name and workspace_id are required" } })
@@ -30,6 +70,10 @@ export const POST = async (req: any, res: Response) => {
     const err = errors[0]
     res.status((err as any).status ?? 500).json({ error: { message: err.message } })
     return
+  }
+  // Auto-create project membership for the creator (manager role)
+  if (req.user?.id && project) {
+    await projectMemberService.ensureProjectMember(project.id, req.user.id, "manager")
   }
   res.status(201).json({ project })
 }
