@@ -1,6 +1,6 @@
 {
   "name": "@meridianjs/meridian",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "Default API routes, workflows, links, and subscribers for Meridian applications",
   "main": "./dist/index.js",
   "module": "./dist/index.js",

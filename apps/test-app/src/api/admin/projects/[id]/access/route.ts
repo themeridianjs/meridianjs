@@ -2,11 +2,23 @@ import type { Response } from "express"
 
 export const GET = async (req: any, res: Response) => {
   const projectMemberService = req.scope.resolve("projectMemberModuleService") as any
+  const projectService = req.scope.resolve("projectModuleService") as any
   const userService = req.scope.resolve("userModuleService") as any
   const teamMemberService = req.scope.resolve("teamMemberModuleService") as any
 
-  const members = await projectMemberService.listProjectMembers(req.params.id)
-  const teamEntries = await projectMemberService.listProjectTeamIds(req.params.id)
+  const projectId = req.params.id
+
+  // Ensure the project owner is always a project member (handles projects created
+  // before ensureProjectMember was introduced, and acts as a defensive guarantee)
+  try {
+    const project = await projectService.retrieveProject(projectId)
+    if (project?.owner_id) {
+      await projectMemberService.ensureProjectMember(projectId, project.owner_id, "manager")
+    }
+  } catch { /* project may not exist or owner already a member */ }
+
+  const members = await projectMemberService.listProjectMembers(projectId)
+  const teamEntries = await projectMemberService.listProjectTeamIds(projectId)
 
   // Enrich members with user info
   const enrichedMembers = await Promise.all(

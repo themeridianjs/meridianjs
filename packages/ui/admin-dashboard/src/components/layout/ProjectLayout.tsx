@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useParams } from "react-router-dom"
-import { Zap, GitBranch, LayoutDashboard } from "lucide-react"
+import { Zap, GitBranch, LayoutDashboard, Lock } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import { useProjectByKey } from "@/api/hooks/useProjects"
 
@@ -12,6 +12,7 @@ export function ProjectLayout() {
     { to: `${base}/board`, label: "Board", icon: LayoutDashboard, end: true },
     { to: `${base}/issues`, label: "Issues", icon: GitBranch, end: false },
     { to: `${base}/sprints`, label: "Sprints", icon: Zap, end: true },
+    { to: `${base}/access`, label: "Access", icon: Lock, end: true },
   ]
 
   return (

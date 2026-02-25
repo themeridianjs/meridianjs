@@ -13,6 +13,7 @@ import { SetupWorkspacePage } from "@/pages/SetupWorkspacePage"
 import { ProjectsPage } from "@/pages/ProjectsPage"
 import { ProjectBoardPage } from "@/pages/ProjectBoardPage"
 import { ProjectIssuesPage } from "@/pages/ProjectIssuesPage"
+import { ProjectAccessPage } from "@/pages/ProjectAccessPage"
 import { IssueDetailPage } from "@/pages/IssueDetailPage"
 import { IssueNewPage } from "@/pages/IssueNewPage"
 import { NotificationsPage } from "@/pages/NotificationsPage"
@@ -178,6 +179,7 @@ export function App() {
           <Route path="issues/new" element={<IssueNewPage />} />
           <Route path="issues/:issueId" element={<IssueDetailPage />} />
           <Route path="sprints" element={<SprintsPage />} />
+          <Route path="access" element={<ProjectAccessPage />} />
         </Route>
         <Route path="notifications" element={<NotificationsPage />} />
         <Route path="settings" element={<WorkspaceSettingsPage />} />
