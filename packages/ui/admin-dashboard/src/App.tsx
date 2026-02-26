@@ -1,5 +1,5 @@
 import { Navigate, Route, Routes, useNavigate, useParams, useLocation } from "react-router-dom"
-import { useEffect, type ReactNode } from "react"
+import { useEffect, lazy, Suspense, type ReactNode } from "react"
 import { useAuth } from "@/stores/auth"
 import { useWorkspaces } from "@/api/hooks/useWorkspaces"
 import { useSetupStatus } from "@/api/hooks/useAuth"
@@ -21,6 +21,8 @@ import { SprintsPage } from "@/pages/SprintsPage"
 import { WorkspaceSettingsPage } from "@/pages/WorkspaceSettingsPage"
 import { RolesPage } from "@/pages/RolesPage"
 import { InviteAcceptPage } from "@/pages/InviteAcceptPage"
+
+const ProjectTimelinePage = lazy(() => import("@/pages/ProjectTimelinePage").then(m => ({ default: m.ProjectTimelinePage })))
 
 function RequireAuth({ children }: { children: ReactNode }) {
   const { isAuthenticated } = useAuth()
@@ -180,6 +182,7 @@ export function App() {
           <Route path="issues/new" element={<IssueNewPage />} />
           <Route path="issues/:issueId" element={<IssueDetailPage />} />
           <Route path="sprints" element={<SprintsPage />} />
+          <Route path="timeline" element={<Suspense fallback={<div className="flex items-center justify-center h-full text-sm text-muted-foreground">Loading…</div>}><ProjectTimelinePage /></Suspense>} />
           <Route path="access" element={<ProjectAccessPage />} />
         </Route>
         <Route path="notifications" element={<NotificationsPage />} />

@@ -54,6 +54,7 @@ export function CreateIssueDialog({ open, onClose, projectId, defaultStatus = "b
   const [assigneeIds, setAssigneeIds] = useState<string[]>([])
   const [sprintId, setSprintId] = useState<string>("")
   const [taskListId, setTaskListId] = useState<string>(defaultTaskListId ?? "")
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined)
   const [dueDate, setDueDate] = useState<Date | undefined>(undefined)
   const createIssue = useCreateIssue()
   const { data: projectStatuses } = useProjectStatuses(projectId)
@@ -75,6 +76,7 @@ export function CreateIssueDialog({ open, onClose, projectId, defaultStatus = "b
     setAssigneeIds([])
     setSprintId("")
     setTaskListId(defaultTaskListId ?? "")
+    setStartDate(undefined)
     setDueDate(undefined)
     onClose()
   }
@@ -83,7 +85,7 @@ export function CreateIssueDialog({ open, onClose, projectId, defaultStatus = "b
     e.preventDefault()
     if (!title.trim()) return
     createIssue.mutate(
-      { title: title.trim(), description: description.trim() || undefined, status, priority, type, project_id: projectId, workspace_id: workspaceRef!.id, assignee_ids: assigneeIds.length > 0 ? assigneeIds : undefined, sprint_id: sprintId || null, task_list_id: taskListId || null, parent_id: defaultParentId || null, due_date: dueDate ? format(dueDate, "yyyy-MM-dd") : null },
+      { title: title.trim(), description: description.trim() || undefined, status, priority, type, project_id: projectId, workspace_id: workspaceRef!.id, assignee_ids: assigneeIds.length > 0 ? assigneeIds : undefined, sprint_id: sprintId || null, task_list_id: taskListId || null, parent_id: defaultParentId || null, start_date: startDate ? format(startDate, "yyyy-MM-dd") : null, due_date: dueDate ? format(dueDate, "yyyy-MM-dd") : null },
       {
         onSuccess: () => {
           toast.success("Issue created")
@@ -212,6 +214,39 @@ export function CreateIssueDialog({ open, onClose, projectId, defaultStatus = "b
           <div className="space-y-1.5">
             <Label>Assignees <span className="text-xs text-muted-foreground font-normal">Optional</span></Label>
             <AssigneeSelector value={assigneeIds} onChange={setAssigneeIds} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Start Date <span className="text-xs text-muted-foreground font-normal">Optional</span></Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  className="flex items-center gap-2 h-9 w-full rounded-md border border-input px-3 text-sm bg-transparent hover:bg-accent transition-colors text-left"
+                >
+                  <CalendarIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                  <span className={startDate ? "text-foreground" : "text-muted-foreground"}>
+                    {startDate ? format(startDate, "MMM d, yyyy") : "No start date"}
+                  </span>
+                  {startDate && (
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); setStartDate(undefined) }}
+                      className="ml-auto text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={startDate}
+                  onSelect={setStartDate}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
           </div>
           <div className="space-y-1.5">
             <Label>Due Date <span className="text-xs text-muted-foreground font-normal">Optional</span></Label>

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import { format } from "date-fns"
 import type { Issue } from "@/api/hooks/useIssues"
-import { useUpdateIssue, useIssues } from "@/api/hooks/useIssues"
+import { useUpdateIssue, useIssues, useIssue } from "@/api/hooks/useIssues"
 import { useProjectStatuses } from "@/api/hooks/useProjectStatuses"
 import { useSprints, type Sprint } from "@/api/hooks/useSprints"
 import { useTaskLists } from "@/api/hooks/useTaskLists"
@@ -51,9 +51,12 @@ interface IssueDetailProps {
   onClose: () => void
 }
 
-export function IssueDetail({ issue, projectId, open, onClose }: IssueDetailProps) {
+export function IssueDetail({ issue: issueProp, projectId, open, onClose }: IssueDetailProps) {
   const navigate = useNavigate()
   const { workspace, projectKey } = useParams<{ workspace: string; projectKey: string }>()
+  // Subscribe to the detail query so date/field changes reflect immediately after mutation
+  const { data: liveIssue } = useIssue(issueProp?.id ?? "")
+  const issue = liveIssue ?? issueProp
   const [isEditing, setIsEditing] = useState(false)
   const [editTitle, setEditTitle] = useState("")
   const [editDescription, setEditDescription] = useState("")
@@ -146,6 +149,16 @@ export function IssueDetail({ issue, projectId, open, onClose }: IssueDetailProp
       onSuccess: () => toast.success(task_list_id ? "Moved to list" : "Removed from list"),
       onError: () => toast.error("Failed to update list"),
     })
+  }
+
+  const handleStartDateChange = (date: Date | undefined) => {
+    updateIssue.mutate(
+      { start_date: date ? format(date, "yyyy-MM-dd") : null },
+      {
+        onSuccess: () => toast.success(date ? "Start date set" : "Start date cleared"),
+        onError: () => toast.error("Failed to update start date"),
+      }
+    )
   }
 
   const handleDueDateChange = (date: Date | undefined) => {
@@ -382,6 +395,38 @@ export function IssueDetail({ issue, projectId, open, onClose }: IssueDetailProp
                   </Select>
                 </div>
               )}
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-muted-foreground mb-1.5">Start Date</p>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button className="flex items-center gap-1 h-8 w-full min-w-0 px-2 rounded border border-input text-xs bg-transparent hover:bg-accent transition-colors overflow-hidden">
+                      <CalendarIcon className="h-3 w-3 shrink-0 text-muted-foreground" />
+                      <span className={`truncate ${issue.start_date ? "text-foreground" : "text-muted-foreground"}`}>
+                        {issue.start_date ? format(new Date(issue.start_date), "MMM d, yyyy") : "No date"}
+                      </span>
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={issue.start_date ? new Date(issue.start_date) : undefined}
+                      onSelect={handleStartDateChange}
+                      initialFocus
+                    />
+                    {issue.start_date && (
+                      <div className="border-t px-3 py-2">
+                        <button
+                          onClick={() => handleStartDateChange(undefined)}
+                          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors"
+                        >
+                          <X className="h-3 w-3" />
+                          Clear date
+                        </button>
+                      </div>
+                    )}
+                  </PopoverContent>
+                </Popover>
+              </div>
               <div className="flex-1 min-w-0">
                 <p className="text-xs text-muted-foreground mb-1.5">Due Date</p>
                 <Popover>

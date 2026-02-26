@@ -496,6 +496,43 @@ export function IssueDetailPage() {
                   </PropertyRow>
                 )}
 
+                <PropertyRow label="Start Date">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button className="flex items-center gap-1.5 h-7 px-1 rounded text-xs bg-transparent hover:bg-accent transition-colors focus:outline-none w-full text-left">
+                        <CalendarIcon className="h-3 w-3 shrink-0 text-muted-foreground" />
+                        <span className={issue.start_date ? "text-foreground" : "text-muted-foreground"}>
+                          {issue.start_date ? format(new Date(issue.start_date), "MMM d, yyyy") : "No start date"}
+                        </span>
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={issue.start_date ? new Date(issue.start_date) : undefined}
+                        onSelect={(date) =>
+                          handlePropUpdate(
+                            { start_date: date ? format(date, "yyyy-MM-dd") : null },
+                            "Start date"
+                          )
+                        }
+                        initialFocus
+                      />
+                      {issue.start_date && (
+                        <div className="border-t px-3 py-2">
+                          <button
+                            onClick={() => handlePropUpdate({ start_date: null }, "Start date")}
+                            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors"
+                          >
+                            <X className="h-3 w-3" />
+                            Clear date
+                          </button>
+                        </div>
+                      )}
+                    </PopoverContent>
+                  </Popover>
+                </PropertyRow>
+
                 <PropertyRow label="Due Date">
                   <Popover>
                     <PopoverTrigger asChild>

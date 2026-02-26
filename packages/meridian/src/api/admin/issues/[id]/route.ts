@@ -14,12 +14,13 @@ export const PUT = async (req: any, res: Response) => {
     const issueService = req.scope.resolve("issueModuleService") as any
     const activityService = req.scope.resolve("activityModuleService") as any
     const allowed = ["title", "description", "status", "priority", "type",
-                     "assignee_ids", "parent_id", "sprint_id", "task_list_id", "due_date", "estimate"]
+                     "assignee_ids", "parent_id", "sprint_id", "task_list_id", "start_date", "due_date", "estimate"]
     const updates: Record<string, unknown> = {}
     for (const field of allowed) {
       if (req.body[field] !== undefined) updates[field] = req.body[field]
     }
-    if (updates.due_date) updates.due_date = new Date(updates.due_date as string)
+    if (updates.start_date !== undefined) updates.start_date = updates.start_date ? new Date(updates.start_date as string) : null
+    if (updates.due_date !== undefined) updates.due_date = updates.due_date ? new Date(updates.due_date as string) : null
 
     if (updates.status !== undefined) {
       const { result: issue, errors, transaction_status } = await updateIssueStatusWorkflow(req.scope).run({

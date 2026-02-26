@@ -23,6 +23,7 @@ const Issue = model.define("issue", {
   sprint_id: model.text().nullable(),
   /** Denormalized task list reference — no FK constraint */
   task_list_id: model.text().nullable(),
+  start_date: model.date().nullable(),
   due_date: model.date().nullable(),
   /** Story point estimate */
   estimate: model.number().nullable(),

@@ -17,6 +17,7 @@ export interface CreateIssueInput {
   assignee_ids?: string[]
   reporter_id?: string
   parent_id?: string | null
+  start_date?: Date | null
   due_date?: Date
   estimate?: number
   sprint_id?: string | null

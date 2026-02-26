@@ -15,6 +15,7 @@ export interface Issue {
   sprint_id?: string | null
   task_list_id?: string | null
   parent_id?: string | null
+  start_date?: string | null
   due_date?: string | null
   created_at: string
   updated_at: string
@@ -45,6 +46,7 @@ interface CreateIssueInput {
   sprint_id?: string | null
   task_list_id?: string | null
   parent_id?: string | null
+  start_date?: string | null
   due_date?: string | null
 }
 
@@ -58,6 +60,7 @@ interface UpdateIssueInput {
   sprint_id?: string | null
   task_list_id?: string | null
   parent_id?: string | null
+  start_date?: string | null
   due_date?: string | null
 }
 

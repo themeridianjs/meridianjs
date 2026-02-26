@@ -18,6 +18,7 @@ export interface CreateIssueInput {
   assignee_ids?: string[] | null
   reporter_id?: string | null
   parent_id?: string | null
+  start_date?: Date | null
   due_date?: Date
   estimate?: number | null
   sprint_id?: string | null
@@ -34,7 +35,7 @@ const createIssueStep = createStep(
       description: input.description, type: input.type, priority: input.priority,
       status: input.status, assignee_ids: input.assignee_ids ?? null,
       reporter_id: input.reporter_id ?? null, parent_id: input.parent_id ?? null,
-      due_date: input.due_date, estimate: input.estimate ?? null,
+      start_date: input.start_date ?? null, due_date: input.due_date, estimate: input.estimate ?? null,
       sprint_id: input.sprint_id ?? null, task_list_id: input.task_list_id ?? null,
     })
     return new StepResponse(issue, { issueId: issue.id })
