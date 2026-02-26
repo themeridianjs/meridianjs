@@ -31,6 +31,7 @@ const CORE_MODULES = [
   "@meridianjs/workspace-member",
   "@meridianjs/team-member",
   "@meridianjs/project-member",
+  "@meridianjs/app-role",
 ]
 
 export default async function register(ctx: PluginRegistrationContext): Promise<void> {

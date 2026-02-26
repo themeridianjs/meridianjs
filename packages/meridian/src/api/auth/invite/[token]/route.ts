@@ -89,6 +89,16 @@ export const POST = async (req: any, res: Response) => {
   })
 
   await workspaceMemberService.ensureMember(invitation.workspace_id, authResult.user.id, invitation.role)
+
+  if (invitation.app_role_id) {
+    try {
+      const userService = req.scope.resolve("userModuleService") as any
+      await userService.updateUser(authResult.user.id, { app_role_id: invitation.app_role_id })
+    } catch {
+      // Non-fatal — member joined, just couldn't assign app role
+    }
+  }
+
   await invitationService.updateInvitation(invitation.id, { status: "accepted" })
 
   res.status(201).json(authResult)

@@ -6,6 +6,7 @@ interface User {
   first_name: string
   last_name: string
   avatar_url?: string
+  roles: string[]
 }
 
 export interface WorkspaceRef {
@@ -19,7 +20,7 @@ interface AuthState {
   token: string | null
   workspace: WorkspaceRef | null
   isAuthenticated: boolean
-  login: (user: User, token: string) => void
+  login: (user: Omit<User, "roles">, token: string) => void
   logout: () => void
   setWorkspace: (w: WorkspaceRef | null) => void
 }
@@ -30,11 +31,33 @@ const TOKEN_KEY = "meridian_token"
 const USER_KEY = "meridian_user"
 const WORKSPACE_KEY = "meridian_workspace"
 
+function decodeTokenRoles(token: string): string[] {
+  try {
+    // JWT uses base64url — replace url-safe chars and add padding before atob
+    const base64url = token.split(".")[1]
+    const base64 = base64url.replace(/-/g, "+").replace(/_/g, "/").padEnd(
+      base64url.length + (4 - (base64url.length % 4)) % 4,
+      "="
+    )
+    const payload = JSON.parse(atob(base64))
+    return Array.isArray(payload.roles) ? payload.roles : []
+  } catch {
+    return []
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(() => {
     try {
       const stored = localStorage.getItem(USER_KEY)
-      return stored ? JSON.parse(stored) : null
+      const token = localStorage.getItem(TOKEN_KEY)
+      if (!stored) return null
+      const parsed = JSON.parse(stored) as User
+      // Ensure roles field is present — decode from token if missing
+      if (!Array.isArray(parsed.roles)) {
+        parsed.roles = token ? decodeTokenRoles(token) : []
+      }
+      return parsed
     } catch {
       return null
     }
@@ -51,11 +74,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   })
 
-  const login = (user: User, token: string) => {
-    setUser(user)
-    setToken(token)
-    localStorage.setItem(TOKEN_KEY, token)
-    localStorage.setItem(USER_KEY, JSON.stringify(user))
+  const login = (rawUser: Omit<User, "roles">, newToken: string) => {
+    const roles = decodeTokenRoles(newToken)
+    const userWithRoles: User = { ...rawUser, roles }
+    setUser(userWithRoles)
+    setToken(newToken)
+    localStorage.setItem(TOKEN_KEY, newToken)
+    localStorage.setItem(USER_KEY, JSON.stringify(userWithRoles))
   }
 
   const logout = () => {

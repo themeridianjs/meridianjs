@@ -7,6 +7,7 @@ import {
   Check,
   ChevronsUpDown,
   LogOut,
+  Shield,
 } from "lucide-react"
 import { useProjects } from "@/api/hooks/useProjects"
 import { useWorkspaces } from "@/api/hooks/useWorkspaces"
@@ -181,12 +182,15 @@ export function AppSidebar({ ...props }: SidebarProps) {
   const { workspace: workspaceSlug, projectKey } = useParams<{ workspace: string; projectKey: string }>()
   const { data: projects } = useProjects()
   const { toggle: openCommandPalette } = useCommandPalette()
+  const { user } = useAuth()
   const location = useLocation()
   const ws = workspaceSlug ?? ""
 
   const isProjectsActive = location.pathname === `/${ws}/projects`
   const isNotificationsActive = location.pathname.includes("/notifications")
   const isSettingsActive = location.pathname.includes("/settings")
+  const isRolesActive = location.pathname.includes("/roles")
+  const isSuperAdmin = user?.roles?.includes("super-admin") ?? false
 
   return (
     <SidebarRoot collapsible="offcanvas" {...props}>
@@ -260,10 +264,20 @@ export function AppSidebar({ ...props }: SidebarProps) {
           </>
         )}
 
-        {/* Settings — pushed to bottom */}
+        {/* Settings / Roles — pushed to bottom */}
         <SidebarGroup className="mt-auto">
           <SidebarGroupContent>
             <SidebarMenu>
+              {isSuperAdmin && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={isRolesActive} tooltip="Roles & Permissions">
+                    <NavLink to={`/${ws}/roles`}>
+                      <Shield />
+                      <span>Roles</span>
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
               <SidebarMenuItem>
                 <SidebarMenuButton asChild isActive={isSettingsActive} tooltip="Settings">
                   <NavLink to={`/${ws}/settings`}>

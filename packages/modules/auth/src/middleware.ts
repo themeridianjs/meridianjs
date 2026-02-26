@@ -39,6 +39,7 @@ export function authenticateJWT(req: any, res: Response, next: NextFunction): vo
       id: payload.sub as string,
       workspaceId: payload.workspaceId ?? null,
       roles: Array.isArray(payload.roles) ? payload.roles : [],
+      permissions: Array.isArray(payload.permissions) ? payload.permissions : [],
     }
     next()
   } catch {

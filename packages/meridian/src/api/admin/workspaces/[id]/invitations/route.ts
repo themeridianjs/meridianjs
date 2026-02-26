@@ -11,7 +11,7 @@ export const GET = async (req: any, res: Response) => {
 }
 
 export const POST = async (req: any, res: Response) => {
-  const { email, role } = req.body
+  const { email, role, app_role_id } = req.body
 
   if (!role || !["admin", "member"].includes(role)) {
     res.status(400).json({ error: { message: "role must be 'admin' or 'member'" } })
@@ -32,6 +32,7 @@ export const POST = async (req: any, res: Response) => {
       workspace_id: req.params.id,
       email: email?.trim() || null,
       role,
+      app_role_id: app_role_id ?? null,
       created_by: req.user?.id ?? "system",
     },
   })

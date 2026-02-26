@@ -19,6 +19,7 @@ import { IssueNewPage } from "@/pages/IssueNewPage"
 import { NotificationsPage } from "@/pages/NotificationsPage"
 import { SprintsPage } from "@/pages/SprintsPage"
 import { WorkspaceSettingsPage } from "@/pages/WorkspaceSettingsPage"
+import { RolesPage } from "@/pages/RolesPage"
 import { InviteAcceptPage } from "@/pages/InviteAcceptPage"
 
 function RequireAuth({ children }: { children: ReactNode }) {
@@ -183,6 +184,7 @@ export function App() {
         </Route>
         <Route path="notifications" element={<NotificationsPage />} />
         <Route path="settings" element={<WorkspaceSettingsPage />} />
+        <Route path="roles" element={<RolesPage />} />
       </Route>
 
       {/* Fallback */}

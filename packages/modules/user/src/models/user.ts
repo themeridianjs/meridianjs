@@ -10,6 +10,7 @@ const User = model.define("user", {
   role: model.enum(["super-admin", "admin", "moderator", "member"]).default("member"),
   is_active: model.boolean().default(true),
   last_login_at: model.date().nullable(),
+  app_role_id: model.text().nullable(),
   metadata: model.json().nullable(),
 }, [
   { columns: ["email"], unique: true },

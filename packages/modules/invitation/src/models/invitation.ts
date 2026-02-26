@@ -5,6 +5,7 @@ const Invitation = model.define("invitation", {
   workspace_id: model.text(),
   email: model.text().nullable(),
   role: model.enum(["admin", "member"]).default("member"),
+  app_role_id: model.text().nullable(),
   token: model.text(),
   status: model.enum(["pending", "accepted", "revoked"]).default("pending"),
   created_by: model.text(),

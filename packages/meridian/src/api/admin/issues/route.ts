@@ -1,4 +1,5 @@
 import type { Response } from "express"
+import { requirePermission } from "@meridianjs/auth"
 import { createIssueWorkflow } from "../../../workflows/create-issue.js"
 
 export const GET = async (req: any, res: Response) => {
@@ -18,27 +19,29 @@ export const GET = async (req: any, res: Response) => {
 }
 
 export const POST = async (req: any, res: Response) => {
-  const { title, project_id, workspace_id, description, type, priority, status,
-          assignee_ids, reporter_id, parent_id, due_date, estimate, sprint_id, task_list_id } = req.body
-  if (!title || !project_id || !workspace_id) {
-    res.status(400).json({ error: { message: "title, project_id and workspace_id are required" } })
-    return
-  }
-  const { result: issue, errors, transaction_status } = await createIssueWorkflow(req.scope).run({
-    input: {
-      title, project_id, workspace_id, description, type, priority, status,
-      assignee_ids: Array.isArray(assignee_ids) ? assignee_ids : null,
-      reporter_id: reporter_id ?? (req.user?.id ?? null),
-      parent_id: parent_id ?? null,
-      due_date: due_date ? new Date(due_date) : undefined,
-      estimate: estimate ?? null, sprint_id: sprint_id ?? null, task_list_id: task_list_id ?? null,
-      actor_id: req.user?.id ?? null,
-    },
+  requirePermission("issue:create")(req, res, async () => {
+    const { title, project_id, workspace_id, description, type, priority, status,
+            assignee_ids, reporter_id, parent_id, due_date, estimate, sprint_id, task_list_id } = req.body
+    if (!title || !project_id || !workspace_id) {
+      res.status(400).json({ error: { message: "title, project_id and workspace_id are required" } })
+      return
+    }
+    const { result: issue, errors, transaction_status } = await createIssueWorkflow(req.scope).run({
+      input: {
+        title, project_id, workspace_id, description, type, priority, status,
+        assignee_ids: Array.isArray(assignee_ids) ? assignee_ids : null,
+        reporter_id: reporter_id ?? (req.user?.id ?? null),
+        parent_id: parent_id ?? null,
+        due_date: due_date ? new Date(due_date) : undefined,
+        estimate: estimate ?? null, sprint_id: sprint_id ?? null, task_list_id: task_list_id ?? null,
+        actor_id: req.user?.id ?? null,
+      },
+    })
+    if (transaction_status === "reverted") {
+      const err = errors[0]
+      res.status((err as any).status ?? 500).json({ error: { message: err.message } })
+      return
+    }
+    res.status(201).json({ issue })
   })
-  if (transaction_status === "reverted") {
-    const err = errors[0]
-    res.status((err as any).status ?? 500).json({ error: { message: err.message } })
-    return
-  }
-  res.status(201).json({ issue })
 }

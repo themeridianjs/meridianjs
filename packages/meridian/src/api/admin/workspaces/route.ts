@@ -1,4 +1,5 @@
 import type { Response } from "express"
+import { requirePermission } from "@meridianjs/auth"
 
 export const GET = async (req: any, res: Response) => {
   const workspaceService = req.scope.resolve("workspaceModuleService") as any
@@ -31,26 +32,28 @@ export const GET = async (req: any, res: Response) => {
 }
 
 export const POST = async (req: any, res: Response) => {
-  const workspaceService = req.scope.resolve("workspaceModuleService") as any
-  const workspaceMemberService = req.scope.resolve("workspaceMemberModuleService") as any
-  const { name, plan } = req.body
+  requirePermission("workspace:create")(req, res, async () => {
+    const workspaceService = req.scope.resolve("workspaceModuleService") as any
+    const workspaceMemberService = req.scope.resolve("workspaceMemberModuleService") as any
+    const { name, plan } = req.body
 
-  if (!name || typeof name !== "string" || name.trim().length === 0) {
-    res.status(400).json({ error: { message: "name is required" } })
-    return
-  }
+    if (!name || typeof name !== "string" || name.trim().length === 0) {
+      res.status(400).json({ error: { message: "name is required" } })
+      return
+    }
 
-  const slug = workspaceService.generateSlug(name.trim())
-  const workspace = await workspaceService.createWorkspace({
-    name: name.trim(),
-    slug,
-    plan: plan ?? "free",
+    const slug = workspaceService.generateSlug(name.trim())
+    const workspace = await workspaceService.createWorkspace({
+      name: name.trim(),
+      slug,
+      plan: plan ?? "free",
+    })
+
+    // Auto-create workspace membership for the creator (admin role)
+    if (req.user?.id) {
+      await workspaceMemberService.ensureMember(workspace.id, req.user.id, "admin")
+    }
+
+    res.status(201).json({ workspace })
   })
-
-  // Auto-create workspace membership for the creator (admin role)
-  if (req.user?.id) {
-    await workspaceMemberService.ensureMember(workspace.id, req.user.id, "admin")
-  }
-
-  res.status(201).json({ workspace })
 }
