@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import React, { useState, useEffect } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import { format } from "date-fns"
 import type { Issue } from "@/api/hooks/useIssues"
@@ -13,9 +13,13 @@ import { CommentInput } from "@/components/issues/CommentInput"
 import {
   Drawer,
   DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
 } from "@/components/ui/drawer"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -27,7 +31,7 @@ import {
   ISSUE_TYPE_LABELS,
 } from "@/lib/constants"
 import { RichTextEditor, RichTextContent } from "@/components/ui/rich-text-editor"
-import { Pencil, X, Check, ExternalLink, Layers, FolderOpen, CornerDownRight, Plus, ChevronUp, Calendar as CalendarIcon } from "lucide-react"
+import { Pencil, Check, Link2, Paperclip, GitBranch, Maximize2, MoreHorizontal, PanelRight, ThumbsUp, Layers, FolderOpen, CornerDownRight, Plus, ChevronUp, Calendar as CalendarIcon } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
 import { toast } from "sonner"
@@ -156,63 +160,92 @@ export function IssueDetail({ issue, projectId, open, onClose }: IssueDetailProp
   return (
     <>
     <Drawer open={open} onOpenChange={(o) => !o && onClose()}>
-      <DrawerContent className="flex flex-col p-0 w-full max-w-2xl overflow-hidden [&>button]:right-4">
-        <DrawerHeader className="pr-10">
-          <div className="flex items-center justify-between gap-2 mb-1">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-mono text-muted-foreground">{issue.identifier}</span>
-              <Badge variant="muted" className="text-[10px]">
-                {ISSUE_TYPE_LABELS[issue.type] ?? issue.type}
-              </Badge>
-            </div>
-            <div className="flex items-center gap-1">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 text-xs text-muted-foreground hover:text-foreground gap-1.5"
+      <DrawerContent className="flex flex-col p-0 w-full max-w-2xl overflow-hidden">
+        {/* ── Toolbar ── */}
+        {(() => {
+          const completedStatus = projectStatuses?.find((s) => s.category === "completed")
+          const isCompleted = !!completedStatus && issue.status === completedStatus.key
+
+          const iconBtn = (icon: React.ElementType, label: string, onClick?: () => void) => {
+            const Icon = icon
+            return (
+              <button
+                key={label}
+                title={label}
+                onClick={onClick}
+                className="h-8 w-8 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+              >
+                <Icon className="h-4 w-4" />
+              </button>
+            )
+          }
+
+          return (
+            <div className="flex items-center justify-between px-4 py-2 border-b border-border shrink-0">
+              {/* Left: Mark complete */}
+              <button
                 onClick={() => {
+                  if (!completedStatus) return
+                  handleStatusChange(isCompleted ? (projectStatuses?.find((s) => s.category === "unstarted" || s.category === "backlog")?.key ?? issue.status) : completedStatus.key)
+                }}
+                className={cn(
+                  "flex items-center gap-1.5 px-3 py-1.5 rounded-md border text-xs font-medium transition-colors",
+                  isCompleted
+                    ? "border-emerald-500/40 text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30"
+                    : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/40"
+                )}
+              >
+                <Check className="h-3.5 w-3.5" />
+                {isCompleted ? "Completed" : "Mark complete"}
+              </button>
+
+              {/* Right: action icons */}
+              <div className="flex items-center">
+                {iconBtn(ThumbsUp, "Upvote")}
+                {iconBtn(Paperclip, "Attachments")}
+                {iconBtn(GitBranch, "Add sub-issue", () => setCreateChildOpen(true))}
+                {iconBtn(Link2, "Copy link", () => {
+                  navigator.clipboard.writeText(`${window.location.origin}/${workspace}/projects/${projectKey}/issues/${issue.id}`)
+                  toast.success("Link copied")
+                })}
+                {iconBtn(Maximize2, "Open full page", () => {
                   onClose()
                   navigate(`/${workspace}/projects/${projectKey}/issues/${issue.id}`)
-                }}
-              >
-                <ExternalLink className="h-3.5 w-3.5" />
-                Open
-              </Button>
-              {!isEditing ? (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 text-xs text-muted-foreground hover:text-foreground gap-1.5"
-                  onClick={() => setIsEditing(true)}
-                >
-                  <Pencil className="h-3.5 w-3.5" />
-                  Edit
-                </Button>
-              ) : (
-                <div className="flex items-center gap-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 text-xs text-muted-foreground"
-                    onClick={handleCancelEdit}
-                  >
-                    <X className="h-3.5 w-3.5" />
-                    Cancel
-                  </Button>
-                  <Button
-                    size="sm"
-                    className="h-7 text-xs gap-1.5"
-                    onClick={handleSaveEdit}
-                    disabled={!editTitle.trim() || updateIssue.isPending}
-                  >
-                    <Check className="h-3.5 w-3.5" />
-                    Save
-                  </Button>
-                </div>
-              )}
+                })}
+                {isEditing ? (
+                  <div className="flex items-center gap-1 ml-1">
+                    <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={handleCancelEdit}>
+                      Cancel
+                    </Button>
+                    <Button size="sm" className="h-7 text-xs" onClick={handleSaveEdit} disabled={!editTitle.trim() || updateIssue.isPending}>
+                      <Check className="h-3.5 w-3.5 mr-1" />
+                      Save
+                    </Button>
+                  </div>
+                ) : (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      {iconBtn(MoreHorizontal, "More options")}
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-40">
+                      <DropdownMenuItem onClick={() => setIsEditing(true)}>
+                        <Pencil className="h-3.5 w-3.5 mr-2" />
+                        Edit
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+                {iconBtn(PanelRight, "Open in full page", () => {
+                  onClose()
+                  navigate(`/${workspace}/projects/${projectKey}/issues/${issue.id}`)
+                })}
+              </div>
             </div>
-          </div>
+          )
+        })()}
 
+        {/* ── Title ── */}
+        <div className="px-6 pt-4 pb-2 shrink-0">
           {isEditing ? (
             <Input
               value={editTitle}
@@ -221,11 +254,17 @@ export function IssueDetail({ issue, projectId, open, onClose }: IssueDetailProp
               autoFocus
             />
           ) : (
-            <DrawerTitle className="text-base font-medium leading-snug text-left">
-              {issue.title}
-            </DrawerTitle>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-xs font-mono text-muted-foreground shrink-0">{issue.identifier}</span>
+              <Badge variant="muted" className="text-[10px] shrink-0">
+                {ISSUE_TYPE_LABELS[issue.type] ?? issue.type}
+              </Badge>
+            </div>
           )}
-        </DrawerHeader>
+          {!isEditing && (
+            <h2 className="text-base font-medium leading-snug">{issue.title}</h2>
+          )}
+        </div>
 
         <ScrollArea className="flex-1 min-w-0">
           <div className="px-6 py-4 space-y-5 min-w-0">
