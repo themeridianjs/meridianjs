@@ -1,6 +1,6 @@
 {
   "name": "@meridianjs/auth",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Meridian auth module — JWT authentication and middleware",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
