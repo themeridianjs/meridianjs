@@ -245,6 +245,18 @@ This script diffs test-app routes against the plugin and exits with code 1 if an
 ### 10. All modules are npm packages
 The `apps/test-app/` is **only for integration testing**. All reusable modules, plugins, and UI packages live under `packages/` and are published to npm under `@meridianjs/`. Never create local modules in `test-app/src/modules/` for features meant to ship.
 
+### 11. Always publish affected packages after merging features
+When a feature touches one or more packages, **all affected packages must be published before considering the work done**. Common mistakes to avoid:
+- Adding a new export to a package (e.g. `requirePermission` in `@meridianjs/auth`) and not republishing — consumers get a runtime "does not provide an export" error
+- Creating a new package (e.g. `@meridianjs/app-role`) and not publishing it — consumers get a 404 on `npm install`
+- Bumping a package's `package.json` version locally but forgetting to run `npm publish`
+
+**Checklist before closing any feature:**
+1. Run `git diff origin/main --name-only` to identify changed packages
+2. For each changed package under `packages/`, bump the version (`npm version patch --no-git-tag-version`) and publish (`npm publish --access public`)
+3. Verify nothing is missing: `for pkg in <all @meridianjs/* deps of @meridianjs/meridian>; do npm view $pkg version; done`
+4. Commit the version bumps and push
+
 ---
 
 ## Build & Run Commands
