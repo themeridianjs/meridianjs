@@ -14,7 +14,7 @@ export const GET = async (req: any, res: Response) => {
   else if (req.query.sprint_id) filters.sprint_id = req.query.sprint_id as string
   if (req.query.task_list_id === "none") filters.task_list_id = null
   else if (req.query.task_list_id) filters.task_list_id = req.query.task_list_id as string
-  const [issues, count] = await issueService.listAndCountIssues(filters, { limit, offset })
+  const [issues, count] = await issueService.listAndCountIssues(filters, { limit, offset, orderBy: { created_at: "ASC" } })
   res.json({ issues, count, limit, offset })
 }
 
