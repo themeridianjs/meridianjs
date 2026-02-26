@@ -655,7 +655,7 @@ export const GanttColumn: FC<GanttColumnProps> = ({
     <div
       className={cn(
         "group relative h-full overflow-hidden",
-        isColumnSecondary?.(index) ? "bg-red-50" : ""
+        isColumnSecondary?.(index) ? "bg-[#f59e0b]/5 dark:bg-[#f59e0b]/5" : ""
       )}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
