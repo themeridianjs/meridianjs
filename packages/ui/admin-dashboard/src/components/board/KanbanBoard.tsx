@@ -8,7 +8,9 @@ import {
   type DragStartEvent,
   type DragEndEvent,
   type DragOverEvent,
+  type CollisionDetection,
   closestCorners,
+  rectIntersection,
 } from "@dnd-kit/core"
 import { SortableContext, arrayMove, horizontalListSortingStrategy } from "@dnd-kit/sortable"
 import { useQueryClient } from "@tanstack/react-query"
@@ -133,6 +135,23 @@ export function KanbanBoard({ issues, projectId, statuses, onIssueClick, onColum
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+  )
+
+  // When dragging a column, only consider other columns as drop targets.
+  // closestCorners would otherwise resolve to the nearest *issue card* inside
+  // a column, making over.id an issue ID and causing the reorder to silently
+  // bail out (columnOrder.indexOf(issueId) === -1).
+  const collisionDetection: CollisionDetection = useCallback(
+    (args) => {
+      if (draggingColumnId) {
+        const columnContainers = args.droppableContainers.filter((c) =>
+          columnOrder.includes(c.id as string)
+        )
+        return rectIntersection({ ...args, droppableContainers: columnContainers })
+      }
+      return closestCorners(args)
+    },
+    [draggingColumnId, columnOrder]
   )
 
   const findColumn = useCallback(
@@ -357,7 +376,7 @@ export function KanbanBoard({ issues, projectId, statuses, onIssueClick, onColum
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={closestCorners}
+      collisionDetection={collisionDetection}
       onDragStart={handleDragStart}
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
