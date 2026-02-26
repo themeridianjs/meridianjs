@@ -9,6 +9,7 @@ interface CreateNotificationInput {
   action: string
   message?: string | null
   workspace_id: string
+  metadata?: Record<string, unknown> | null
 }
 
 export class NotificationModuleService extends MeridianService({ Notification }) {
@@ -34,6 +35,7 @@ export class NotificationModuleService extends MeridianService({ Notification })
       message: input.message ?? null,
       read: false,
       workspace_id: input.workspace_id,
+      metadata: input.metadata ?? null,
     })
     await repo.persistAndFlush(record)
     return record

@@ -15,6 +15,8 @@ const Notification = model.define("notification", {
   /** Whether the user has read this notification */
   read: model.boolean().default(false),
   workspace_id: model.text(),
+  /** Optional JSON payload for building deep-links (e.g. { project_id }) */
+  metadata: model.json().nullable(),
 })
 
 export default Notification

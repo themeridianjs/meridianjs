@@ -63,7 +63,7 @@ export const assignIssueWorkflow = createWorkflow(
     await logAssigneesStep(activityInput)
     await emitEventStep({
       name: "issue.assigned",
-      data: { issue_id: updated.id, workspace_id: updated.workspace_id, actor_id: actor_id ?? "system", assignee_ids: newAssignees },
+      data: { issue_id: updated.id, project_id: updated.project_id, workspace_id: updated.workspace_id, actor_id: actor_id ?? "system", assignee_ids: newAssignees },
     })
     return new WorkflowResponse(updated)
   }

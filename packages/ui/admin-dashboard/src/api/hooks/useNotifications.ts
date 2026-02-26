@@ -10,6 +10,7 @@ export interface Notification {
   message: string
   read: boolean
   created_at: string
+  metadata?: Record<string, string> | null
 }
 
 interface NotificationsResponse {
@@ -33,7 +34,7 @@ export function useNotifications() {
 export function useUnreadCount() {
   return useQuery({
     queryKey: [...notificationKeys.list(), "unread"],
-    queryFn: () => api.get<NotificationsResponse>("/admin/notifications?read=false"),
+    queryFn: () => api.get<NotificationsResponse>("/admin/notifications?unread=true"),
     select: (data) => data.count,
   })
 }
@@ -44,7 +45,7 @@ export function useMarkAsRead() {
     mutationFn: (id: string) =>
       api.post<{ ok: boolean }>(`/admin/notifications/${id}/read`),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: notificationKeys.list() })
+      qc.invalidateQueries({ queryKey: notificationKeys.all })
     },
   })
 }
@@ -54,7 +55,7 @@ export function useMarkAllAsRead() {
   return useMutation({
     mutationFn: () => api.post<{ ok: boolean }>("/admin/notifications/read-all"),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: notificationKeys.list() })
+      qc.invalidateQueries({ queryKey: notificationKeys.all })
     },
   })
 }

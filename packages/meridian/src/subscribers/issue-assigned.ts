@@ -3,6 +3,7 @@ import { sseManager } from "@meridianjs/framework"
 
 interface IssueAssignedData {
   issue_id: string
+  project_id: string
   workspace_id: string
   actor_id: string
   assignee_ids: string[]
@@ -22,6 +23,7 @@ export default async function handler({ event, container }: SubscriberArgs<Issue
           user_id: userId, entity_type: "issue", entity_id: data.issue_id,
           action: "assigned", message: "You were assigned to an issue",
           workspace_id: data.workspace_id,
+          metadata: { project_id: data.project_id },
         })
       )
   )

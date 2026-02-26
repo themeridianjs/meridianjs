@@ -23,6 +23,7 @@ export default async function handler({ event, container }: SubscriberArgs<Issue
       action: "created",
       message: data.assignee_ids?.includes(userId) ? "You were assigned to a new issue" : "An issue was created in your project",
       workspace_id: data.workspace_id,
+      metadata: { project_id: data.project_id },
     })
   ))
 
