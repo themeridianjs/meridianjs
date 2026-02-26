@@ -158,6 +158,7 @@ export interface AuthenticatedUser {
   id: string
   workspaceId: string
   roles: string[]
+  permissions: string[]
 }
 
 // Augmented Express request — actual implementation in @meridianjs/framework

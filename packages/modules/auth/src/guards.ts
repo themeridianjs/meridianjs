@@ -18,6 +18,28 @@ export function requireRoles(...roles: string[]) {
 }
 
 /**
+ * Permission guard — allows the request if `req.user.roles` includes "super-admin"
+ * (full bypass) or if `req.user.permissions` contains at least one of the listed
+ * permissions.
+ *
+ * Must be used after `authenticateJWT` so that `req.user` is populated.
+ *
+ * @example
+ * export const POST = async (req, res) => {
+ *   requirePermission("project:create")(req, res, async () => { ... })
+ * }
+ */
+export function requirePermission(...permissions: string[]) {
+  return (req: any, res: Response, next: NextFunction) => {
+    const userRoles: string[] = req.user?.roles ?? []
+    if (userRoles.includes("super-admin")) return next()
+    const userPermissions: string[] = req.user?.permissions ?? []
+    if (permissions.some((p) => userPermissions.includes(p))) return next()
+    res.status(403).json({ error: { message: "Forbidden — insufficient permissions" } })
+  }
+}
+
+/**
  * Workspace isolation guard — rejects requests where the `workspace_id` query
  * param or body field does not match the authenticated user's workspace.
  *

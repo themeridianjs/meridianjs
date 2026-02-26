@@ -15,12 +15,14 @@ export class InvitationModuleService extends MeridianService({ Invitation: Invit
     workspace_id: string
     email?: string | null
     role: "admin" | "member"
+    app_role_id?: string | null
     created_by: string
   }) {
     return this.createInvitation({
       workspace_id: data.workspace_id,
       email: data.email ?? null,
       role: data.role,
+      app_role_id: data.app_role_id ?? null,
       token: randomUUID(),
       status: "pending" as const,
       created_by: data.created_by,

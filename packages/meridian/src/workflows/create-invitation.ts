@@ -10,6 +10,7 @@ export interface CreateInvitationInput {
   workspace_id: string
   email?: string | null
   role: "admin" | "member"
+  app_role_id?: string | null
   created_by: string
 }
 
@@ -21,6 +22,7 @@ const createInvitationStep = createStep(
       workspace_id: input.workspace_id,
       email: input.email ?? null,
       role: input.role,
+      app_role_id: input.app_role_id ?? null,
       created_by: input.created_by,
     })
     return new StepResponse(invitation, { invitationId: invitation.id })

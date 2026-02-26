@@ -1,7 +1,7 @@
 {
-  "name": "@meridianjs/framework-utils",
-  "version": "0.1.1",
-  "description": "Utilities for building Meridian modules: DML, service factory, defineModule, defineLink",
+  "name": "@meridianjs/app-role",
+  "version": "0.1.0",
+  "description": "Meridian app-role module — application-wide custom roles and permissions",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
@@ -20,34 +20,20 @@
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --dts --clean",
     "dev": "tsup src/index.ts --format esm,cjs --dts --watch",
-    "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist",
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@meridianjs/types": "^0.1.0"
-  },
-  "peerDependencies": {
-    "@mikro-orm/core": "^6.0.0",
-    "@mikro-orm/postgresql": "^6.0.0"
-  },
-  "peerDependenciesMeta": {
-    "@mikro-orm/core": {
-      "optional": true
-    },
-    "@mikro-orm/postgresql": {
-      "optional": true
-    }
+    "@meridianjs/framework-utils": "^0.1.0",
+    "@meridianjs/types": "^0.1.0",
+    "@mikro-orm/core": "^6.4.3",
+    "@mikro-orm/postgresql": "^6.4.3"
   },
   "devDependencies": {
     "tsup": "^8.3.5",
     "typescript": "*"
   },
-  "files": [
-    "dist"
-  ],
-  "publishConfig": {
-    "access": "public"
-  }
+  "files": ["dist"],
+  "publishConfig": { "access": "public" }
 }

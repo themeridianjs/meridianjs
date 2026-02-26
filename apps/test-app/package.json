@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@meridianjs/activity": "*",
+    "@meridianjs/app-role": "*",
     "@meridianjs/auth": "*",
     "@meridianjs/event-bus-local": "*",
     "@meridianjs/framework": "*",

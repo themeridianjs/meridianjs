@@ -17,6 +17,7 @@ import {
   type Invitation,
   type WorkspaceMember,
 } from "@/api/hooks/useWorkspaces"
+import { useRoles, useAssignUserRole } from "@/api/hooks/useRoles"
 import { useAuth } from "@/stores/auth"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -95,13 +96,16 @@ interface InviteMemberDialogProps {
 function InviteMemberDialog({ open, onClose, workspaceId }: InviteMemberDialogProps) {
   const [email, setEmail] = useState("")
   const [role, setRole] = useState<"admin" | "member">("member")
+  const [appRoleId, setAppRoleId] = useState<string | null>(null)
   const [createdInvitation, setCreatedInvitation] = useState<Invitation | null>(null)
   const createInvitation = useCreateInvitation(workspaceId)
+  const { data: appRoles } = useRoles()
 
   useEffect(() => {
     if (open) {
       setEmail("")
       setRole("member")
+      setAppRoleId(null)
       setCreatedInvitation(null)
     }
   }, [open])
@@ -113,7 +117,7 @@ function InviteMemberDialog({ open, onClose, workspaceId }: InviteMemberDialogPr
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     createInvitation.mutate(
-      { email: email.trim() || undefined, role },
+      { email: email.trim() || undefined, role, app_role_id: appRoleId },
       {
         onSuccess: (data) => {
           setCreatedInvitation(data.invitation)
@@ -203,6 +207,32 @@ function InviteMemberDialog({ open, onClose, workspaceId }: InviteMemberDialogPr
                 </SelectContent>
               </Select>
             </div>
+
+            {appRoles && appRoles.length > 0 && (
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">
+                  Custom role <span className="font-normal">(optional)</span>
+                </label>
+                <Select
+                  value={appRoleId ?? "none"}
+                  onValueChange={(v) => setAppRoleId(v === "none" ? null : v)}
+                >
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="No custom role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">
+                      <span className="text-muted-foreground">No custom role</span>
+                    </SelectItem>
+                    {appRoles.map((r) => (
+                      <SelectItem key={r.id} value={r.id}>
+                        {r.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             <div className="flex justify-end gap-2 pt-1">
               <Button type="button" variant="outline" size="sm" onClick={onClose}>
@@ -380,6 +410,8 @@ function MembersTab({ workspaceId, onInvite }: { workspaceId: string; onInvite: 
   const { data: invitations, isLoading: invitationsLoading } = useInvitations(workspaceId)
   const updateRole = useUpdateWorkspaceMemberRole(workspaceId)
   const removeMember = useRemoveWorkspaceMember(workspaceId)
+  const assignUserRole = useAssignUserRole()
+  const { data: appRoles } = useRoles()
   const { user } = useAuth()
 
   const pending = invitations?.filter((i) => i.status === "pending") ?? []
@@ -461,6 +493,36 @@ function MembersTab({ workspaceId, onInvite }: { workspaceId: string; onInvite: 
                 )}>
                   {m.role === "admin" ? "Admin" : "Member"}
                 </span>
+
+                {/* Custom app role */}
+                {appRoles && appRoles.length > 0 && (
+                  <Select
+                    value={m.app_role_id ?? "none"}
+                    onValueChange={(v) =>
+                      assignUserRole.mutate(
+                        { userId: m.user_id, appRoleId: v === "none" ? null : v },
+                        {
+                          onSuccess: () => toast.success("Custom role updated"),
+                          onError: () => toast.error("Failed to update custom role"),
+                        }
+                      )
+                    }
+                  >
+                    <SelectTrigger className="h-7 text-[11px] w-32 shrink-0">
+                      <SelectValue placeholder="Custom role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">
+                        <span className="text-muted-foreground">No custom role</span>
+                      </SelectItem>
+                      {appRoles.map((r) => (
+                        <SelectItem key={r.id} value={r.id}>
+                          {r.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
 
                 {/* Actions */}
                 {!isCurrentUser && (

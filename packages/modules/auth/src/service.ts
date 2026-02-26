@@ -35,6 +35,7 @@ export interface JwtPayload {
   sub: string
   workspaceId: string | null
   roles: string[]
+  permissions: string[]
   iat?: number
   exp?: number
 }
@@ -76,7 +77,8 @@ export class AuthModuleService extends MeridianService({}) {
       is_active: true,
     })
 
-    const token = this.signToken(user.id, null, [user.role], config.projectConfig.jwtSecret)
+    const permissions = await this.resolvePermissions(user.app_role_id)
+    const token = this.signToken(user.id, null, [user.role], permissions, config.projectConfig.jwtSecret)
 
     return {
       user: {
@@ -111,7 +113,8 @@ export class AuthModuleService extends MeridianService({}) {
     // Non-critical — don't fail login if timestamp update fails
     await userService.recordLogin(user.id).catch(() => {})
 
-    const token = this.signToken(user.id, null, [user.role ?? "member"], config.projectConfig.jwtSecret)
+    const permissions = await this.resolvePermissions(user.app_role_id)
+    const token = this.signToken(user.id, null, [user.role ?? "member"], permissions, config.projectConfig.jwtSecret)
 
     return {
       user: {
@@ -129,13 +132,25 @@ export class AuthModuleService extends MeridianService({}) {
     return jwt.verify(token, secret) as JwtPayload
   }
 
+  /** Resolve permissions for a given app_role_id — gracefully degrades if module not loaded. */
+  private async resolvePermissions(appRoleId: string | null | undefined): Promise<string[]> {
+    if (!appRoleId) return []
+    try {
+      const appRoleService = this.container.resolve<any>("appRoleModuleService")
+      return await appRoleService.getPermissionsForRole(appRoleId)
+    } catch {
+      return []
+    }
+  }
+
   private signToken(
     userId: string,
     workspaceId: string | null,
     roles: string[],
+    permissions: string[],
     secret: string
   ): string {
-    return jwt.sign({ sub: userId, workspaceId, roles }, secret, {
+    return jwt.sign({ sub: userId, workspaceId, roles, permissions }, secret, {
       expiresIn: JWT_EXPIRES_IN,
     })
   }
