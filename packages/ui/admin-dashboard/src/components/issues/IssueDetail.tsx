@@ -34,6 +34,7 @@ import { RichTextEditor, RichTextContent } from "@/components/ui/rich-text-edito
 import { Pencil, Check, Link2, Paperclip, GitBranch, Maximize2, MoreHorizontal, PanelRight, ThumbsUp, Layers, FolderOpen, CornerDownRight, Plus, ChevronUp, Calendar as CalendarIcon } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
+import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 
 function sprintDateRange(sprint: Sprint): string | null {
