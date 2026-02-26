@@ -95,29 +95,39 @@ interface InviteMemberDialogProps {
 
 function InviteMemberDialog({ open, onClose, workspaceId }: InviteMemberDialogProps) {
   const [email, setEmail] = useState("")
-  const [role, setRole] = useState<"admin" | "member">("member")
-  const [appRoleId, setAppRoleId] = useState<string | null>(null)
+  // selectedRole is either "admin" (workspace admin) or an app role ID
+  const [selectedRole, setSelectedRole] = useState<string>("__admin")
   const [createdInvitation, setCreatedInvitation] = useState<Invitation | null>(null)
   const createInvitation = useCreateInvitation(workspaceId)
   const { data: appRoles } = useRoles()
 
+  // Default to first app role once loaded, otherwise workspace admin
   useEffect(() => {
     if (open) {
       setEmail("")
-      setRole("member")
-      setAppRoleId(null)
       setCreatedInvitation(null)
+      setSelectedRole(appRoles && appRoles.length > 0 ? appRoles[0].id : "__admin")
     }
-  }, [open])
+  }, [open, appRoles])
 
   const inviteUrl = createdInvitation
     ? `${window.location.origin}/invite/${createdInvitation.token}`
     : null
 
+  const selectedRoleName =
+    selectedRole === "__admin"
+      ? "Admin"
+      : (appRoles?.find((r) => r.id === selectedRole)?.name ?? "Member")
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    const isAdmin = selectedRole === "__admin"
     createInvitation.mutate(
-      { email: email.trim() || undefined, role, app_role_id: appRoleId },
+      {
+        email: email.trim() || undefined,
+        role: isAdmin ? "admin" : "member",
+        app_role_id: isAdmin ? null : selectedRole,
+      },
       {
         onSuccess: (data) => {
           setCreatedInvitation(data.invitation)
@@ -145,7 +155,7 @@ function InviteMemberDialog({ open, onClose, workspaceId }: InviteMemberDialogPr
                 "anyone you want to invite"
               )}
               . They will join as{" "}
-              <span className="font-medium text-foreground capitalize">{createdInvitation?.role}</span>.
+              <span className="font-medium text-foreground">{selectedRoleName}</span>.
             </p>
 
             <div className="flex items-start gap-2 p-3 bg-muted/50 rounded-lg border border-border">
@@ -185,54 +195,35 @@ function InviteMemberDialog({ open, onClose, workspaceId }: InviteMemberDialogPr
 
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">Role</label>
-              <Select value={role} onValueChange={(v) => setRole(v as "admin" | "member")}>
+              <Select value={selectedRole} onValueChange={setSelectedRole}>
                 <SelectTrigger className="h-9">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="member">
-                    <div className="flex items-center gap-2">
-                      <UserRound className="h-3.5 w-3.5 text-muted-foreground" />
-                      <span>Member</span>
-                      <span className="text-xs text-muted-foreground ml-1">— Can view and edit</span>
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="admin">
+                  <SelectItem value="__admin">
                     <div className="flex items-center gap-2">
                       <ShieldCheck className="h-3.5 w-3.5 text-muted-foreground" />
                       <span>Admin</span>
-                      <span className="text-xs text-muted-foreground ml-1">— Full access</span>
+                      <span className="text-xs text-muted-foreground ml-1">— Full workspace access</span>
                     </div>
                   </SelectItem>
+                  {appRoles && appRoles.length > 0 && (
+                    <>
+                      <div className="px-2 pt-2 pb-1">
+                        <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
+                          Roles
+                        </span>
+                      </div>
+                      {appRoles.map((r) => (
+                        <SelectItem key={r.id} value={r.id}>
+                          {r.name}
+                        </SelectItem>
+                      ))}
+                    </>
+                  )}
                 </SelectContent>
               </Select>
             </div>
-
-            {appRoles && appRoles.length > 0 && (
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
-                  Custom role <span className="font-normal">(optional)</span>
-                </label>
-                <Select
-                  value={appRoleId ?? "none"}
-                  onValueChange={(v) => setAppRoleId(v === "none" ? null : v)}
-                >
-                  <SelectTrigger className="h-9">
-                    <SelectValue placeholder="No custom role" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">
-                      <span className="text-muted-foreground">No custom role</span>
-                    </SelectItem>
-                    {appRoles.map((r) => (
-                      <SelectItem key={r.id} value={r.id}>
-                        {r.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
 
             <div className="flex justify-end gap-2 pt-1">
               <Button type="button" variant="outline" size="sm" onClick={onClose}>
