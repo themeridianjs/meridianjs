@@ -1,11 +1,29 @@
-import { NavLink, Outlet, useParams } from "react-router-dom"
+import { NavLink, Outlet, useParams, useNavigate, useSearchParams, useLocation } from "react-router-dom"
+import { useEffect } from "react"
 import { Zap, GitBranch, LayoutDashboard, Lock } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import { useProjectByKey } from "@/api/hooks/useProjects"
 
+const PROJECT_TAB_ROUTES = ["board", "issues", "sprints", "access"] as const
+
 export function ProjectLayout() {
   const { projectKey, workspace: ws } = useParams<{ projectKey: string; workspace: string }>()
   const { data: project } = useProjectByKey(projectKey ?? "")
+  const navigate = useNavigate()
+  const location = useLocation()
+  const [searchParams] = useSearchParams()
+
+  useEffect(() => {
+    const tab = searchParams.get("tab")
+    if (!tab || !PROJECT_TAB_ROUTES.includes(tab as any)) return
+    // Only redirect if we're at the layout root (no sub-route active yet)
+    const isAtRoot = PROJECT_TAB_ROUTES.every(
+      (r) => !location.pathname.endsWith(`/${r}`)
+    )
+    if (isAtRoot) {
+      navigate(`/${ws}/projects/${projectKey}/${tab}`, { replace: true })
+    }
+  }, []) // run once on mount
 
   const base = `/${ws}/projects/${projectKey}`
   const tabs: { to: string; label: string; icon: LucideIcon; end: boolean }[] = [

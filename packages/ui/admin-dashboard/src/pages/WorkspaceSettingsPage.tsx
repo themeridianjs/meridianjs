@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react"
+import { useSearchParams } from "react-router-dom"
 import {
   useWorkspaces,
   useUpdateWorkspace,
@@ -887,10 +888,22 @@ function TeamsTab({ workspaceId }: { workspaceId: string }) {
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
+const VALID_TABS = ["general", "members", "teams"] as const
+type WorkspaceTab = typeof VALID_TABS[number]
+
 export function WorkspaceSettingsPage() {
   const { workspace: wsRef } = useAuth()
   const workspaceId = wsRef?.id ?? ""
-  const [activeTab, setActiveTab] = useState<"general" | "members" | "teams">("general")
+  const [searchParams, setSearchParams] = useSearchParams()
+  const tabParam = searchParams.get("tab")
+  const [activeTab, setActiveTab] = useState<WorkspaceTab>(
+    VALID_TABS.includes(tabParam as WorkspaceTab) ? (tabParam as WorkspaceTab) : "general"
+  )
+
+  const handleTabChange = (tab: WorkspaceTab) => {
+    setActiveTab(tab)
+    setSearchParams({ tab }, { replace: true })
+  }
   const [inviteOpen, setInviteOpen] = useState(false)
 
   return (
@@ -903,7 +916,7 @@ export function WorkspaceSettingsPage() {
             {(["general", "members", "teams"] as const).map((tab) => (
               <button
                 key={tab}
-                onClick={() => setActiveTab(tab)}
+                onClick={() => handleTabChange(tab)}
                 className={cn(
                   "h-12 px-4 text-sm font-medium border-b-2 transition-colors capitalize",
                   activeTab === tab
