@@ -31,7 +31,7 @@ import {
   ISSUE_TYPE_LABELS,
 } from "@/lib/constants"
 import { RichTextEditor, RichTextContent } from "@/components/ui/rich-text-editor"
-import { Pencil, Check, Link2, Paperclip, GitBranch, Maximize2, MoreHorizontal, PanelRight, ThumbsUp, Layers, FolderOpen, CornerDownRight, Plus, ChevronUp, Calendar as CalendarIcon } from "lucide-react"
+import { Pencil, X, Check, Link2, Paperclip, GitBranch, Maximize2, MoreHorizontal, PanelRight, ThumbsUp, Layers, FolderOpen, CornerDownRight, Plus, ChevronUp, Calendar as CalendarIcon } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
 import { cn } from "@/lib/utils"
