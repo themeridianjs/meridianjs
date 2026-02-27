@@ -10,6 +10,7 @@ import {
   addDays,
   addMonths,
   differenceInDays,
+  subDays,
   differenceInHours,
   differenceInMonths,
   endOfDay,
@@ -967,7 +968,7 @@ export const GanttFeatureItem: FC<GanttFeatureItemProps> = ({
             sensors={[mouseSensor]}
           >
             <GanttFeatureDragHelper
-              date={endAt ?? addRange(startAt, 2)}
+              date={endAt ? subDays(endAt, 1) : addRange(startAt, 1)}
               direction="right"
               featureId={feature.id}
             />
