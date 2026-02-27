@@ -56,6 +56,7 @@ import {
 import { cn } from "@/lib/utils"
 import { format } from "date-fns"
 import { toast } from "sonner"
+import { WidgetZone } from "@/components/WidgetZone"
 
 // ─── PriorityIcon ─────────────────────────────────────────────────────────────
 
@@ -670,6 +671,7 @@ export function ProjectIssuesPage() {
 
   return (
     <div className="p-2">
+      <WidgetZone zone="project.issues.before" props={{ projectId }} />
       <div className="bg-white dark:bg-card border border-border rounded-xl overflow-hidden">
 
         {/* Card header */}
@@ -860,6 +862,8 @@ export function ProjectIssuesPage() {
           </div>
         )}
       </div>
+
+      <WidgetZone zone="project.issues.after" props={{ projectId }} />
 
       <IssueDetail
         issue={selectedIssue}

@@ -79,7 +79,7 @@ export function renderTsConfig(): string {
         sourceMap: true,
       },
       include: ["src/**/*"],
-      exclude: ["node_modules", "dist"],
+      exclude: ["node_modules", "dist", "src/admin"],
     },
     null,
     2
@@ -296,9 +296,18 @@ src/
   workflows/           DAG workflows with compensation
   subscribers/         Event subscribers
   jobs/                Scheduled background jobs
-  links/               Cross-module link definitions
+  links/               Cross-module link definitions${vars.dashboard ? `
+  admin/
+    widgets/
+      index.tsx        Dashboard widget extensions` : ""}
 \`\`\`
+${vars.dashboard ? `
+## Admin UI extensions
 
+Add custom React components to \`src/admin/widgets/index.tsx\` to inject them into the dashboard UI. They are compiled automatically when you run \`npm run dev\` and loaded by the dashboard at runtime.
+
+Available zones: \`issue.details.before/after/sidebar\`, \`project.board.before/after\`, \`project.issues.before/after\`, \`project.timeline.before/after\`, \`project.sprints.before/after\`, \`workspace.settings.before/after\`.
+` : ""}
 ## Extending Meridian
 
 See the [Meridian documentation](https://github.com/meridian/meridian) for guides on:
@@ -307,6 +316,46 @@ See the [Meridian documentation](https://github.com/meridian/meridian) for guide
 - Writing event subscribers
 - Scheduling background jobs
 - Building plugins
+`
+}
+
+// ─── Admin UI extension template ───────────────────────────────────────────
+
+export function renderAdminWidgetsIndex(): string {
+  return `import React from "react"
+
+// Admin UI widget extensions — injected into the Meridian dashboard at runtime.
+// Run \`meridian dev\` or \`meridian serve-dashboard\` to compile and load these.
+//
+// Available zones and their props:
+//   "issue.details.before"      — { issue: Issue }
+//   "issue.details.after"       — { issue: Issue }
+//   "issue.details.sidebar"     — { issue: Issue }
+//   "project.board.before"      — { projectId: string }
+//   "project.board.after"       — { projectId: string }
+//   "project.issues.before"     — { projectId: string }
+//   "project.issues.after"      — { projectId: string }
+//   "project.timeline.before"   — { projectId: string }
+//   "project.timeline.after"    — { projectId: string }
+//   "project.sprints.before"    — { projectId: string }
+//   "project.sprints.after"     — { projectId: string }
+//   "workspace.settings.before" — { workspaceId: string }
+//   "workspace.settings.after"  — { workspaceId: string }
+//
+// Example:
+//   function MyBanner({ projectId }: { projectId: string }) {
+//     return (
+//       <div className="mx-6 my-2 p-3 rounded border border-border text-sm">
+//         Custom panel for project: {projectId}
+//       </div>
+//     )
+//   }
+//
+//   export default [
+//     { zone: "project.board.before", component: MyBanner },
+//   ]
+
+export default []
 `
 }
 

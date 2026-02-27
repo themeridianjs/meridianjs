@@ -13,6 +13,7 @@ import {
   renderGitIgnore,
   renderEnvExample,
   renderReadme,
+  renderAdminWidgetsIndex,
 } from "../templates/index.js"
 import { writeFile, mkdirWithKeep } from "../utils.js"
 
@@ -128,6 +129,14 @@ export async function runNew(projectName?: string): Promise<void> {
     await mkdirWithKeep(path.join(targetDir, "src", "subscribers"))
     await mkdirWithKeep(path.join(targetDir, "src", "jobs"))
     await mkdirWithKeep(path.join(targetDir, "src", "links"))
+
+    // Admin UI extension entry point (only when dashboard is enabled)
+    if (vars.dashboard) {
+      await writeFile(
+        path.join(targetDir, "src", "admin", "widgets", "index.tsx"),
+        renderAdminWidgetsIndex()
+      )
+    }
 
     spinner.succeed("Scaffolded project files")
   } catch (err) {

@@ -1,7 +1,10 @@
 import path from "node:path"
 import http from "node:http"
 import fs from "node:fs"
+import os from "node:os"
 import { existsSync } from "node:fs"
+import * as esbuild from "esbuild"
+import type { Plugin } from "esbuild"
 import chalk from "chalk"
 import { findProjectRoot, readProjectPorts } from "../utils.js"
 
@@ -20,15 +23,94 @@ const MIME_TYPES: Record<string, string> = {
 }
 
 /**
+ * esbuild plugin that rewrites bare `react` / `react/jsx-runtime` imports to
+ * use the React instance already loaded by the pre-built dashboard bundle,
+ * exposed on `window.__React` and `window.__ReactJsxRuntime`.
+ */
+function makeReactWindowPlugin(): Plugin {
+  return {
+    name: "react-window",
+    setup(build) {
+      build.onResolve({ filter: /^react(\/.*)?$/ }, (args) => ({
+        path: args.path,
+        namespace: "react-window",
+      }))
+
+      build.onLoad({ filter: /.*/, namespace: "react-window" }, (args) => {
+        if (args.path === "react/jsx-runtime") {
+          return {
+            contents: `
+              const { jsx, jsxs, Fragment } = window.__ReactJsxRuntime;
+              export { jsx, jsxs, Fragment };
+            `,
+            loader: "js",
+          }
+        }
+        // Full react namespace forwarded from window.__React
+        return {
+          contents: `
+            const R = window.__React;
+            export default R;
+            export const {
+              createElement, createContext, cloneElement, isValidElement,
+              useState, useEffect, useContext, useReducer, useCallback, useMemo,
+              useRef, useImperativeHandle, useLayoutEffect, useDebugValue, useId,
+              useDeferredValue, useTransition, startTransition,
+              memo, forwardRef, lazy, Suspense, StrictMode, Fragment,
+              Component, PureComponent, Children, createRef,
+            } = R;
+          `,
+          loader: "js",
+        }
+      })
+    },
+  }
+}
+
+/**
+ * Compile `src/admin/widgets/index.tsx` into a self-contained ESM bundle.
+ * Returns the compiled source, or null if the entry point does not exist or
+ * compilation fails.
+ */
+async function buildAdminExtensions(
+  rootDir: string
+): Promise<Buffer | null> {
+  const entryPoint = path.join(rootDir, "src", "admin", "widgets", "index.tsx")
+  if (!existsSync(entryPoint)) return null
+
+  const outfile = path.join(os.tmpdir(), `meridian-ext-${Date.now()}.js`)
+  try {
+    await esbuild.build({
+      entryPoints: [entryPoint],
+      bundle: true,
+      format: "esm",
+      outfile,
+      jsx: "automatic",
+      plugins: [makeReactWindowPlugin()],
+      logLevel: "silent",
+    })
+    const buf = fs.readFileSync(outfile)
+    fs.unlinkSync(outfile)
+    return buf
+  } catch (err) {
+    // Clean up temp file if it was created
+    if (existsSync(outfile)) fs.unlinkSync(outfile)
+    throw err
+  }
+}
+
+/**
  * Starts the dashboard static server.
  * Injects window.__MERIDIAN_CONFIG__ into every HTML response so the dashboard
  * calls the API at the correct host:port directly from the browser.
+ * If adminExtensionsBuf is provided it is served at /admin-extensions.js.
  */
 export function startDashboardServer(
   distDir: string,
   port: number,
   apiPort: number,
-  apiHost = "localhost"
+  apiHost = "localhost",
+  adminExtensionsBuf: Buffer | null = null
 ): Promise<http.Server> {
   const configScript = `<script>window.__MERIDIAN_CONFIG__ = { apiUrl: "http://${apiHost}:${apiPort}" };</script>`
 
@@ -47,6 +129,13 @@ export function startDashboardServer(
         )
         proxyReq.on("error", () => { res.writeHead(502); res.end("Bad Gateway") })
         req.pipe(proxyReq)
+        return
+      }
+
+      // Serve compiled user extensions (or an empty module stub)
+      if (urlPath === "/admin-extensions.js") {
+        res.writeHead(200, { "Content-Type": "application/javascript" })
+        res.end(adminExtensionsBuf ?? Buffer.from("export default [];\n"))
         return
       }
 
@@ -103,10 +192,29 @@ export async function runServeDashboard(portOverride?: number): Promise<void> {
   const { apiPort, dashboardPort } = await readProjectPorts(rootDir)
   const port = portOverride ?? dashboardPort
 
-  const server = await startDashboardServer(distDir, port, apiPort)
+  // Compile user-defined admin extensions if present
+  let adminExtensionsBuf: Buffer | null = null
+  const extensionsEntry = path.join(rootDir, "src", "admin", "widgets", "index.tsx")
+  if (existsSync(extensionsEntry)) {
+    const extSpinner = chalk.dim("  → Compiling admin extensions…")
+    process.stdout.write(extSpinner + "\r")
+    try {
+      adminExtensionsBuf = await buildAdminExtensions(rootDir)
+      process.stdout.write(" ".repeat(extSpinner.length) + "\r")
+      console.log(chalk.green("  ✔ Admin extensions compiled"))
+    } catch (err) {
+      process.stdout.write(" ".repeat(extSpinner.length) + "\r")
+      console.warn(chalk.yellow("  ⚠ Admin extensions failed to compile:"), err)
+    }
+  }
+
+  const server = await startDashboardServer(distDir, port, apiPort, "localhost", adminExtensionsBuf)
 
   console.log(chalk.green("  ✔ Admin dashboard: ") + chalk.cyan(`http://localhost:${port}`))
   console.log(chalk.dim(`     → API: http://localhost:${apiPort}`))
+  if (adminExtensionsBuf) {
+    console.log(chalk.dim(`     → Extensions: /admin-extensions.js (${adminExtensionsBuf.length} bytes)`))
+  }
 
   const shutdown = () => { server.close(); process.exit(0) }
   process.on("SIGINT", shutdown)

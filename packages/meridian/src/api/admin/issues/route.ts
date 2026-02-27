@@ -21,7 +21,7 @@ export const GET = async (req: any, res: Response) => {
 export const POST = async (req: any, res: Response) => {
   requirePermission("issue:create")(req, res, async () => {
     const { title, project_id, workspace_id, description, type, priority, status,
-            assignee_ids, reporter_id, parent_id, start_date, due_date, estimate, sprint_id, task_list_id } = req.body
+            assignee_ids, reporter_id, parent_id, start_date, due_date, estimate, sprint_id, task_list_id, metadata } = req.body
     if (!title || !project_id || !workspace_id) {
       res.status(400).json({ error: { message: "title, project_id and workspace_id are required" } })
       return
@@ -35,6 +35,7 @@ export const POST = async (req: any, res: Response) => {
         start_date: start_date ? new Date(start_date) : null,
         due_date: due_date ? new Date(due_date) : undefined,
         estimate: estimate ?? null, sprint_id: sprint_id ?? null, task_list_id: task_list_id ?? null,
+        metadata: metadata ?? null,
         actor_id: req.user?.id ?? null,
       },
     })

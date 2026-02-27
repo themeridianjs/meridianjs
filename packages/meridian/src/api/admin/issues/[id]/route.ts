@@ -14,7 +14,7 @@ export const PUT = async (req: any, res: Response) => {
     const issueService = req.scope.resolve("issueModuleService") as any
     const activityService = req.scope.resolve("activityModuleService") as any
     const allowed = ["title", "description", "status", "priority", "type",
-                     "assignee_ids", "parent_id", "sprint_id", "task_list_id", "start_date", "due_date", "estimate"]
+                     "assignee_ids", "parent_id", "sprint_id", "task_list_id", "start_date", "due_date", "estimate", "metadata"]
     const updates: Record<string, unknown> = {}
     for (const field of allowed) {
       if (req.body[field] !== undefined) updates[field] = req.body[field]

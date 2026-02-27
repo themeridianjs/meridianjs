@@ -35,6 +35,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { WidgetZone } from "@/components/WidgetZone"
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -277,6 +278,8 @@ export function IssueDetailPage() {
           {/* ── Left column ───────────────────────────────────────────────── */}
           <div className="space-y-4">
 
+            <WidgetZone zone="issue.details.before" props={{ issue }} />
+
             {/* Card 1: Title + Description */}
             <div className="bg-white dark:bg-card border border-border rounded-xl overflow-hidden shadow-sm">
               {/* Title */}
@@ -372,10 +375,13 @@ export function IssueDetailPage() {
               <IssueActivity issueId={issueId} />
             </div>
 
+            <WidgetZone zone="issue.details.after" props={{ issue }} />
+
           </div>
 
           {/* ── Right — properties ──────────────────────────────────────────── */}
           <div className="space-y-4">
+            <WidgetZone zone="issue.details.sidebar" props={{ issue }} />
             <div className="bg-white dark:bg-card border border-border rounded-xl shadow-sm overflow-hidden">
               <div className="px-4 py-3 border-b border-border/60">
                 <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest">

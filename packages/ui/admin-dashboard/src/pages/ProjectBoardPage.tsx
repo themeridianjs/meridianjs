@@ -10,6 +10,7 @@ import { CreateIssueDialog } from "@/components/issues/CreateIssueDialog"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Plus } from "lucide-react"
+import { WidgetZone } from "@/components/WidgetZone"
 
 export function ProjectBoardPage() {
   const { projectKey } = useParams<{ projectKey: string }>()
@@ -41,6 +42,8 @@ export function ProjectBoardPage() {
           </Button>
         </div>
 
+        <WidgetZone zone="project.board.before" props={{ projectId }} />
+
         {/* Board — only this area scrolls */}
         <div className="flex-1 min-h-0">
           {isLoading ? (
@@ -66,6 +69,8 @@ export function ProjectBoardPage() {
           )}
         </div>
       </div>
+
+      <WidgetZone zone="project.board.after" props={{ projectId }} />
 
       <IssueDetail
         issue={selectedIssue}

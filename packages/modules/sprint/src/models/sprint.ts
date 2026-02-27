@@ -8,6 +8,8 @@ const Sprint = model.define("sprint", {
   status: model.enum(["planned", "active", "completed"]).default("planned"),
   start_date: model.date().nullable(),
   end_date: model.date().nullable(),
+  /** Arbitrary key/value storage for custom integrations */
+  metadata: model.json().nullable(),
 })
 
 export default Sprint

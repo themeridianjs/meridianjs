@@ -24,6 +24,7 @@ export interface CreateIssueInput {
   sprint_id?: string | null
   task_list_id?: string | null
   actor_id?: string | null
+  metadata?: Record<string, unknown> | null
 }
 
 const createIssueStep = createStep(
@@ -37,6 +38,7 @@ const createIssueStep = createStep(
       reporter_id: input.reporter_id ?? null, parent_id: input.parent_id ?? null,
       start_date: input.start_date ?? null, due_date: input.due_date, estimate: input.estimate ?? null,
       sprint_id: input.sprint_id ?? null, task_list_id: input.task_list_id ?? null,
+      metadata: input.metadata ?? null,
     })
     return new StepResponse(issue, { issueId: issue.id })
   },

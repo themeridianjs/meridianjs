@@ -6,6 +6,8 @@ const Comment = model.define("comment", {
   issue_id: model.text(),
   author_id: model.text(),
   edited_at: model.date().nullable(),
+  /** Arbitrary key/value storage for custom integrations */
+  metadata: model.json().nullable(),
 })
 
 export default Comment

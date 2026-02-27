@@ -17,6 +17,7 @@ export interface Issue {
   parent_id?: string | null
   start_date?: string | null
   due_date?: string | null
+  metadata?: Record<string, unknown> | null
   created_at: string
   updated_at: string
 }
@@ -26,6 +27,7 @@ export interface Comment {
   body: string
   author_id: string
   issue_id: string
+  metadata?: Record<string, unknown> | null
   created_at: string
 }
 
@@ -48,6 +50,7 @@ interface CreateIssueInput {
   parent_id?: string | null
   start_date?: string | null
   due_date?: string | null
+  metadata?: Record<string, unknown> | null
 }
 
 interface UpdateIssueInput {
@@ -62,6 +65,7 @@ interface UpdateIssueInput {
   parent_id?: string | null
   start_date?: string | null
   due_date?: string | null
+  metadata?: Record<string, unknown> | null
 }
 
 export interface Activity {

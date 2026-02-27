@@ -9,6 +9,7 @@ export interface ProjectStatus {
   color: string
   category: "backlog" | "unstarted" | "started" | "completed" | "cancelled"
   position: number
+  metadata?: Record<string, unknown> | null
 }
 
 const statusKeys = {

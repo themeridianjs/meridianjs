@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
+import { WidgetZone } from "@/components/WidgetZone"
 
 // ─── Status config ────────────────────────────────────────────────────────────
 
@@ -211,6 +212,7 @@ export function SprintsPage() {
 
   return (
     <div className="p-2">
+      <WidgetZone zone="project.sprints.before" props={{ projectId }} />
       <div className="bg-white dark:bg-card border border-border rounded-xl overflow-hidden">
 
         {/* Header */}
@@ -273,6 +275,8 @@ export function SprintsPage() {
           </div>
         )}
       </div>
+
+      <WidgetZone zone="project.sprints.after" props={{ projectId }} />
 
       <CreateSprintDialog
         open={createOpen}

@@ -27,6 +27,7 @@ import { IssueDetail } from "@/components/issues/IssueDetail"
 import { CreateIssueDialog } from "@/components/issues/CreateIssueDialog"
 import { Plus } from "lucide-react"
 import { toast } from "sonner"
+import { WidgetZone } from "@/components/WidgetZone"
 
 function issueToFeature(issue: Issue, statusColor: string): GanttFeature {
   const startAt = issue.start_date
@@ -145,6 +146,7 @@ export function ProjectTimelinePage() {
 
   return (
     <div className="flex flex-col h-full min-h-0">
+      <WidgetZone zone="project.timeline.before" props={{ projectId }} />
       {/* Toolbar */}
       <div className="flex items-center justify-between px-6 py-3 border-b border-border shrink-0 bg-white dark:bg-zinc-950">
         <div className="flex items-center gap-1 bg-muted rounded-md p-0.5">
@@ -292,6 +294,8 @@ export function ProjectTimelinePage() {
           </GanttTimeline>
         </GanttProvider>
       </div>
+
+      <WidgetZone zone="project.timeline.after" props={{ projectId }} />
 
       {/* Issue detail drawer */}
       <IssueDetail

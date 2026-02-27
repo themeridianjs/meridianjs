@@ -36,6 +36,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
+import { WidgetZone } from "@/components/WidgetZone"
 
 function sprintDateRange(sprint: Sprint): string | null {
   if (!sprint.start_date && !sprint.end_date) return null
@@ -282,6 +283,7 @@ export function IssueDetail({ issue: issueProp, projectId, open, onClose }: Issu
 
         <ScrollArea className="flex-1 min-w-0">
           <div className="px-6 py-4 space-y-5 min-w-0">
+            <WidgetZone zone="issue.details.before" props={{ issue }} />
             {/* Status / Priority / Type */}
             <div className="grid grid-cols-3 gap-3 mb-1">
               <div className="min-w-0">
@@ -533,6 +535,8 @@ export function IssueDetail({ issue: issueProp, projectId, open, onClose }: Issu
             </div>
 
           </div>
+
+          <WidgetZone zone="issue.details.after" props={{ issue }} />
 
           <IssueActivity
             issueId={issue.id}

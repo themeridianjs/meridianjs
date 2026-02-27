@@ -55,7 +55,7 @@ export const GET = async (req: any, res: Response) => {
 export const POST = async (req: any, res: Response) => {
   requirePermission("project:create")(req, res, async () => {
     const projectMemberService = req.scope.resolve("projectMemberModuleService") as any
-    const { name, description, workspace_id, visibility, icon, color, identifier, initial_statuses } = req.body
+    const { name, description, workspace_id, visibility, icon, color, identifier, initial_statuses, metadata } = req.body
     if (!name || !workspace_id) {
       res.status(400).json({ error: { message: "name and workspace_id are required" } })
       return
@@ -66,6 +66,7 @@ export const POST = async (req: any, res: Response) => {
         visibility: visibility ?? "private", icon: icon ?? null, color: color ?? null,
         owner_id: req.user?.id ?? null, actor_id: req.user?.id ?? null,
         initial_statuses: initial_statuses ?? undefined,
+        metadata: metadata ?? null,
       },
     })
     if (transaction_status === "reverted") {

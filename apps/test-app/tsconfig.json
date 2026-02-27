@@ -4,5 +4,6 @@
     "outDir": "./dist",
     "noEmit": true
   },
-  "include": ["src/**/*", "meridian.config.ts"]
+  "include": ["src/**/*", "meridian.config.ts"],
+  "exclude": ["src/admin"]
 }

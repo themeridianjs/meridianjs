@@ -12,6 +12,7 @@ export interface Project {
   identifier: string
   description?: string
   status: string
+  metadata?: Record<string, unknown> | null
   created_at: string
   updated_at: string
 }

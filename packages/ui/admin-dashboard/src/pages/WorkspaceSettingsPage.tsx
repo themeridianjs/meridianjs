@@ -46,6 +46,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { toast } from "sonner"
 import { format } from "date-fns"
+import { WidgetZone } from "@/components/WidgetZone"
 import {
   Users,
   Copy,
@@ -908,6 +909,7 @@ export function WorkspaceSettingsPage() {
 
   return (
     <div className="p-2">
+      <WidgetZone zone="workspace.settings.before" props={{ workspaceId }} />
       <div className="bg-white dark:bg-card border border-border rounded-xl overflow-hidden">
 
         {/* Tab nav row */}
@@ -944,6 +946,8 @@ export function WorkspaceSettingsPage() {
         )}
         {activeTab === "teams" && <TeamsTab workspaceId={workspaceId} />}
       </div>
+
+      <WidgetZone zone="workspace.settings.after" props={{ workspaceId }} />
 
       <InviteMemberDialog
         open={inviteOpen}

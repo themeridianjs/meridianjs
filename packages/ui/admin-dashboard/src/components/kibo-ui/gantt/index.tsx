@@ -906,7 +906,8 @@ export const GanttFeatureItem: FC<GanttFeatureItemProps> = ({
     const ganttRect = gantt.ref?.current?.getBoundingClientRect();
     const x =
       mousePosition.x - (ganttRect?.left ?? 0) + scrollX - gantt.sidebarWidth;
-    const newStartAt = getDateByMousePosition(gantt, x);
+    const startOf = getStartOf(gantt.range);
+    const newStartAt = startOf(getDateByMousePosition(gantt, x));
 
     setStartAt(newStartAt);
   }, [gantt, mousePosition.x, scrollX]);
@@ -915,7 +916,8 @@ export const GanttFeatureItem: FC<GanttFeatureItemProps> = ({
     const ganttRect = gantt.ref?.current?.getBoundingClientRect();
     const x =
       mousePosition.x - (ganttRect?.left ?? 0) + scrollX - gantt.sidebarWidth;
-    const newEndAt = getDateByMousePosition(gantt, x);
+    const startOf = getStartOf(gantt.range);
+    const newEndAt = startOf(getDateByMousePosition(gantt, x));
 
     setEndAt(newEndAt);
   }, [gantt, mousePosition.x, scrollX]);

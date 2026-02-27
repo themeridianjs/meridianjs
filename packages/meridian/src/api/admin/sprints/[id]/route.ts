@@ -36,15 +36,16 @@ export const PUT = async (req: any, res: Response) => {
     return
   }
 
-  // Non-status updates (name, goal, dates) — no special permission required
+  // Non-status updates (name, goal, dates, metadata) — no special permission required
   const sprintService = req.scope.resolve("sprintModuleService") as any
-  const { name, goal, start_date, end_date } = req.body
+  const { name, goal, start_date, end_date, metadata } = req.body
   const updates: Record<string, unknown> = {}
   if (name !== undefined) updates.name = name
   if (goal !== undefined) updates.goal = goal
   if (start_date !== undefined) updates.start_date = new Date(start_date)
   if (end_date !== undefined) updates.end_date = new Date(end_date)
   if (status !== undefined) updates.status = status
+  if (metadata !== undefined) updates.metadata = metadata
   const sprint = await sprintService.updateSprint(req.params.id, updates)
   res.json({ sprint })
 }

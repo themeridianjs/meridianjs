@@ -9,6 +9,7 @@ export interface Sprint {
   status: "planned" | "active" | "completed"
   start_date?: string | null
   end_date?: string | null
+  metadata?: Record<string, unknown> | null
   created_at: string
   updated_at: string
 }

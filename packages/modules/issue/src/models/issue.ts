@@ -27,6 +27,8 @@ const Issue = model.define("issue", {
   due_date: model.date().nullable(),
   /** Story point estimate */
   estimate: model.number().nullable(),
+  /** Arbitrary key/value storage for custom integrations */
+  metadata: model.json().nullable(),
 }, [
   { columns: ["project_id"] },
   { columns: ["workspace_id"] },

@@ -26,6 +26,7 @@ export interface CreateProjectInput {
   owner_id?: string | null
   actor_id?: string | null
   initial_statuses?: InitialStatus[]
+  metadata?: Record<string, unknown> | null
 }
 
 const DEFAULT_STATUSES: InitialStatus[] = [
@@ -66,6 +67,7 @@ const createProjectStep = createStep(
       icon: input.icon ?? null,
       color: input.color ?? null,
       owner_id: input.owner_id ?? null,
+      metadata: input.metadata ?? null,
     })
     return new StepResponse(project, { projectId: project.id })
   },

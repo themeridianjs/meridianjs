@@ -11,7 +11,7 @@ export const PUT = async (req: any, res: Response) => {
   requirePermission("project:update")(req, res, async () => {
     const projectService = req.scope.resolve("projectModuleService") as any
     const activityService = req.scope.resolve("activityModuleService") as any
-    const { name, description, status, visibility, icon, color } = req.body
+    const { name, description, status, visibility, icon, color, metadata } = req.body
     const updates: Record<string, unknown> = {}
     if (name !== undefined) updates.name = name
     if (description !== undefined) updates.description = description
@@ -19,6 +19,7 @@ export const PUT = async (req: any, res: Response) => {
     if (visibility !== undefined) updates.visibility = visibility
     if (icon !== undefined) updates.icon = icon
     if (color !== undefined) updates.color = color
+    if (metadata !== undefined) updates.metadata = metadata
     const project = await projectService.updateProject(req.params.id, updates)
     await activityService.recordActivity({
       entity_type: "project", entity_id: req.params.id,

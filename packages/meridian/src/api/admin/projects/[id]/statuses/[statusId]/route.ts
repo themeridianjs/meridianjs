@@ -1,9 +1,14 @@
 import type { Response } from "express"
 
 export const PUT = async (req: any, res: Response) => {
-  const { name, color, category } = req.body
+  const { name, color, category, metadata } = req.body
   const svc = req.scope.resolve("projectModuleService") as any
-  const updated = await svc.updateProjectStatus(req.params.statusId, { name, color, category })
+  const payload: Record<string, unknown> = {}
+  if (name !== undefined) payload.name = name
+  if (color !== undefined) payload.color = color
+  if (category !== undefined) payload.category = category
+  if (metadata !== undefined) payload.metadata = metadata
+  const updated = await svc.updateProjectStatus(req.params.statusId, payload)
   res.json({ status: updated })
 }
 
