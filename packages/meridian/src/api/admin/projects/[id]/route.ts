@@ -3,7 +3,37 @@ import { requirePermission } from "@meridianjs/auth"
 
 export const GET = async (req: any, res: Response) => {
   const projectService = req.scope.resolve("projectModuleService") as any
-  const project = await projectService.retrieveProject(req.params.id)
+  const project = await projectService.retrieveProject(req.params.id).catch(() => null)
+  if (!project) {
+    res.status(404).json({ error: { message: "Project not found" } })
+    return
+  }
+
+  const roles: string[] = req.user?.roles ?? []
+  const isPrivileged = roles.includes("super-admin") || roles.includes("admin")
+
+  if (!isPrivileged) {
+    const workspaceMemberService = req.scope.resolve("workspaceMemberModuleService") as any
+    const teamMemberService = req.scope.resolve("teamMemberModuleService") as any
+    const projectMemberService = req.scope.resolve("projectMemberModuleService") as any
+    const userId = req.user?.id
+
+    const membership = await workspaceMemberService.getMembership(project.workspace_id, userId)
+    if (!membership) {
+      res.status(403).json({ error: { message: "Forbidden" } })
+      return
+    }
+
+    if (membership.role !== "admin") {
+      const userTeamIds = await teamMemberService.getUserTeamIds(userId)
+      const accessibleProjectIds = await projectMemberService.getAccessibleProjectIds(userId, userTeamIds)
+      if (!accessibleProjectIds.includes(project.id)) {
+        res.status(403).json({ error: { message: "Forbidden" } })
+        return
+      }
+    }
+  }
+
   res.json({ project })
 }
 

@@ -84,6 +84,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const logout = () => {
+    // Fire-and-forget: revoke the session on the server so the token can't be reused
+    const currentToken = localStorage.getItem(TOKEN_KEY)
+    if (currentToken) {
+      fetch("/auth/logout", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${currentToken}`, "Content-Type": "application/json" },
+      }).catch(() => {})
+    }
     setUser(null)
     setToken(null)
     setWorkspaceState(null)

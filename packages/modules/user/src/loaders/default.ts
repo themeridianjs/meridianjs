@@ -2,11 +2,13 @@ import { dmlToEntitySchema, createRepository, createModuleOrm } from "@meridianj
 import type { LoaderOptions, MeridianConfig } from "@meridianjs/types"
 import UserModel from "../models/user.js"
 import TeamModel from "../models/team.js"
+import UserSessionModel from "../models/user-session.js"
 
 const UserSchema = dmlToEntitySchema(UserModel)
 const TeamSchema = dmlToEntitySchema(TeamModel)
+const UserSessionSchema = dmlToEntitySchema(UserSessionModel)
 
-export const entitySchemas = [UserSchema, TeamSchema]
+export const entitySchemas = [UserSchema, TeamSchema, UserSessionSchema]
 
 export default async function defaultLoader({ container }: LoaderOptions): Promise<void> {
   const config = container.resolve<MeridianConfig>("config")
@@ -18,6 +20,7 @@ export default async function defaultLoader({ container }: LoaderOptions): Promi
   container.register({
     userRepository: createRepository(em, "user"),
     teamRepository: createRepository(em, "team"),
+    userSessionRepository: createRepository(em, "user_session"),
     userOrm: orm,
   })
 }

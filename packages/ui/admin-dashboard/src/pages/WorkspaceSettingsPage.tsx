@@ -20,7 +20,7 @@ import {
   type WorkspaceMember,
 } from "@/api/hooks/useWorkspaces"
 import { useUsers } from "@/api/hooks/useUsers"
-import { useRoles, useAssignUserRole } from "@/api/hooks/useRoles"
+import { useRoles, useAssignUserRole, type AppRole } from "@/api/hooks/useRoles"
 import { useAuth } from "@/stores/auth"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -46,6 +46,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { toast } from "sonner"
 import { format } from "date-fns"
 import { WidgetZone } from "@/components/WidgetZone"
@@ -56,16 +57,25 @@ import {
   Plus,
   Link2,
   X,
-  ShieldCheck,
-  UserRound,
   MoreHorizontal,
   Users2,
   Trash2,
   ChevronDown,
   ChevronRight,
   UserPlus,
+  AlertCircle,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+
+// Permissions that imply workspace-level admin access
+const ADMIN_PERMS = ["workspace:update", "workspace:delete", "workspace:create"]
+
+/** Derive workspace role from selected app role's permissions. */
+function resolveWorkspaceRole(appRoleId: string, appRoles: AppRole[]): "admin" | "member" {
+  const role = appRoles.find((r) => r.id === appRoleId)
+  if (!role) return "member"
+  return ADMIN_PERMS.some((p) => role.permissions.includes(p)) ? "admin" : "member"
+}
 
 // ── Copy button ───────────────────────────────────────────────────────────────
 
@@ -106,33 +116,39 @@ function RoleSelectControl({
 }: {
   value: string
   onChange: (v: string) => void
-  appRoles: { id: string; name: string }[] | undefined
+  appRoles: AppRole[] | undefined
 }) {
+  if (!appRoles || appRoles.length === 0) {
+    return (
+      <div className="flex items-start gap-2 px-3 py-2.5 border border-border rounded-lg bg-muted/40 text-xs text-muted-foreground">
+        <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+        <span>
+          No roles created yet.{" "}
+          <a href="?tab=roles" className="underline hover:text-foreground transition-colors">
+            Create roles
+          </a>{" "}
+          before inviting members.
+        </span>
+      </div>
+    )
+  }
+
   return (
     <Select value={value} onValueChange={onChange}>
       <SelectTrigger className="h-9">
-        <SelectValue />
+        <SelectValue placeholder="Select a role…" />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value="__admin">
-          <div className="flex items-center gap-2">
-            <ShieldCheck className="h-3.5 w-3.5 text-muted-foreground" />
-            <span>Admin</span>
-            <span className="text-xs text-muted-foreground ml-1">— Full workspace access</span>
-          </div>
-        </SelectItem>
-        {appRoles && appRoles.length > 0 && (
-          <>
-            <div className="px-2 pt-2 pb-1">
-              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
-                Roles
-              </span>
+        {appRoles.map((r) => (
+          <SelectItem key={r.id} value={r.id}>
+            <div className="flex flex-col">
+              <span>{r.name}</span>
+              {r.description && (
+                <span className="text-xs text-muted-foreground">{r.description}</span>
+              )}
             </div>
-            {appRoles.map((r) => (
-              <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
-            ))}
-          </>
-        )}
+          </SelectItem>
+        ))}
       </SelectContent>
     </Select>
   )
@@ -143,10 +159,10 @@ function InviteMemberDialog({ open, onClose, workspaceId }: InviteMemberDialogPr
   // Existing-user mode state
   const [search, setSearch] = useState("")
   const [selectedUserId, setSelectedUserId] = useState("")
-  const [addRole, setAddRole] = useState<string>("__admin")
+  const [addRole, setAddRole] = useState<string>("")
   // Invite mode state
   const [email, setEmail] = useState("")
-  const [inviteRole, setInviteRole] = useState<string>("__admin")
+  const [inviteRole, setInviteRole] = useState<string>("")
   const [createdInvitation, setCreatedInvitation] = useState<Invitation | null>(null)
 
   const { data: allUsers = [] } = useUsers()
@@ -172,7 +188,7 @@ function InviteMemberDialog({ open, onClose, workspaceId }: InviteMemberDialogPr
 
   useEffect(() => {
     if (open) {
-      const defaultRole = appRoles && appRoles.length > 0 ? appRoles[0].id : "__admin"
+      const defaultRole = appRoles && appRoles.length > 0 ? appRoles[0].id : ""
       setSearch("")
       setSelectedUserId("")
       setAddRole(defaultRole)
@@ -183,14 +199,13 @@ function InviteMemberDialog({ open, onClose, workspaceId }: InviteMemberDialogPr
     }
   }, [open, appRoles])
 
-  const roleLabel = (role: string) =>
-    role === "__admin" ? "Admin" : (appRoles?.find((r) => r.id === role)?.name ?? "Member")
+  const roleLabel = (roleId: string) => appRoles?.find((r) => r.id === roleId)?.name ?? "Member"
 
   const handleAddExisting = () => {
-    if (!selectedUserId) return
-    const isAdmin = addRole === "__admin"
+    if (!selectedUserId || !addRole) return
+    const wsRole = resolveWorkspaceRole(addRole, appRoles ?? [])
     addMember.mutate(
-      { user_id: selectedUserId, role: isAdmin ? "admin" : "member" },
+      { user_id: selectedUserId, role: wsRole, app_role_id: addRole },
       {
         onSuccess: () => {
           toast.success("Member added")
@@ -203,12 +218,13 @@ function InviteMemberDialog({ open, onClose, workspaceId }: InviteMemberDialogPr
 
   const handleInvite = (e: React.FormEvent) => {
     e.preventDefault()
-    const isAdmin = inviteRole === "__admin"
+    if (!inviteRole) return
+    const wsRole = resolveWorkspaceRole(inviteRole, appRoles ?? [])
     createInvitation.mutate(
       {
         email: email.trim() || undefined,
-        role: isAdmin ? "admin" : "member",
-        app_role_id: isAdmin ? null : inviteRole,
+        role: wsRole,
+        app_role_id: inviteRole,
       },
       {
         onSuccess: (data) => {
@@ -331,7 +347,7 @@ function InviteMemberDialog({ open, onClose, workspaceId }: InviteMemberDialogPr
                   <Button
                     type="button"
                     size="sm"
-                    disabled={!selectedUserId || addMember.isPending}
+                    disabled={!selectedUserId || !addRole || addMember.isPending}
                     onClick={handleAddExisting}
                   >
                     {addMember.isPending ? "Adding…" : "Add to workspace"}
@@ -369,7 +385,7 @@ function InviteMemberDialog({ open, onClose, workspaceId }: InviteMemberDialogPr
               <Button type="button" variant="outline" size="sm" onClick={onClose}>
                 Cancel
               </Button>
-              <Button type="submit" size="sm" disabled={createInvitation.isPending}>
+              <Button type="submit" size="sm" disabled={!inviteRole || createInvitation.isPending}>
                 {createInvitation.isPending ? "Creating…" : "Create invitation"}
               </Button>
             </div>
@@ -580,6 +596,10 @@ function MembersTab({ workspaceId, onInvite }: { workspaceId: string; onInvite: 
   const { data: appRoles } = useRoles()
   const { user } = useAuth()
 
+  // Confirmation dialog state
+  const [confirmRemove, setConfirmRemove] = useState<WorkspaceMember | null>(null)
+  const [confirmRoleChange, setConfirmRoleChange] = useState<{ member: WorkspaceMember; newRole: "admin" | "member" } | null>(null)
+
   const pending = invitations?.filter((i) => i.status === "pending") ?? []
 
   return (
@@ -698,33 +718,35 @@ function MembersTab({ workspaceId, onInvite }: { workspaceId: string; onInvite: 
                         <MoreHorizontal className="h-4 w-4" />
                       </button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-40">
+                    <DropdownMenuContent align="end" className="w-44">
                       <DropdownMenuItem
                         onClick={() =>
-                          updateRole.mutate(
-                            { userId: m.user_id, role: m.role === "admin" ? "member" : "admin" },
-                            {
-                              onSuccess: () => toast.success("Role updated"),
-                              onError: () => toast.error("Failed to update role"),
-                            }
-                          )
+                          setConfirmRoleChange({
+                            member: m,
+                            newRole: m.role === "admin" ? "member" : "admin",
+                          })
                         }
                       >
-                        {m.role === "admin" ? (
-                          <><UserRound className="h-3.5 w-3.5 mr-2" />Make member</>
-                        ) : (
-                          <><ShieldCheck className="h-3.5 w-3.5 mr-2" />Make admin</>
-                        )}
+                        {m.role === "admin" ? "Make member" : "Make admin"}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => {
+                          fetch(`/admin/users/${m.user_id}/sessions`, {
+                            method: "DELETE",
+                            headers: {
+                              Authorization: `Bearer ${localStorage.getItem("meridian_token")}`,
+                            },
+                          })
+                            .then(() => toast.success("Sessions revoked — user will be signed out"))
+                            .catch(() => toast.error("Failed to revoke sessions"))
+                        }}
+                      >
+                        Revoke sessions
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
                         className="text-destructive focus:text-destructive"
-                        onClick={() =>
-                          removeMember.mutate(m.user_id, {
-                            onSuccess: () => toast.success("Member removed"),
-                            onError: () => toast.error("Failed to remove member"),
-                          })
-                        }
+                        onClick={() => setConfirmRemove(m)}
                       >
                         <Trash2 className="h-3.5 w-3.5 mr-2" />
                         Remove
@@ -786,6 +808,55 @@ function MembersTab({ workspaceId, onInvite }: { workspaceId: string; onInvite: 
           ))}
         </div>
       )}
+
+      {/* ── Confirmation dialogs ── */}
+      <ConfirmDialog
+        open={!!confirmRemove}
+        onClose={() => setConfirmRemove(null)}
+        onConfirm={() => {
+          if (!confirmRemove) return
+          removeMember.mutate(confirmRemove.user_id, {
+            onSuccess: () => {
+              toast.success("Member removed")
+              setConfirmRemove(null)
+            },
+            onError: () => {
+              toast.error("Failed to remove member")
+              setConfirmRemove(null)
+            },
+          })
+        }}
+        title="Remove member"
+        description={`Remove ${confirmRemove?.user?.email ?? "this member"} from the workspace? They will lose access to all projects.`}
+        confirmLabel="Remove"
+        variant="destructive"
+        loading={removeMember.isPending}
+      />
+
+      <ConfirmDialog
+        open={!!confirmRoleChange}
+        onClose={() => setConfirmRoleChange(null)}
+        onConfirm={() => {
+          if (!confirmRoleChange) return
+          updateRole.mutate(
+            { userId: confirmRoleChange.member.user_id, role: confirmRoleChange.newRole },
+            {
+              onSuccess: () => {
+                toast.success("Role updated")
+                setConfirmRoleChange(null)
+              },
+              onError: () => {
+                toast.error("Failed to update role")
+                setConfirmRoleChange(null)
+              },
+            }
+          )
+        }}
+        title="Change role"
+        description={`Make ${confirmRoleChange?.member.user?.email ?? "this member"} a workspace ${confirmRoleChange?.newRole === "admin" ? "admin" : "member"}?`}
+        confirmLabel="Change role"
+        loading={updateRole.isPending}
+      />
     </>
   )
 }
@@ -805,9 +876,14 @@ function TeamMemberList({
   const addMember = useAddTeamMember(workspaceId, teamId)
   const removeMember = useRemoveTeamMember(workspaceId, teamId)
   const [addingUserId, setAddingUserId] = useState("")
+  const [confirmRemoveUserId, setConfirmRemoveUserId] = useState<string | null>(null)
+  const [confirmAddUserId, setConfirmAddUserId] = useState<string | null>(null)
 
   const memberUserIds = new Set(teamMembers?.map((m) => m.user_id) ?? [])
   const available = allMembers.filter((m) => !memberUserIds.has(m.user_id))
+
+  const confirmRemoveMember = teamMembers?.find((m) => m.user_id === confirmRemoveUserId)
+  const confirmAddMember = allMembers.find((m) => m.user_id === confirmAddUserId)
 
   return (
     <div className="bg-muted/10 border-t border-border">
@@ -833,12 +909,7 @@ function TeamMemberList({
                 </Avatar>
                 <span className="flex-1 text-sm truncate">{displayName}</span>
                 <button
-                  onClick={() =>
-                    removeMember.mutate(m.user_id, {
-                      onSuccess: () => toast.success("Removed from team"),
-                      onError: () => toast.error("Failed to remove"),
-                    })
-                  }
+                  onClick={() => setConfirmRemoveUserId(m.user_id)}
                   className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
                   title="Remove from team"
                 >
@@ -877,21 +948,60 @@ function TeamMemberList({
               size="sm"
               className="h-7 text-xs px-2"
               disabled={addMember.isPending}
-              onClick={() =>
-                addMember.mutate(addingUserId, {
-                  onSuccess: () => {
-                    toast.success("Added to team")
-                    setAddingUserId("")
-                  },
-                  onError: () => toast.error("Failed to add"),
-                })
-              }
+              onClick={() => setConfirmAddUserId(addingUserId)}
             >
               Add
             </Button>
           )}
         </div>
       )}
+      {/* Remove from team confirmation */}
+      <ConfirmDialog
+        open={!!confirmRemoveUserId}
+        onClose={() => setConfirmRemoveUserId(null)}
+        onConfirm={() => {
+          if (!confirmRemoveUserId) return
+          removeMember.mutate(confirmRemoveUserId, {
+            onSuccess: () => {
+              toast.success("Removed from team")
+              setConfirmRemoveUserId(null)
+            },
+            onError: () => {
+              toast.error("Failed to remove")
+              setConfirmRemoveUserId(null)
+            },
+          })
+        }}
+        title="Remove from team"
+        description={`Remove ${confirmRemoveMember?.user?.email ?? "this member"} from the team?`}
+        confirmLabel="Remove"
+        variant="destructive"
+        loading={removeMember.isPending}
+      />
+
+      {/* Add to team confirmation */}
+      <ConfirmDialog
+        open={!!confirmAddUserId}
+        onClose={() => { setConfirmAddUserId(null); setAddingUserId("") }}
+        onConfirm={() => {
+          if (!confirmAddUserId) return
+          addMember.mutate(confirmAddUserId, {
+            onSuccess: () => {
+              toast.success("Added to team")
+              setConfirmAddUserId(null)
+              setAddingUserId("")
+            },
+            onError: () => {
+              toast.error("Failed to add")
+              setConfirmAddUserId(null)
+            },
+          })
+        }}
+        title="Add to team"
+        description={`Add ${confirmAddMember?.user?.email ?? "this member"} to the team?`}
+        confirmLabel="Add"
+        loading={addMember.isPending}
+      />
     </div>
   )
 }
@@ -906,6 +1016,9 @@ function TeamsTab({ workspaceId }: { workspaceId: string }) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const [creating, setCreating] = useState(false)
   const [newTeamName, setNewTeamName] = useState("")
+  const [confirmDeleteTeamId, setConfirmDeleteTeamId] = useState<string | null>(null)
+
+  const confirmDeleteTeam = teams?.find((t) => t.id === confirmDeleteTeamId)
 
   const toggle = (teamId: string) => {
     setExpanded((prev) => {
@@ -1030,12 +1143,7 @@ function TeamsTab({ workspaceId }: { workspaceId: string }) {
                     <DropdownMenuContent align="end" className="w-36">
                       <DropdownMenuItem
                         className="text-destructive focus:text-destructive"
-                        onClick={() =>
-                          deleteTeam.mutate(team.id, {
-                            onSuccess: () => toast.success("Team deleted"),
-                            onError: () => toast.error("Failed to delete team"),
-                          })
-                        }
+                        onClick={() => setConfirmDeleteTeamId(team.id)}
                       >
                         <Trash2 className="h-3.5 w-3.5 mr-2" />
                         Delete team
@@ -1056,6 +1164,29 @@ function TeamsTab({ workspaceId }: { workspaceId: string }) {
           })}
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!confirmDeleteTeamId}
+        onClose={() => setConfirmDeleteTeamId(null)}
+        onConfirm={() => {
+          if (!confirmDeleteTeamId) return
+          deleteTeam.mutate(confirmDeleteTeamId, {
+            onSuccess: () => {
+              toast.success("Team deleted")
+              setConfirmDeleteTeamId(null)
+            },
+            onError: () => {
+              toast.error("Failed to delete team")
+              setConfirmDeleteTeamId(null)
+            },
+          })
+        }}
+        title="Delete team"
+        description={`Delete "${confirmDeleteTeam?.name ?? "this team"}"? All members will be removed from the team. Projects will not be affected.`}
+        confirmLabel="Delete team"
+        variant="destructive"
+        loading={deleteTeam.isPending}
+      />
     </>
   )
 }

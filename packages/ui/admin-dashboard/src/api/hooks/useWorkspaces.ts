@@ -132,7 +132,7 @@ export function useWorkspaceMembers(workspaceId: string) {
 export function useAddWorkspaceMember(workspaceId: string) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (data: { user_id: string; role: "admin" | "member" }) =>
+    mutationFn: (data: { user_id: string; role: "admin" | "member"; app_role_id?: string | null }) =>
       api.post<{ member: WorkspaceMember }>(`/admin/workspaces/${workspaceId}/members`, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: memberKeys.list(workspaceId) })

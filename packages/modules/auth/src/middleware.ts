@@ -5,11 +5,9 @@ import type { MeridianConfig, MeridianContainer } from "@meridianjs/types"
 /**
  * Express middleware that validates a Bearer JWT on every request.
  *
- * On success, populates req.user = { id, workspaceId, roles } and calls next().
+ * On success, populates req.user = { id, workspaceId, roles, permissions, jti } and calls next().
+ * Also validates the session against the DB (stateful revocation support).
  * On failure, responds 401 Unauthorized.
- *
- * Reads jwtSecret from req.scope (the request-scoped DI container that is
- * attached by the framework before any middleware runs).
  */
 export function authenticateJWT(req: any, res: Response, next: NextFunction): void {
   // Accept token from Authorization header (standard) or ?token= query param
@@ -24,25 +22,44 @@ export function authenticateJWT(req: any, res: Response, next: NextFunction): vo
     return
   }
 
-  let config: MeridianConfig
-  try {
-    const scope = req.scope as MeridianContainer
-    config = scope.resolve<MeridianConfig>("config")
-  } catch {
-    res.status(500).json({ error: { message: "Server misconfiguration" } })
-    return
-  }
-
-  try {
-    const payload = jwt.verify(token, config.projectConfig.jwtSecret) as any
-    req.user = {
-      id: payload.sub as string,
-      workspaceId: payload.workspaceId ?? null,
-      roles: Array.isArray(payload.roles) ? payload.roles : [],
-      permissions: Array.isArray(payload.permissions) ? payload.permissions : [],
+  ;(async () => {
+    let config: MeridianConfig
+    try {
+      const scope = req.scope as MeridianContainer
+      config = scope.resolve<MeridianConfig>("config")
+    } catch {
+      res.status(500).json({ error: { message: "Server misconfiguration" } })
+      return
     }
-    next()
-  } catch {
-    res.status(401).json({ error: { message: "Invalid or expired token" } })
-  }
+
+    try {
+      const payload = jwt.verify(token, config.projectConfig.jwtSecret) as any
+
+      // Validate session is not revoked (stateful check)
+      if (payload.jti) {
+        try {
+          const scope = req.scope as MeridianContainer
+          const userService = scope.resolve<any>("userModuleService")
+          const valid = await userService.isSessionValid(payload.jti)
+          if (!valid) {
+            res.status(401).json({ error: { message: "Session revoked or expired" } })
+            return
+          }
+        } catch {
+          // If session service is unavailable, fall through (graceful degradation)
+        }
+      }
+
+      req.user = {
+        id: payload.sub as string,
+        workspaceId: payload.workspaceId ?? null,
+        roles: Array.isArray(payload.roles) ? payload.roles : [],
+        permissions: Array.isArray(payload.permissions) ? payload.permissions : [],
+        jti: payload.jti ?? null,
+      }
+      next()
+    } catch {
+      res.status(401).json({ error: { message: "Invalid or expired token" } })
+    }
+  })()
 }

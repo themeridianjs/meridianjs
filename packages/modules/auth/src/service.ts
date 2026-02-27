@@ -2,9 +2,11 @@ import { MeridianService } from "@meridianjs/framework-utils"
 import type { MeridianContainer, MeridianConfig } from "@meridianjs/types"
 import bcrypt from "bcrypt"
 import jwt from "jsonwebtoken"
+import { randomUUID } from "crypto"
 
 const BCRYPT_ROUNDS = 12
 const JWT_EXPIRES_IN = "7d"
+const JWT_EXPIRES_MS = 7 * 24 * 60 * 60 * 1000
 
 export type UserRole = "super-admin" | "admin" | "moderator" | "member"
 
@@ -36,6 +38,7 @@ export interface JwtPayload {
   workspaceId: string | null
   roles: string[]
   permissions: string[]
+  jti?: string
   iat?: number
   exp?: number
 }
@@ -78,7 +81,9 @@ export class AuthModuleService extends MeridianService({}) {
     })
 
     const permissions = await this.resolvePermissions(user.app_role_id)
-    const token = this.signToken(user.id, null, [user.role], permissions, config.projectConfig.jwtSecret)
+    const { token, jti, expiresAt } = this.signToken(user.id, null, [user.role], permissions, config.projectConfig.jwtSecret)
+
+    await userService.createSession(jti, user.id, expiresAt).catch(() => {})
 
     return {
       user: {
@@ -114,7 +119,9 @@ export class AuthModuleService extends MeridianService({}) {
     await userService.recordLogin(user.id).catch(() => {})
 
     const permissions = await this.resolvePermissions(user.app_role_id)
-    const token = this.signToken(user.id, null, [user.role ?? "member"], permissions, config.projectConfig.jwtSecret)
+    const { token, jti, expiresAt } = this.signToken(user.id, null, [user.role ?? "member"], permissions, config.projectConfig.jwtSecret)
+
+    await userService.createSession(jti, user.id, expiresAt).catch(() => {})
 
     return {
       user: {
@@ -149,9 +156,12 @@ export class AuthModuleService extends MeridianService({}) {
     roles: string[],
     permissions: string[],
     secret: string
-  ): string {
-    return jwt.sign({ sub: userId, workspaceId, roles, permissions }, secret, {
+  ): { token: string; jti: string; expiresAt: Date } {
+    const jti = randomUUID()
+    const expiresAt = new Date(Date.now() + JWT_EXPIRES_MS)
+    const token = jwt.sign({ sub: userId, workspaceId, roles, permissions, jti }, secret, {
       expiresIn: JWT_EXPIRES_IN,
     })
+    return { token, jti, expiresAt }
   }
 }

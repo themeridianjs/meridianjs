@@ -3,15 +3,23 @@ import { useEffect } from "react"
 import { Zap, GitBranch, LayoutDashboard, Lock, CalendarRange } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import { useProjectByKey } from "@/api/hooks/useProjects"
+import { ApiError } from "@/api/client"
 
 const PROJECT_TAB_ROUTES = ["board", "issues", "sprints", "timeline", "access"] as const
 
 export function ProjectLayout() {
   const { projectKey, workspace: ws } = useParams<{ projectKey: string; workspace: string }>()
-  const { data: project } = useProjectByKey(projectKey ?? "")
+  const { data: project, error } = useProjectByKey(projectKey ?? "")
   const navigate = useNavigate()
   const location = useLocation()
   const [searchParams] = useSearchParams()
+
+  // Redirect to projects list if access is denied or project doesn't exist
+  useEffect(() => {
+    if (error && error instanceof ApiError && (error.status === 403 || error.status === 404)) {
+      navigate(`/${ws}/projects`, { replace: true })
+    }
+  }, [error, ws, navigate])
 
   useEffect(() => {
     const tab = searchParams.get("tab")
