@@ -1,6 +1,6 @@
 {
   "name": "@meridianjs/project",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Meridian project module — Project, Label, Milestone domain models",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",

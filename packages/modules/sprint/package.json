@@ -1,6 +1,6 @@
 {
   "name": "@meridianjs/sprint",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Meridian sprint module — Sprint/Cycle management",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
