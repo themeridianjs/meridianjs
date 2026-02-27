@@ -1,6 +1,7 @@
 import type { Response } from "express"
 import { requirePermission } from "@meridianjs/auth"
 import { createIssueWorkflow } from "../../../workflows/create-issue.js"
+import { hasProjectAccess } from "../../utils/project-access.js"
 
 export const GET = async (req: any, res: Response) => {
   const issueService = req.scope.resolve("issueModuleService") as any
@@ -14,6 +15,18 @@ export const GET = async (req: any, res: Response) => {
   else if (req.query.sprint_id) filters.sprint_id = req.query.sprint_id as string
   if (req.query.task_list_id === "none") filters.task_list_id = null
   else if (req.query.task_list_id) filters.task_list_id = req.query.task_list_id as string
+
+  // When scoped to a project, verify the caller has access to that project
+  if (req.query.project_id) {
+    const projectService = req.scope.resolve("projectModuleService") as any
+    const project = await projectService.retrieveProject(req.query.project_id).catch(() => null)
+    if (!project) { res.status(404).json({ error: { message: "Project not found" } }); return }
+    if (!await hasProjectAccess(req, project)) {
+      res.status(403).json({ error: { message: "Forbidden" } })
+      return
+    }
+  }
+
   const [issues, count] = await issueService.listAndCountIssues(filters, { limit, offset, orderBy: { created_at: "ASC" } })
   res.json({ issues, count, limit, offset })
 }
