@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react"
 import { useParams } from "react-router-dom"
 import { useQueryClient, useMutation } from "@tanstack/react-query"
-import { format } from "date-fns"
+import { format, addDays, subDays } from "date-fns"
 import { useProjectByKey } from "@/api/hooks/useProjects"
 import { useIssues, issueKeys } from "@/api/hooks/useIssues"
 import type { Issue } from "@/api/hooks/useIssues"
@@ -32,7 +32,10 @@ function issueToFeature(issue: Issue, statusColor: string): GanttFeature {
   const startAt = issue.start_date
     ? new Date(issue.start_date)
     : new Date(issue.due_date!)
-  const endAt = issue.due_date ? new Date(issue.due_date) : startAt
+  // Add 1 day so the bar extends through the full due_date day.
+  // The Gantt treats endAt as an exclusive end (start of that day),
+  // so due_date=Feb27 → endAt=Feb28 renders the bar through Feb 27.
+  const endAt = issue.due_date ? addDays(new Date(issue.due_date), 1) : addDays(startAt, 1)
 
   return {
     id: issue.id,
@@ -124,10 +127,12 @@ export function ProjectTimelinePage() {
   }
 
   const handleMove = (id: string, startAt: Date, endAt: Date | null) => {
+    // Gantt endAt is exclusive (start of day after last day), so subtract 1
+    // to recover the actual due_date the bar visually ends on.
     updateMutation.mutate({
       id,
       start_date: format(startAt, "yyyy-MM-dd"),
-      due_date: endAt ? format(endAt, "yyyy-MM-dd") : null,
+      due_date: endAt ? format(subDays(endAt, 1), "yyyy-MM-dd") : null,
     })
   }
 
