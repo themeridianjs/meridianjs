@@ -536,7 +536,9 @@ export function IssueDetail({ issue: issueProp, projectId, open, onClose }: Issu
 
           </div>
 
-          <WidgetZone zone="issue.details.after" props={{ issue }} />
+          <div className="px-6 py-4">
+            <WidgetZone zone="issue.details.after" props={{ issue }} />
+          </div>
 
           <IssueActivity
             issueId={issue.id}
