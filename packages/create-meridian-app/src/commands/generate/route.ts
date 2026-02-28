@@ -22,6 +22,14 @@ export async function generateRoute(routePath: string, methods: string[]): Promi
   const normalized = routePath.replace(/^\//, "")
   const filePath = path.join(rootDir, "src", "api", normalized, "route.ts")
 
+  // Guard against path traversal (e.g. ../../package.json/evil)
+  const resolvedFile = path.resolve(filePath)
+  const resolvedBase = path.resolve(rootDir, "src", "api")
+  if (!resolvedFile.startsWith(resolvedBase + path.sep)) {
+    console.error(chalk.red("  ✖ Invalid route path: must resolve within src/api/"))
+    process.exit(1)
+  }
+
   if (existsSync(filePath)) {
     console.error(chalk.red(`  ✖ Route already exists: src/api/${normalized}/route.ts`))
     process.exit(1)

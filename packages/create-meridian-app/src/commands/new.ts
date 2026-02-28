@@ -24,6 +24,11 @@ export async function runNew(projectName?: string): Promise<void> {
 
   // ── 1. Prompt for project name if not provided ──────────────────────────
   let name = projectName
+  // Validate name provided via argv (the interactive prompt already validates)
+  if (name && !/^[a-z0-9-_]+$/.test(name)) {
+    console.error(chalk.red("  ✖ Project name must contain only lowercase letters, numbers, hyphens, and underscores"))
+    process.exit(1)
+  }
   if (!name) {
     const res = await prompts(
       {

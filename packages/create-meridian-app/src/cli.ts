@@ -14,6 +14,7 @@
  */
 
 import { Command } from "commander"
+import chalk from "chalk"
 import { runNew } from "./commands/new.js"
 import { runDev } from "./commands/dev.js"
 import { runBuild } from "./commands/build.js"
@@ -98,7 +99,12 @@ program
   .description("Serve the admin dashboard as a static site")
   .option("-p, --port <port>", "Port to serve on", "5174")
   .action((options) => {
-    runServeDashboard(Number(options.port)).catch((err: unknown) => {
+    const port = Number(options.port)
+    if (!Number.isInteger(port) || port < 1 || port > 65535) {
+      console.error(chalk.red(`  ✖ Invalid port: ${options.port}`))
+      process.exit(1)
+    }
+    runServeDashboard(port).catch((err: unknown) => {
       console.error(err)
       process.exit(1)
     })

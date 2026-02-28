@@ -29,11 +29,13 @@ await app.stop()
 process.exit(0)
 `
 
-  const scriptPath = path.join(rootDir, ".meridian-migrate-tmp.mjs")
+  const { randomBytes } = await import("node:crypto")
+  const { tmpdir } = await import("node:os")
+  const scriptPath = path.join(tmpdir(), `meridian-migrate-${randomBytes(8).toString("hex")}.mjs`)
 
   // Write temp script to disk and run it with tsx
   const { writeFile, unlink } = await import("node:fs/promises")
-  await writeFile(scriptPath, script, "utf-8")
+  await writeFile(scriptPath, script, { encoding: "utf-8", mode: 0o600 })
 
   try {
     await execa("node", ["--import", "tsx/esm", scriptPath], {

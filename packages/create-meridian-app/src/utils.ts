@@ -1,4 +1,6 @@
 import path from "node:path"
+import os from "node:os"
+import { randomBytes } from "node:crypto"
 import fs from "node:fs/promises"
 import { existsSync } from "node:fs"
 import { execa } from "execa"
@@ -65,8 +67,8 @@ process.stdout.write(JSON.stringify({
   dashboardPort: c?.admin?.port ?? 5174,
 }))
 `
-  const scriptPath = path.join(rootDir, ".meridian-ports-tmp.mjs")
-  await fs.writeFile(scriptPath, script, "utf-8")
+  const scriptPath = path.join(os.tmpdir(), `meridian-ports-${randomBytes(8).toString("hex")}.mjs`)
+  await fs.writeFile(scriptPath, script, { encoding: "utf-8", mode: 0o600 })
   try {
     const result = await execa("node", ["--import", "tsx/esm", scriptPath], { cwd: rootDir })
     return JSON.parse(result.stdout)

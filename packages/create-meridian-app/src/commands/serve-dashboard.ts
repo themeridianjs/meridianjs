@@ -141,6 +141,12 @@ export function startDashboardServer(
 
       // Resolve file path; fall back to index.html for unknown paths (SPA routing)
       let filePath = path.join(distDir, urlPath === "/" ? "index.html" : urlPath)
+      // Guard against path traversal (e.g. /../../../etc/passwd)
+      const resolvedFile = path.resolve(filePath)
+      const resolvedDist = path.resolve(distDir)
+      if (!resolvedFile.startsWith(resolvedDist + path.sep) && resolvedFile !== resolvedDist) {
+        res.writeHead(403); res.end("Forbidden"); return
+      }
       if (!existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
         filePath = path.join(distDir, "index.html")
       }

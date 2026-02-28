@@ -22,6 +22,12 @@ export async function runUserCreate(opts: {
     process.exit(1)
   }
 
+  // Validate role flag against allowlist (interactive select already enforces this)
+  if (opts.role && !(ROLES as readonly string[]).includes(opts.role)) {
+    console.error(chalk.red(`  ✖ Invalid role "${opts.role}". Must be one of: ${ROLES.join(", ")}`))
+    process.exit(1)
+  }
+
   // Collect inputs interactively for any that weren't provided via flags
   const response = await prompts(
     [
@@ -97,6 +103,7 @@ export async function runUserCreate(opts: {
 
   const spinner = ora("Creating user...").start()
 
+  // Password is passed via environment variable so it is never written to disk
   const script = `
 import { bootstrap } from "@meridianjs/framework"
 
@@ -109,7 +116,7 @@ let output
 try {
   const result = await authService.register({
     email: ${JSON.stringify(email)},
-    password: ${JSON.stringify(password)},
+    password: process.env.MERIDIAN_USER_PASSWORD,
     first_name: ${JSON.stringify(first_name || null)},
     last_name: ${JSON.stringify(last_name || null)},
     role: ${JSON.stringify(role)},
@@ -124,15 +131,17 @@ await app.stop()
 process.exit(output.success ? 0 : 1)
 `
 
-  const scriptPath = path.join(rootDir, ".meridian-user-create-tmp.mjs")
+  const { randomBytes } = await import("node:crypto")
+  const { tmpdir } = await import("node:os")
+  const scriptPath = path.join(tmpdir(), `meridian-user-create-${randomBytes(8).toString("hex")}.mjs`)
   const { writeFile, unlink } = await import("node:fs/promises")
-  await writeFile(scriptPath, script, "utf-8")
+  await writeFile(scriptPath, script, { encoding: "utf-8", mode: 0o600 })
 
   try {
     const result = await execa("node", ["--import", "tsx/esm", scriptPath], {
       cwd: rootDir,
       stdio: "pipe",
-      env: { ...process.env, NODE_ENV: "development" },
+      env: { ...process.env, NODE_ENV: "development", MERIDIAN_USER_PASSWORD: password },
     })
 
     const lines = result.stdout.trim().split("\n")
