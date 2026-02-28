@@ -11,7 +11,7 @@ import { loadJobs } from "./job-loader.js"
 import { loadLinks } from "./link-loader.js"
 import { createServer } from "./server.js"
 import { ConsoleLogger } from "./logger.js"
-import type { MeridianConfig, MeridianContainer, ILogger, IEventBus } from "@meridianjs/types"
+import type { MeridianConfig, MeridianContainer, ILogger, IEventBus, IScheduler } from "@meridianjs/types"
 
 export interface BootstrapOptions {
   /** Absolute path to the project root directory */
@@ -145,6 +145,12 @@ export async function bootstrap(opts: BootstrapOptions): Promise<MeridianApp> {
       } catch {
         // eventBus may not have close()
       }
+      try {
+        const scheduler = container.resolve<IScheduler>("scheduler")
+        await scheduler.close()
+      } catch {
+        // scheduler may not be configured
+      }
       logger.info("Meridian server stopped.")
     },
   }
@@ -159,14 +165,26 @@ async function loadMiddlewares(
   apiDir: string
 ): Promise<void> {
   const logger = container.resolve<ILogger>("logger")
-  const middlewaresPath = path.join(apiDir, "middlewares.ts")
+  // Probe multiple extensions so middlewares.ts is found in both dev (tsx) and compiled builds
+  const candidates = [
+    path.join(apiDir, "middlewares.ts"),
+    path.join(apiDir, "middlewares.mts"),
+    path.join(apiDir, "middlewares.js"),
+    path.join(apiDir, "middlewares.mjs"),
+  ]
 
-  let mod: Record<string, unknown>
-  try {
-    const { pathToFileURL } = await import("node:url")
-    mod = await import(pathToFileURL(middlewaresPath).href)
-  } catch {
-    // middlewares.ts is optional
+  let mod: Record<string, unknown> | null = null
+  const { pathToFileURL } = await import("node:url")
+  for (const candidate of candidates) {
+    try {
+      mod = await import(pathToFileURL(candidate).href)
+      break
+    } catch (err: any) {
+      if (err.code !== "ERR_MODULE_NOT_FOUND" && err.code !== "MODULE_NOT_FOUND") throw err
+    }
+  }
+  if (!mod) {
+    // middlewares file is optional
     return
   }
 

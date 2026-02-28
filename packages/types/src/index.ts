@@ -6,6 +6,7 @@ export interface MeridianContainer {
   resolve<T = unknown>(token: string): T
   register(registrations: Record<string, unknown>): void
   createScope(): MeridianContainer
+  dispose?(): Promise<void>
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

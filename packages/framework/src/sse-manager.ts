@@ -34,7 +34,8 @@ export class SseManager {
     const set = this.clients.get(workspaceId)
     if (!set?.size) return
 
-    const payload = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`
+    const safeEvent = event.replace(/[\r\n]/g, "")
+    const payload = `event: ${safeEvent}\ndata: ${JSON.stringify(data)}\n\n`
     const dead: Response[] = []
 
     for (const res of set) {

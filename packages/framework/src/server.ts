@@ -13,6 +13,10 @@ export function createServer(
   config: MeridianConfig
 ): Express {
   const app = express()
+  // Trust the first proxy hop so req.ip reflects the real client IP.
+  // This is required for rate limiters to key by client IP rather than the
+  // proxy's IP when running behind nginx, AWS ALB, Cloudflare, etc.
+  app.set("trust proxy", 1)
   const logger = container.resolve<ILogger>("logger")
 
   // ── Middleware ─────────────────────────────────────────────────────────────
@@ -55,9 +59,11 @@ export function createServer(
     })
   )
 
-  // Attach a request-scoped DI container to every request
-  app.use((req: any, _res: Response, next: NextFunction) => {
+  // Attach a request-scoped DI container to every request and dispose it when done
+  app.use((req: any, res: Response, next: NextFunction) => {
     req.scope = container.createScope()
+    res.on("finish", () => req.scope.dispose?.())
+    res.on("close",  () => req.scope.dispose?.())
     next()
   })
 

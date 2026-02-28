@@ -48,6 +48,10 @@ function wrapContainer(raw: AwilixContainer): MeridianContainer {
     createScope(): MeridianContainer {
       return wrapContainer(raw.createScope())
     },
+
+    async dispose(): Promise<void> {
+      await raw.dispose()
+    },
   }
 
   return container
