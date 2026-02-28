@@ -1,6 +1,6 @@
 {
   "name": "@meridianjs/framework-utils",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Utilities for building Meridian modules: DML, service factory, defineModule, defineLink",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
