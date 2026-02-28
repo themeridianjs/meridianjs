@@ -132,8 +132,9 @@ process.exit(output.success ? 0 : 1)
 `
 
   const { randomBytes } = await import("node:crypto")
-  const { tmpdir } = await import("node:os")
-  const scriptPath = path.join(tmpdir(), `meridian-user-create-${randomBytes(8).toString("hex")}.mjs`)
+  // Script must live in rootDir so Node.js resolves @meridianjs/framework from
+  // the project's node_modules. Random suffix prevents TOCTOU attacks.
+  const scriptPath = path.join(rootDir, `.meridian-user-create-${randomBytes(8).toString("hex")}.mjs`)
   const { writeFile, unlink } = await import("node:fs/promises")
   await writeFile(scriptPath, script, { encoding: "utf-8", mode: 0o600 })
 
