@@ -71,6 +71,8 @@ const PriorityIcon = ({ priority, className }: { priority: string; className?: s
   }
 }
 
+const GRID = "grid-cols-[70px_250px_150px_120px_130px_140px_130px_32px]"
+
 // ─── IssueRow ─────────────────────────────────────────────────────────────────
 
 interface IssueRowProps {
@@ -121,19 +123,29 @@ function IssueRow({
       <div
         onClick={() => onOpen(issue)}
         className={cn(
-          "group grid grid-cols-[70px_1fr_150px_120px_130px_140px_130px_32px] items-center px-6 py-3",
+          `group grid ${GRID} items-center py-3`,
           "hover:bg-[#f9fafb] dark:hover:bg-muted/30 cursor-pointer transition-colors",
-          isChild && "pl-14 bg-muted/10",
+          isChild && "bg-muted/10",
           update.isPending && "opacity-70"
         )}
       >
         {/* ID */}
-        <span className={cn("text-xs font-mono text-muted-foreground truncate", isChild && "text-muted-foreground/60")}>
+        <span className={cn(
+          "text-xs font-mono text-muted-foreground truncate",
+          "sticky left-0 z-10 pl-6 transition-colors",
+          "bg-white dark:bg-card group-hover:bg-[#f9fafb] dark:group-hover:bg-muted/30",
+          isChild && "text-muted-foreground/60",
+        )}>
           {issue.identifier}
         </span>
 
         {/* Title — with expand/collapse for children */}
-        <div className="flex items-center gap-1 min-w-0 pr-3">
+        <div className={cn(
+          "flex items-center gap-1 min-w-0 pr-3",
+          "sticky left-[70px] z-10 transition-colors",
+          "bg-white dark:bg-card group-hover:bg-[#f9fafb] dark:group-hover:bg-muted/30",
+          isChild && "bg-[#f8f9fa] dark:bg-muted/20",
+        )}>
           {!isChild && hasChildren && (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -336,7 +348,7 @@ function IssueRow({
         </div>
 
         {/* External link + add child */}
-        <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-1 pr-6" onClick={(e) => e.stopPropagation()}>
           {!isChild && onAddChild && (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -668,8 +680,6 @@ export function ProjectIssuesPage() {
     })
   }
 
-  const GRID = "grid-cols-[70px_1fr_150px_120px_130px_140px_130px_32px]"
-
   return (
     <div className="p-2">
       <WidgetZone zone="project.issues.before" props={{ projectId }} />
@@ -764,16 +774,19 @@ export function ProjectIssuesPage() {
           </div>
         </div>
 
+        {/* Table header + scrollable content */}
+        <div className="overflow-x-auto">
+        <div className="min-w-[1025px]">
         {/* Table header */}
-        <div className={cn("grid items-center px-6 py-2.5 border-b border-border", GRID)}>
-          <span className="text-xs font-medium text-[#6b7280]">ID</span>
-          <span className="text-xs font-medium text-[#6b7280]">Title</span>
+        <div className={cn("grid items-center py-2.5 border-b border-border", GRID)}>
+          <span className="text-xs font-medium text-[#6b7280] sticky left-0 z-10 bg-white dark:bg-card pl-6">ID</span>
+          <span className="text-xs font-medium text-[#6b7280] sticky left-[70px] z-10 bg-white dark:bg-card">Title</span>
           <span className="text-xs font-medium text-[#6b7280]">Status</span>
           <span className="text-xs font-medium text-[#6b7280]">Priority</span>
           <span className="text-xs font-medium text-[#6b7280]">Sprint</span>
           <span className="text-xs font-medium text-[#6b7280]">Due Date</span>
           <span className="text-xs font-medium text-[#6b7280]">Assignees</span>
-          <span />
+          <span className="pr-6" />
         </div>
 
         {/* Content */}
@@ -853,6 +866,8 @@ export function ProjectIssuesPage() {
             </div>
           </TooltipProvider>
         )}
+        </div>{/* /min-w */}
+        </div>{/* /overflow-x-auto */}
 
         {/* Footer */}
         {!isLoading && totalCount > 0 && (
