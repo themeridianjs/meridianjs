@@ -1,6 +1,6 @@
 {
   "name": "@meridianjs/types",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Shared TypeScript types and interfaces for Meridian",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",

@@ -1,6 +1,6 @@
 {
   "name": "@meridianjs/framework",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Core Meridian framework: bootstrap, DI container, module/route/subscriber/job loaders",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
