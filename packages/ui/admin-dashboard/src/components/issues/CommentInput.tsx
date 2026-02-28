@@ -10,6 +10,7 @@ import { useAuth } from "@/stores/auth"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { FileTypeIcon, formatBytes } from "@/components/issues/AttachmentViewer"
+import { getAvatarColor } from "@/components/issues/IssueActivity"
 import {
   Bold, Italic, Strikethrough, Code,
   List, ListOrdered, Code2,
@@ -69,9 +70,13 @@ export function CommentInput({ issueId, compact, className, onSuccess }: Comment
   const createComment = useCreateComment(issueId)
   const uploadAttachment = useUploadAttachment(issueId)
 
+  const firstName = currentUser?.first_name ?? ""
+  const lastName  = currentUser?.last_name  ?? ""
+  const displayName = `${firstName} ${lastName}`.trim() || currentUser?.email || "?"
   const initials = currentUser
-    ? `${currentUser.first_name?.[0] ?? ""}${currentUser.last_name?.[0] ?? ""}`.toUpperCase() || "?"
+    ? `${firstName[0] ?? ""}${lastName[0] ?? ""}`.toUpperCase() || "?"
     : "?"
+  const avatarColor = getAvatarColor(displayName)
 
   // Keyboard shortcut extension — created once; calls handleSubmitRef so it
   // always invokes the latest version of handleSubmit without reinitialising
@@ -153,7 +158,7 @@ export function CommentInput({ issueId, compact, className, onSuccess }: Comment
   return (
     <div className={cn("flex gap-3 items-start", className)}>
       <Avatar className="h-7 w-7 shrink-0 mt-1">
-        <AvatarFallback className="text-[11px] bg-muted text-muted-foreground">
+        <AvatarFallback className={cn("text-[11px] font-semibold", avatarColor.bg, avatarColor.text)}>
           {initials}
         </AvatarFallback>
       </Avatar>

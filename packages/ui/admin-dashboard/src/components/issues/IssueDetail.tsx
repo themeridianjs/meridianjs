@@ -20,7 +20,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -45,6 +44,30 @@ function sprintDateRange(sprint: Sprint): string | null {
   return `${start} – ${end}`
 }
 
+const PRIORITY_DOT: Record<string, string> = {
+  urgent: "bg-red-500",
+  high: "bg-orange-500",
+  medium: "bg-amber-500",
+  low: "bg-sky-500",
+  no_priority: "bg-zinc-400",
+}
+
+function getStatusDot(category?: string, key?: string): string {
+  if (category === "completed") return "bg-emerald-500"
+  if (category === "in_progress") return "bg-indigo-500"
+  if (category === "cancelled") return "bg-red-400"
+  if (key?.includes("block")) return "bg-red-500"
+  return "bg-zinc-400"
+}
+
+const FieldLabel = ({ children }: { children: React.ReactNode }) => (
+  <p className="text-[10px] font-semibold tracking-[0.08em] uppercase text-zinc-900 dark:text-zinc-100 mb-1.5">
+    {children}
+  </p>
+)
+
+const Divider = () => <div className="border-t border-zinc-100 dark:border-zinc-800" />
+
 interface IssueDetailProps {
   issue: Issue | null
   projectId: string
@@ -55,15 +78,14 @@ interface IssueDetailProps {
 export function IssueDetail({ issue: issueProp, projectId, open, onClose }: IssueDetailProps) {
   const navigate = useNavigate()
   const { workspace, projectKey } = useParams<{ workspace: string; projectKey: string }>()
-  // Subscribe to the detail query so date/field changes reflect immediately after mutation
   const { data: liveIssue } = useIssue(issueProp?.id ?? "")
   const issue = liveIssue ?? issueProp
   const [isEditing, setIsEditing] = useState(false)
   const [editTitle, setEditTitle] = useState("")
   const [editDescription, setEditDescription] = useState("")
   const [activeActivityTab, setActiveActivityTab] = useState<ActivityTab>("comments")
-
   const [createChildOpen, setCreateChildOpen] = useState(false)
+
   const updateIssue = useUpdateIssue(issue?.id ?? "", projectId)
   const { data: projectStatuses } = useProjectStatuses(projectId)
   const { data: sprints } = useSprints(projectId || undefined)
@@ -74,12 +96,12 @@ export function IssueDetail({ issue: issueProp, projectId, open, onClose }: Issu
   const parentIssue = issue?.parent_id ? allIssues?.find((i) => i.id === issue.parent_id) : null
   const childIssues = allIssues?.filter((i) => i.parent_id === issue?.id) ?? []
   const currentTaskList = issue?.task_list_id ? taskLists?.find((tl) => tl.id === issue.task_list_id) : null
+  const currentStatusObj = projectStatuses?.find((s) => s.key === issue?.status)
 
   const statusOptions = projectStatuses && projectStatuses.length > 0
     ? Object.fromEntries(projectStatuses.map((s) => [s.key, s.name]))
     : ISSUE_STATUS_LABELS
 
-  // Reset edit state when issue changes
   useEffect(() => {
     if (issue) {
       setEditTitle(issue.title)
@@ -95,10 +117,7 @@ export function IssueDetail({ issue: issueProp, projectId, open, onClose }: Issu
     updateIssue.mutate(
       { title: editTitle.trim(), description: editDescription.trim() || undefined },
       {
-        onSuccess: () => {
-          setIsEditing(false)
-          toast.success("Issue updated")
-        },
+        onSuccess: () => { setIsEditing(false); toast.success("Issue updated") },
         onError: () => toast.error("Failed to update issue"),
       }
     )
@@ -172,403 +191,439 @@ export function IssueDetail({ issue: issueProp, projectId, open, onClose }: Issu
     )
   }
 
+  const completedStatus = projectStatuses?.find((s) => s.category === "completed")
+  const isCompleted = !!completedStatus && issue.status === completedStatus.key
+
+  const iconBtn = (icon: React.ElementType, label: string, onClick?: () => void) => {
+    const Icon = icon
+    return (
+      <button
+        key={label}
+        title={label}
+        onClick={onClick}
+        className="h-8 w-8 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+      >
+        <Icon className="h-4 w-4" />
+      </button>
+    )
+  }
+
   return (
     <>
-    <Drawer open={open} onOpenChange={(o) => !o && onClose()}>
-      <DrawerContent className="flex flex-col p-0 w-full max-w-2xl overflow-hidden">
-        {/* ── Toolbar ── */}
-        {(() => {
-          const completedStatus = projectStatuses?.find((s) => s.category === "completed")
-          const isCompleted = !!completedStatus && issue.status === completedStatus.key
+      <Drawer open={open} onOpenChange={(o) => !o && onClose()}>
+        <DrawerContent className="flex flex-col p-0 w-full max-w-2xl overflow-hidden bg-white dark:bg-zinc-950">
 
-          const iconBtn = (icon: React.ElementType, label: string, onClick?: () => void) => {
-            const Icon = icon
-            return (
-              <button
-                key={label}
-                title={label}
-                onClick={onClick}
-                className="h-8 w-8 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-              >
-                <Icon className="h-4 w-4" />
-              </button>
-            )
-          }
+          {/* ── Toolbar ── */}
+          <div className="flex items-center justify-between px-4 py-2 border-b border-border shrink-0">
+            <button
+              onClick={() => {
+                if (!completedStatus) return
+                handleStatusChange(isCompleted ? (projectStatuses?.find((s) => s.category === "unstarted" || s.category === "backlog")?.key ?? issue.status) : completedStatus.key)
+              }}
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-1.5 rounded-md border text-xs font-medium transition-colors",
+                isCompleted
+                  ? "border-emerald-500/40 text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30"
+                  : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/40"
+              )}
+            >
+              <Check className="h-3.5 w-3.5" />
+              {isCompleted ? "Completed" : "Mark complete"}
+            </button>
 
-          return (
-            <div className="flex items-center justify-between px-4 py-2 border-b border-border shrink-0">
-              {/* Left: Mark complete */}
-              <button
-                onClick={() => {
-                  if (!completedStatus) return
-                  handleStatusChange(isCompleted ? (projectStatuses?.find((s) => s.category === "unstarted" || s.category === "backlog")?.key ?? issue.status) : completedStatus.key)
-                }}
-                className={cn(
-                  "flex items-center gap-1.5 px-3 py-1.5 rounded-md border text-xs font-medium transition-colors",
-                  isCompleted
-                    ? "border-emerald-500/40 text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30"
-                    : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/40"
-                )}
-              >
-                <Check className="h-3.5 w-3.5" />
-                {isCompleted ? "Completed" : "Mark complete"}
-              </button>
-
-              {/* Right: action icons */}
-              <div className="flex items-center">
-                {iconBtn(ThumbsUp, "Upvote")}
-                {iconBtn(Paperclip, "Attachments")}
-                {iconBtn(GitBranch, "Add sub-issue", () => setCreateChildOpen(true))}
-                {iconBtn(Link2, "Copy link", () => {
-                  navigator.clipboard.writeText(`${window.location.origin}/${workspace}/projects/${projectKey}/issues/${issue.id}`)
-                  toast.success("Link copied")
-                })}
-                {iconBtn(Maximize2, "Open full page", () => {
-                  onClose()
-                  navigate(`/${workspace}/projects/${projectKey}/issues/${issue.id}`)
-                })}
-                {isEditing ? (
-                  <div className="flex items-center gap-1 ml-1">
-                    <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={handleCancelEdit}>
-                      Cancel
-                    </Button>
-                    <Button size="sm" className="h-7 text-xs" onClick={handleSaveEdit} disabled={!editTitle.trim() || updateIssue.isPending}>
-                      <Check className="h-3.5 w-3.5 mr-1" />
-                      Save
-                    </Button>
-                  </div>
-                ) : (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      {iconBtn(MoreHorizontal, "More options")}
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-40">
-                      <DropdownMenuItem onClick={() => setIsEditing(true)}>
-                        <Pencil className="h-3.5 w-3.5 mr-2" />
-                        Edit
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                )}
-                {iconBtn(PanelRight, "Open in full page", () => {
-                  onClose()
-                  navigate(`/${workspace}/projects/${projectKey}/issues/${issue.id}`)
-                })}
-              </div>
+            <div className="flex items-center">
+              {iconBtn(ThumbsUp, "Upvote")}
+              {iconBtn(Paperclip, "Attachments")}
+              {iconBtn(GitBranch, "Add sub-issue", () => setCreateChildOpen(true))}
+              {iconBtn(Link2, "Copy link", () => {
+                navigator.clipboard.writeText(`${window.location.origin}/${workspace}/projects/${projectKey}/issues/${issue.id}`)
+                toast.success("Link copied")
+              })}
+              {iconBtn(Maximize2, "Open full page", () => {
+                onClose()
+                navigate(`/${workspace}/projects/${projectKey}/issues/${issue.id}`)
+              })}
+              {isEditing ? (
+                <div className="flex items-center gap-1 ml-1">
+                  <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={handleCancelEdit}>
+                    Cancel
+                  </Button>
+                  <Button size="sm" className="h-7 text-xs" onClick={handleSaveEdit} disabled={!editTitle.trim() || updateIssue.isPending}>
+                    <Check className="h-3.5 w-3.5 mr-1" />
+                    Save
+                  </Button>
+                </div>
+              ) : (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    {iconBtn(MoreHorizontal, "More options")}
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-40">
+                    <DropdownMenuItem onClick={() => setIsEditing(true)}>
+                      <Pencil className="h-3.5 w-3.5 mr-2" />
+                      Edit
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+              {iconBtn(PanelRight, "Open in full page", () => {
+                onClose()
+                navigate(`/${workspace}/projects/${projectKey}/issues/${issue.id}`)
+              })}
             </div>
-          )
-        })()}
+          </div>
 
-        {/* ── Title ── */}
-        <div className="px-6 pt-4 pb-2 shrink-0">
-          {isEditing ? (
-            <Input
-              value={editTitle}
-              onChange={(e) => setEditTitle(e.target.value)}
-              className="text-sm font-medium h-8"
-              autoFocus
-            />
-          ) : (
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-xs font-mono text-muted-foreground shrink-0">{issue.identifier}</span>
-              <Badge variant="muted" className="text-[10px] shrink-0">
-                {ISSUE_TYPE_LABELS[issue.type] ?? issue.type}
-              </Badge>
-            </div>
-          )}
-          {!isEditing && (
-            <h2 className="text-base font-medium leading-snug">{issue.title}</h2>
-          )}
-        </div>
-
-        <ScrollArea className="flex-1 min-w-0">
-          <div className="px-6 py-4 space-y-5 min-w-0">
-            <WidgetZone zone="issue.details.before" props={{ issue }} />
-            {/* Status / Priority / Type */}
-            <div className="grid grid-cols-3 gap-3 mb-1">
-              <div className="min-w-0">
-                <p className="text-xs text-muted-foreground mb-1.5">Status</p>
-                <Select value={issue.status} onValueChange={handleStatusChange}>
-                  <SelectTrigger className="h-8 text-xs bg-transparent min-w-0">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(statusOptions).map(([val, label]) => (
-                      <SelectItem key={val} value={val} className="text-xs">{label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs text-muted-foreground mb-1.5">Priority</p>
-                <Select value={issue.priority} onValueChange={handlePriorityChange}>
-                  <SelectTrigger className="h-8 text-xs bg-transparent min-w-0">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(ISSUE_PRIORITY_LABELS).map(([val, label]) => (
-                      <SelectItem key={val} value={val} className="text-xs">{label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs text-muted-foreground mb-1.5">Type</p>
-                <Select value={issue.type} onValueChange={handleTypeChange}>
-                  <SelectTrigger className="h-8 text-xs bg-transparent min-w-0">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(ISSUE_TYPE_LABELS).map(([val, label]) => (
-                      <SelectItem key={val} value={val} className="text-xs">{label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* Assignees */}
-            <div>
-              <p className="text-xs text-muted-foreground mb-1.5">Assignees</p>
-              <AssigneeSelector
-                value={issue.assignee_ids ?? []}
-                onChange={handleAssigneesChange}
-                disabled={updateIssue.isPending}
+          {/* ── Title ── */}
+          <div className="px-6 pt-5 pb-4 shrink-0">
+            {isEditing ? (
+              <Input
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                className="text-sm font-medium h-8"
+                autoFocus
               />
-            </div>
+            ) : (
+              <>
+                <div className="flex items-center gap-2 mb-2.5">
+                  <span className="text-[11px] font-mono font-medium text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 px-1.5 py-0.5 rounded">
+                    {issue.identifier}
+                  </span>
+                  <span className="text-[10px] font-semibold tracking-widest uppercase text-violet-500 dark:text-violet-400">
+                    {ISSUE_TYPE_LABELS[issue.type] ?? issue.type}
+                  </span>
+                </div>
+                <h2 className="text-[17px] font-semibold leading-snug text-zinc-900 dark:text-zinc-50">
+                  {issue.title}
+                </h2>
+              </>
+            )}
+          </div>
 
-            {/* Sprint + List + Due Date — inline row */}
-            <div className="flex gap-3 items-start min-w-0">
-              <div className="flex-1 min-w-0">
-                <p className="text-xs text-muted-foreground mb-1.5">Sprint</p>
-                <Select
-                  value={issue.sprint_id ?? "none"}
-                  onValueChange={(v) => handleSprintChange(v === "none" ? null : v)}
-                >
-                  <SelectTrigger className="h-8 text-xs bg-transparent min-w-0">
-                      <div className="flex items-center gap-1 min-w-0 overflow-hidden">
-                        <Layers className="h-3 w-3 shrink-0 text-muted-foreground" />
-                        <SelectValue placeholder="No sprint" />
-                    </div>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none" className="text-xs text-muted-foreground">
-                      No sprint
-                    </SelectItem>
-                    {activeSprints.map((s) => {
-                      const range = sprintDateRange(s)
-                      return (
-                        <SelectItem key={s.id} value={s.id} className="text-xs">
-                          <div className="flex items-baseline gap-1.5">
-                            <span>{s.name}</span>
-                            {range && (
-                              <span className="text-[10px] text-muted-foreground font-normal">
-                                {range}
-                              </span>
-                            )}
-                          </div>
-                        </SelectItem>
-                      )
-                    })}
-                  </SelectContent>
-                </Select>
-              </div>
-              {(taskLists ?? []).length > 0 && (
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-muted-foreground mb-1.5">List</p>
-                  <Select
-                    value={issue.task_list_id ?? "none"}
-                    onValueChange={(v) => handleTaskListChange(v === "none" ? null : v)}
-                  >
-                    <SelectTrigger className="h-8 text-xs bg-transparent min-w-0">
-                      <div className="flex items-center gap-1 min-w-0 overflow-hidden">
-                        <FolderOpen className="h-3 w-3 shrink-0 text-muted-foreground" />
-                        <SelectValue placeholder="No list">
-                          {currentTaskList ? currentTaskList.name : "No list"}
-                        </SelectValue>
-                      </div>
+          <ScrollArea className="flex-1 min-w-0">
+            <div className="px-6 pb-4 space-y-5 min-w-0">
+              <WidgetZone zone="issue.details.before" props={{ issue }} />
+
+              {/* ── Status / Priority / Type ── */}
+              <div className="grid grid-cols-3 gap-3">
+                <div className="min-w-0">
+                  <FieldLabel>Status</FieldLabel>
+                  <Select value={issue.status} onValueChange={handleStatusChange}>
+                    <SelectTrigger className="h-8 text-xs min-w-0">
+                      <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none" className="text-xs text-muted-foreground">No list</SelectItem>
-                      {(taskLists ?? []).map((tl) => (
-                        <SelectItem key={tl.id} value={tl.id} className="text-xs">{tl.name}</SelectItem>
+                      {Object.entries(statusOptions).map(([val, label]) => {
+                        const so = projectStatuses?.find((s) => s.key === val)
+                        return (
+                          <SelectItem key={val} value={val} className="text-xs">
+                            <div className="flex items-center gap-1.5">
+                              <span className={cn("h-2 w-2 rounded-full shrink-0 flex-none", getStatusDot(so?.category, val))} />
+                              <span>{label as string}</span>
+                            </div>
+                          </SelectItem>
+                        )
+                      })}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="min-w-0">
+                  <FieldLabel>Priority</FieldLabel>
+                  <Select value={issue.priority} onValueChange={handlePriorityChange}>
+                    <SelectTrigger className="h-8 text-xs min-w-0">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(ISSUE_PRIORITY_LABELS).map(([val, label]) => (
+                        <SelectItem key={val} value={val} className="text-xs">
+                          <div className="flex items-center gap-1.5">
+                            <span className={cn("h-2 w-2 rounded-full shrink-0 flex-none", PRIORITY_DOT[val] ?? "bg-zinc-400")} />
+                            <span>{label as string}</span>
+                          </div>
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
-              )}
-              <div className="flex-1 min-w-0">
-                <p className="text-xs text-muted-foreground mb-1.5">Start Date</p>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <button className="flex items-center gap-1 h-8 w-full min-w-0 px-2 rounded border border-input text-xs bg-transparent hover:bg-accent transition-colors overflow-hidden">
-                      <CalendarIcon className="h-3 w-3 shrink-0 text-muted-foreground" />
-                      <span className={`truncate ${issue.start_date ? "text-foreground" : "text-muted-foreground"}`}>
-                        {issue.start_date ? format(new Date(issue.start_date), "MMM d, yyyy") : "No date"}
-                      </span>
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={issue.start_date ? new Date(issue.start_date) : undefined}
-                      onSelect={handleStartDateChange}
-                      initialFocus
-                    />
-                    {issue.start_date && (
-                      <div className="border-t px-3 py-2">
-                        <button
-                          onClick={() => handleStartDateChange(undefined)}
-                          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors"
-                        >
-                          <X className="h-3 w-3" />
-                          Clear date
-                        </button>
-                      </div>
-                    )}
-                  </PopoverContent>
-                </Popover>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs text-muted-foreground mb-1.5">Due Date</p>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <button className="flex items-center gap-1 h-8 w-full min-w-0 px-2 rounded border border-input text-xs bg-transparent hover:bg-accent transition-colors overflow-hidden">
-                      <CalendarIcon className="h-3 w-3 shrink-0 text-muted-foreground" />
-                      <span className={`truncate ${issue.due_date ? "text-foreground" : "text-muted-foreground"}`}>
-                        {issue.due_date ? format(new Date(issue.due_date), "MMM d, yyyy") : "No date"}
-                      </span>
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={issue.due_date ? new Date(issue.due_date) : undefined}
-                      onSelect={handleDueDateChange}
-                      initialFocus
-                    />
-                    {issue.due_date && (
-                      <div className="border-t px-3 py-2">
-                        <button
-                          onClick={() => handleDueDateChange(undefined)}
-                          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors"
-                        >
-                          <X className="h-3 w-3" />
-                          Clear date
-                        </button>
-                      </div>
-                    )}
-                  </PopoverContent>
-                </Popover>
-              </div>
-            </div>
-
-            {/* Child Issues — only on top-level issues */}
-            {!issue.parent_id && <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <p className="text-xs text-muted-foreground">Child Issues</p>
-                <button
-                  onClick={() => setCreateChildOpen(true)}
-                  className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <Plus className="h-3 w-3" />
-                  Add
-                </button>
-              </div>
-              {parentIssue && (
-                <div className="flex items-center gap-2 text-xs">
-                  <ChevronUp className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                  <span className="text-muted-foreground shrink-0">Parent:</span>
-                  <button
-                    onClick={() => navigate(`/${workspace}/projects/${projectKey}/issues/${parentIssue.id}`)}
-                    className="font-mono text-muted-foreground hover:text-foreground transition-colors shrink-0"
-                  >
-                    {parentIssue.identifier}
-                  </button>
-                  <span className="text-foreground truncate">{parentIssue.title}</span>
+                <div className="min-w-0">
+                  <FieldLabel>Type</FieldLabel>
+                  <Select value={issue.type} onValueChange={handleTypeChange}>
+                    <SelectTrigger className="h-8 text-xs min-w-0">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(ISSUE_TYPE_LABELS).map(([val, label]) => (
+                        <SelectItem key={val} value={val} className="text-xs">{label as string}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-              )}
-              {childIssues.length === 0 && !parentIssue ? (
-                <p className="text-xs text-muted-foreground/40 italic">No child issues yet</p>
-              ) : (
-                <div className="space-y-1">
-                  {childIssues.map((child) => (
-                    <div key={child.id} className="flex items-center gap-2 text-xs">
-                      <CornerDownRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                      <button
-                        onClick={() => {
-                          onClose()
-                          navigate(`/${workspace}/projects/${projectKey}/issues/${child.id}`)
-                        }}
-                        className="font-mono text-muted-foreground hover:text-foreground transition-colors shrink-0"
-                      >
-                        {child.identifier}
-                      </button>
-                      <button
-                        onClick={() => { onClose(); navigate(`/${workspace}/projects/${projectKey}/issues/${child.id}`) }}
-                        className="text-muted-foreground truncate hover:text-foreground transition-colors text-left"
-                      >
-                        {child.title}
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>}
+              </div>
 
-            {/* Description */}
-            <div>
-              <p className="text-xs text-muted-foreground mb-1.5">Description</p>
-              {isEditing ? (
-                <RichTextEditor
-                  key={`${issue.id}-edit`}
-                  content={editDescription}
-                  onChange={setEditDescription}
-                  placeholder="Add a description…"
-                  className="min-h-[160px] rounded-md border border-input"
+              <Divider />
+
+              {/* ── Assignees ── */}
+              <div>
+                <FieldLabel>Assignees</FieldLabel>
+                <AssigneeSelector
+                  value={issue.assignee_ids ?? []}
+                  onChange={handleAssigneesChange}
+                  disabled={updateIssue.isPending}
                 />
-              ) : issue.description ? (
-                <RichTextContent html={issue.description} className="text-sm" />
-              ) : (
-                <p className="text-sm text-muted-foreground/50 italic">No description</p>
+              </div>
+
+              <Divider />
+
+              {/* ── Sprint + List + Dates ── */}
+              <div className="flex gap-3 items-start min-w-0">
+                <div className="flex-1 min-w-0">
+                  <FieldLabel>Sprint</FieldLabel>
+                  <Select
+                    value={issue.sprint_id ?? "none"}
+                    onValueChange={(v) => handleSprintChange(v === "none" ? null : v)}
+                  >
+                    <SelectTrigger className="h-8 text-xs min-w-0">
+                      <div className="flex items-center gap-1 min-w-0 overflow-hidden">
+                        <Layers className="h-3 w-3 shrink-0 text-muted-foreground" />
+                        <SelectValue placeholder="No sprint" />
+                      </div>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none" className="text-xs text-muted-foreground">
+                        No sprint
+                      </SelectItem>
+                      {activeSprints.map((s) => {
+                        const range = sprintDateRange(s)
+                        return (
+                          <SelectItem key={s.id} value={s.id} className="text-xs">
+                            <div className="flex items-baseline gap-1.5">
+                              <span>{s.name}</span>
+                              {range && (
+                                <span className="text-[10px] text-muted-foreground font-normal">
+                                  {range}
+                                </span>
+                              )}
+                            </div>
+                          </SelectItem>
+                        )
+                      })}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {(taskLists ?? []).length > 0 && (
+                  <div className="flex-1 min-w-0">
+                    <FieldLabel>List</FieldLabel>
+                    <Select
+                      value={issue.task_list_id ?? "none"}
+                      onValueChange={(v) => handleTaskListChange(v === "none" ? null : v)}
+                    >
+                      <SelectTrigger className="h-8 text-xs min-w-0">
+                        <div className="flex items-center gap-1 min-w-0 overflow-hidden">
+                          <FolderOpen className="h-3 w-3 shrink-0 text-muted-foreground" />
+                          <SelectValue placeholder="No list">
+                            {currentTaskList ? currentTaskList.name : "No list"}
+                          </SelectValue>
+                        </div>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none" className="text-xs text-muted-foreground">No list</SelectItem>
+                        {(taskLists ?? []).map((tl) => (
+                          <SelectItem key={tl.id} value={tl.id} className="text-xs">{tl.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <FieldLabel>Start Date</FieldLabel>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button className="flex items-center gap-1 h-8 w-full min-w-0 px-2 rounded border border-input text-xs hover:bg-accent transition-colors overflow-hidden">
+                        <CalendarIcon className="h-3 w-3 shrink-0 text-muted-foreground" />
+                        <span className={`truncate ${issue.start_date ? "text-foreground" : "text-muted-foreground"}`}>
+                          {issue.start_date ? format(new Date(issue.start_date), "MMM d, yyyy") : "No date"}
+                        </span>
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={issue.start_date ? new Date(issue.start_date) : undefined}
+                        onSelect={handleStartDateChange}
+                        initialFocus
+                      />
+                      {issue.start_date && (
+                        <div className="border-t px-3 py-2">
+                          <button
+                            onClick={() => handleStartDateChange(undefined)}
+                            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors"
+                          >
+                            <X className="h-3 w-3" />
+                            Clear date
+                          </button>
+                        </div>
+                      )}
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <FieldLabel>Due Date</FieldLabel>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button className="flex items-center gap-1 h-8 w-full min-w-0 px-2 rounded border border-input text-xs hover:bg-accent transition-colors overflow-hidden">
+                        <CalendarIcon className="h-3 w-3 shrink-0 text-muted-foreground" />
+                        <span className={`truncate ${issue.due_date ? "text-foreground" : "text-muted-foreground"}`}>
+                          {issue.due_date ? format(new Date(issue.due_date), "MMM d, yyyy") : "No date"}
+                        </span>
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={issue.due_date ? new Date(issue.due_date) : undefined}
+                        onSelect={handleDueDateChange}
+                        initialFocus
+                      />
+                      {issue.due_date && (
+                        <div className="border-t px-3 py-2">
+                          <button
+                            onClick={() => handleDueDateChange(undefined)}
+                            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors"
+                          >
+                            <X className="h-3 w-3" />
+                            Clear date
+                          </button>
+                        </div>
+                      )}
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </div>
+
+              <Divider />
+
+              {/* ── Child Issues ── */}
+              {!issue.parent_id && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-semibold tracking-[0.08em] uppercase text-zinc-900 dark:text-zinc-100">
+                      Child Issues
+                    </span>
+                    <button
+                      onClick={() => setCreateChildOpen(true)}
+                      className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 text-[11px] font-medium hover:bg-indigo-100 dark:hover:bg-indigo-900/60 transition-colors"
+                    >
+                      <Plus className="h-3 w-3" />
+                      Add
+                    </button>
+                  </div>
+
+                  {parentIssue && (
+                    <button
+                      onClick={() => navigate(`/${workspace}/projects/${projectKey}/issues/${parentIssue.id}`)}
+                      className="flex items-center gap-2 w-full px-3 py-1.5 rounded-md bg-zinc-100 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 hover:border-indigo-300 dark:hover:border-indigo-700 transition-colors text-left"
+                    >
+                      <ChevronUp className="h-3.5 w-3.5 text-zinc-400 shrink-0" />
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 shrink-0">Parent:</span>
+                      <span className="font-mono text-[11px] font-medium text-indigo-700 dark:text-indigo-300 shrink-0">{parentIssue.identifier}</span>
+                      <span className="text-xs text-zinc-600 dark:text-zinc-300 truncate">{parentIssue.title}</span>
+                    </button>
+                  )}
+
+                  {childIssues.length === 0 ? (
+                    <button
+                      onClick={() => setCreateChildOpen(true)}
+                      className="w-full flex items-center justify-center gap-2 py-3.5 rounded-lg border-2 border-dashed border-zinc-200 dark:border-zinc-800 text-xs text-zinc-400 dark:text-zinc-500 hover:border-indigo-300 hover:text-indigo-500 dark:hover:border-indigo-700 dark:hover:text-indigo-400 transition-all"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      Create child issue
+                    </button>
+                  ) : (
+                    <div className="space-y-1">
+                      {childIssues.map((child) => (
+                        <button
+                          key={child.id}
+                          onClick={() => {
+                            onClose()
+                            navigate(`/${workspace}/projects/${projectKey}/issues/${child.id}`)
+                          }}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg bg-indigo-50/40 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100/70 hover:border-indigo-400 dark:hover:bg-indigo-950/50 dark:hover:border-indigo-600 hover:shadow-sm transition-all text-left group"
+                        >
+                          <CornerDownRight className="h-3.5 w-3.5 text-indigo-400 dark:text-indigo-500 shrink-0" />
+                          <span className="font-mono text-[11px] font-medium text-indigo-700 dark:text-indigo-300 shrink-0">
+                            {child.identifier}
+                          </span>
+                          <span className="text-xs text-zinc-700 dark:text-zinc-300 truncate group-hover:text-zinc-900 dark:group-hover:text-zinc-100 transition-colors">
+                            {child.title}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               )}
+
+              <Divider />
+
+              {/* ── Description ── */}
+              <div>
+                <FieldLabel>Description</FieldLabel>
+                {isEditing ? (
+                  <RichTextEditor
+                    key={`${issue.id}-edit`}
+                    content={editDescription}
+                    onChange={setEditDescription}
+                    placeholder="Add a description…"
+                    className="min-h-[160px] rounded-md border border-input"
+                  />
+                ) : issue.description ? (
+                  <div className="rounded-lg bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-100 dark:border-zinc-800 px-3.5 py-3">
+                    <RichTextContent html={issue.description} className="text-sm" />
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setIsEditing(true)}
+                    className="w-full flex items-center justify-center gap-2 py-3.5 rounded-lg border-2 border-dashed border-zinc-200 dark:border-zinc-800 text-xs text-zinc-400 dark:text-zinc-500 hover:border-indigo-300 hover:text-indigo-500 dark:hover:border-indigo-700 dark:hover:text-indigo-400 transition-all"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                    Add description
+                  </button>
+                )}
+              </div>
             </div>
 
-          </div>
+            <div className="px-6 py-4">
+              <WidgetZone zone="issue.details.after" props={{ issue }} />
+            </div>
 
-          <div className="px-6 py-4">
-            <WidgetZone zone="issue.details.after" props={{ issue }} />
-          </div>
+            <IssueActivity
+              issueId={issue.id}
+              className="border-t border-border"
+              compact
+              hideCommentInput
+              onTabChange={setActiveActivityTab}
+              onViewMore={() => {
+                onClose()
+                navigate(`/${workspace}/projects/${projectKey}/issues/${issue.id}`)
+              }}
+            />
+          </ScrollArea>
 
-          <IssueActivity
-            issueId={issue.id}
-            className="border-t border-border"
-            compact
-            hideCommentInput
-            onTabChange={setActiveActivityTab}
-            onViewMore={() => {
-              onClose()
-              navigate(`/${workspace}/projects/${projectKey}/issues/${issue.id}`)
-            }}
-          />
-        </ScrollArea>
+          {/* ── Sticky comment input ── */}
+          {activeActivityTab === "comments" && (
+            <div className="border-t border-border px-6 py-3 shrink-0">
+              <CommentInput issueId={issue.id} compact />
+            </div>
+          )}
+        </DrawerContent>
+      </Drawer>
 
-        {/* Sticky comment input — only visible on Comments tab */}
-        {activeActivityTab === "comments" && (
-          <div className="border-t border-border px-6 py-3 shrink-0">
-            <CommentInput issueId={issue.id} compact />
-          </div>
-        )}
-      </DrawerContent>
-    </Drawer>
-
-    <CreateIssueDialog
-      open={createChildOpen}
-      onClose={() => setCreateChildOpen(false)}
-      projectId={projectId}
-      defaultParentId={issue.id}
-      defaultTaskListId={issue.task_list_id}
-    />
+      <CreateIssueDialog
+        open={createChildOpen}
+        onClose={() => setCreateChildOpen(false)}
+        projectId={projectId}
+        defaultParentId={issue.id}
+        defaultTaskListId={issue.task_list_id}
+      />
     </>
   )
 }

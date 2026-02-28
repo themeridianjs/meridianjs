@@ -13,7 +13,7 @@ import {
   ISSUE_TYPE_LABELS,
 } from "@/lib/constants"
 import {
-  Plus, Pencil, UserPlus, UserMinus, ArrowRight,
+  Plus, Pencil, UserPlus, UserMinus, ArrowRight, MessageSquare,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { IssueAttachments } from "@/components/issues/IssueAttachments"
@@ -21,6 +21,24 @@ import { IssueTimeLog } from "@/components/issues/IssueTimeLog"
 import { CommentInput } from "@/components/issues/CommentInput"
 import { InlineAttachment } from "@/components/issues/AttachmentViewer"
 import { RichTextContent } from "@/components/ui/rich-text-editor"
+
+// Deterministic avatar color from name
+const AVATAR_PALETTE = [
+  { bg: "bg-indigo-100 dark:bg-indigo-900/50", text: "text-indigo-700 dark:text-indigo-300" },
+  { bg: "bg-violet-100 dark:bg-violet-900/50", text: "text-violet-700 dark:text-violet-300" },
+  { bg: "bg-emerald-100 dark:bg-emerald-900/50", text: "text-emerald-700 dark:text-emerald-300" },
+  { bg: "bg-amber-100 dark:bg-amber-900/50", text: "text-amber-700 dark:text-amber-300" },
+  { bg: "bg-rose-100 dark:bg-rose-900/50", text: "text-rose-700 dark:text-rose-300" },
+  { bg: "bg-sky-100 dark:bg-sky-900/50", text: "text-sky-700 dark:text-sky-300" },
+  { bg: "bg-teal-100 dark:bg-teal-900/50", text: "text-teal-700 dark:text-teal-300" },
+  { bg: "bg-orange-100 dark:bg-orange-900/50", text: "text-orange-700 dark:text-orange-300" },
+]
+
+export function getAvatarColor(name: string) {
+  let hash = 0
+  for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) & 0xffff
+  return AVATAR_PALETTE[hash % AVATAR_PALETTE.length]
+}
 
 // Render HTML from the WYSIWYG editor, or fall back to plain text for older
 // comments that were saved before the editor was introduced.
@@ -148,7 +166,6 @@ export function IssueActivity({
   const { data: userMap } = useUserMap()
   const { data: comments, isLoading: loadingComments } = useIssueComments(issueId)
   const { data: activities, isLoading: loadingActivities } = useIssueActivities(issueId)
-  // All issue attachments — used to filter inline per-comment attachments
   const { data: allAttachments } = useAttachments(issueId)
 
   const getCommentAuthor = (authorId: string) => {
@@ -164,8 +181,8 @@ export function IssueActivity({
 
   return (
     <div className={className}>
-      {/* Tab bar */}
-      <div className="flex items-center gap-0.5 px-6 pt-4 pb-2 flex-wrap">
+      {/* ── Tab bar ── */}
+      <div className="flex items-center gap-0 px-6 pt-3 border-b border-zinc-100 dark:border-zinc-800">
         {(["comments", "activity", "attachments", "time"] as const).map((tab) => {
           const count =
             tab === "comments" ? (comments?.length ?? 0) :
@@ -175,20 +192,24 @@ export function IssueActivity({
             tab === "comments" ? "Comments" :
             tab === "activity" ? "Activity" :
             tab === "attachments" ? "Attachments" : "Time"
+          const isActive = activeTab === tab
           return (
             <button
               key={tab}
               onClick={() => handleTabChange(tab)}
               className={cn(
-                "px-3 py-1.5 text-xs font-medium rounded-md transition-colors",
-                activeTab === tab
-                  ? "bg-foreground/5 text-foreground"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                "pb-2.5 mr-5 text-xs font-medium transition-colors border-b-2 -mb-px",
+                isActive
+                  ? "text-indigo-700 dark:text-indigo-300 border-indigo-500 dark:border-indigo-400"
+                  : "border-transparent text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"
               )}
             >
               {label}
               {count != null && count > 0 && (
-                <span className="ml-1.5 text-[10px] tabular-nums text-muted-foreground">
+                <span className={cn(
+                  "ml-1.5 text-[10px] tabular-nums font-normal",
+                  isActive ? "text-indigo-700 dark:text-indigo-500" : "text-zinc-400"
+                )}>
                   {count}
                 </span>
               )}
@@ -197,9 +218,9 @@ export function IssueActivity({
         })}
       </div>
 
-      {/* ── Comments tab ──────────────────────────────────────────────────────── */}
+      {/* ── Comments tab ── */}
       {activeTab === "comments" && (
-        <div className="px-6 pb-5">
+        <div className="px-6 pb-5 pt-4">
           <div className="space-y-5 mb-5">
             {loadingComments ? (
               <div className="flex gap-3">
@@ -209,26 +230,27 @@ export function IssueActivity({
             ) : comments && comments.length > 0 ? (
               (compact ? comments.slice(-5) : comments).map((c) => {
                 const author = getCommentAuthor(c.author_id)
+                const avatarColor = getAvatarColor(author.name)
                 const commentAttachments = (allAttachments ?? []).filter(
                   (a) => a.comment_id === c.id
                 )
                 return (
                   <div key={c.id} className="flex gap-3">
                     <Avatar className="h-7 w-7 mt-0.5 shrink-0">
-                      <AvatarFallback className="text-[11px] bg-muted text-muted-foreground">
+                      <AvatarFallback className={cn("text-[11px] font-semibold", avatarColor.bg, avatarColor.text)}>
                         {author.initials}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-baseline gap-2 mb-1">
-                        <span className="text-xs font-medium text-foreground">{author.name}</span>
-                        <span className="text-[11px] text-muted-foreground">
+                      <div className="flex items-baseline gap-2 mb-1.5">
+                        <span className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">{author.name}</span>
+                        <span className="text-[11px] text-zinc-400 dark:text-zinc-500">
                           {format(new Date(c.created_at), "MMM d, h:mm a")}
                         </span>
                       </div>
-                      {/* Comment body — plain text fallback for pre-editor comments */}
-                      <CommentBody body={c.body} />
-                      {/* Inline attachments */}
+                      <div className="rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 px-3 py-2.5">
+                        <CommentBody body={c.body} />
+                      </div>
                       {commentAttachments.length > 0 && (
                         <div className="mt-2 flex flex-wrap gap-2">
                           {commentAttachments.map((a) => (
@@ -241,16 +263,21 @@ export function IssueActivity({
                 )
               })
             ) : (
-              <p className="text-sm text-muted-foreground/50 py-2">No comments yet.</p>
+              <div className="flex flex-col items-center py-6 gap-2">
+                <div className="h-9 w-9 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
+                  <MessageSquare className="h-4 w-4 text-zinc-400 dark:text-zinc-500" />
+                </div>
+                <p className="text-xs text-zinc-400 dark:text-zinc-500">No comments yet</p>
+              </div>
             )}
           </div>
 
           {compact && comments && comments.length > 5 && onViewMore && (
             <button
               onClick={onViewMore}
-              className="text-xs text-muted-foreground hover:text-foreground mb-4 underline underline-offset-2"
+              className="text-xs text-indigo-700 hover:text-indigo-900 dark:text-indigo-300 dark:hover:text-indigo-100 mb-4 font-medium transition-colors"
             >
-              View all {comments.length} comments
+              View all {comments.length} comments →
             </button>
           )}
 
@@ -260,11 +287,11 @@ export function IssueActivity({
         </div>
       )}
 
-      {/* ── Activity tab ──────────────────────────────────────────────────────── */}
+      {/* ── Activity tab ── */}
       {activeTab === "activity" && (
-        <div className="px-6 pb-6">
+        <div className="px-6 pb-6 pt-4">
           {loadingActivities ? (
-            <div className="space-y-4 pt-1">
+            <div className="space-y-4">
               {[1, 2, 3].map((i) => (
                 <div key={i} className="flex gap-3">
                   <Skeleton className="h-6 w-6 rounded-full shrink-0 mt-0.5" />
@@ -275,7 +302,7 @@ export function IssueActivity({
           ) : activities && activities.length > 0 ? (
             <>
               <div className="relative">
-                <div className="absolute left-[11px] top-2 bottom-2 w-px bg-border" />
+                <div className="absolute left-[11px] top-2 bottom-2 w-px bg-zinc-100 dark:bg-zinc-800" />
                 <div className="space-y-0">
                   {(compact ? activities.slice(-5) : activities).map((act, idx, arr) => {
                     const cfg = ACTIVITY_ICONS[act.action] ?? ACTIVITY_ICONS.updated
@@ -292,13 +319,13 @@ export function IssueActivity({
                         </div>
                         <div className="flex-1 min-w-0 pt-0.5">
                           <p className="text-xs text-foreground leading-relaxed">
-                            <span className="font-medium">{actorName}</span>
+                            <span className="font-semibold text-zinc-900 dark:text-zinc-100">{actorName}</span>
                             {" "}
-                            <span className="text-muted-foreground">
+                            <span className="text-zinc-500 dark:text-zinc-400">
                               {renderActivityDescription(act, userMap)}
                             </span>
                           </p>
-                          <p className="text-[11px] text-muted-foreground/60 mt-0.5">
+                          <p className="text-[11px] text-zinc-400 dark:text-zinc-500 mt-0.5">
                             {format(new Date(act.created_at), "MMM d, yyyy · h:mm a")}
                           </p>
                         </div>
@@ -310,24 +337,24 @@ export function IssueActivity({
               {compact && activities.length > 5 && onViewMore && (
                 <button
                   onClick={onViewMore}
-                  className="text-xs text-muted-foreground hover:text-foreground mt-3 underline underline-offset-2"
+                  className="text-xs text-indigo-700 hover:text-indigo-900 dark:text-indigo-300 dark:hover:text-indigo-100 mt-3 font-medium transition-colors"
                 >
-                  View all {activities.length} events
+                  View all {activities.length} events →
                 </button>
               )}
             </>
           ) : (
-            <p className="text-sm text-muted-foreground/50 py-2">No activity yet.</p>
+            <p className="text-xs text-zinc-400 dark:text-zinc-500 py-4">No activity yet.</p>
           )}
         </div>
       )}
 
-      {/* ── Attachments tab ───────────────────────────────────────────────────── */}
+      {/* ── Attachments tab ── */}
       {activeTab === "attachments" && (
         <IssueAttachments issueId={issueId} />
       )}
 
-      {/* ── Time tab ──────────────────────────────────────────────────────────── */}
+      {/* ── Time tab ── */}
       {activeTab === "time" && (
         <IssueTimeLog issueId={issueId} />
       )}
