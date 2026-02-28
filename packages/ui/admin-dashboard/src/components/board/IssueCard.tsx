@@ -5,7 +5,7 @@ import { useUserMap } from "@/api/hooks/useUsers"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { ISSUE_PRIORITY_COLORS } from "@/lib/constants"
 import { cn } from "@/lib/utils"
-import { Circle, Zap, ArrowUp, ArrowDown, Minus } from "lucide-react"
+import { Circle, Zap, ArrowUp, ArrowDown, Minus, ListTree } from "lucide-react"
 
 const PriorityIcon = ({ priority }: { priority: string }) => {
   const cls = cn("h-3 w-3 shrink-0", ISSUE_PRIORITY_COLORS[priority])
@@ -20,10 +20,11 @@ const PriorityIcon = ({ priority }: { priority: string }) => {
 
 interface IssueCardProps {
   issue: Issue
+  childCount?: number
   onClick?: () => void
 }
 
-export function IssueCard({ issue, onClick }: IssueCardProps) {
+export function IssueCard({ issue, childCount = 0, onClick }: IssueCardProps) {
   const { data: userMap } = useUserMap()
   const {
     attributes,
@@ -56,9 +57,22 @@ export function IssueCard({ issue, onClick }: IssueCardProps) {
         {issue.title}
       </p>
       <div className="flex items-center justify-between gap-2">
-        <span className="text-[11px] font-mono text-muted-foreground">
-          {issue.identifier}
-        </span>
+        <div className="flex items-center gap-1.5 min-w-0">
+          <span className="text-[11px] font-mono text-muted-foreground shrink-0">
+            {issue.identifier}
+          </span>
+          {issue.parent_id && (
+            <span className="flex items-center text-zinc-400 dark:text-zinc-500 shrink-0" title="Child issue">
+              <ListTree className="h-3 w-3" />
+            </span>
+          )}
+          {childCount > 0 && (
+            <span className="flex items-center gap-0.5 text-[10px] font-medium text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/50 px-1 py-0.5 rounded shrink-0">
+              <ListTree className="h-2.5 w-2.5" />
+              {childCount}
+            </span>
+          )}
+        </div>
         <div className="flex items-center gap-1.5">
           {(issue.assignee_ids ?? []).length > 0 && (
             <div className="flex -space-x-1">

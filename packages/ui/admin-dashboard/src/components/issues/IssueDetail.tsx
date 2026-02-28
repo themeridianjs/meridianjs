@@ -30,7 +30,7 @@ import {
   ISSUE_TYPE_LABELS,
 } from "@/lib/constants"
 import { RichTextEditor, RichTextContent } from "@/components/ui/rich-text-editor"
-import { Pencil, X, Check, Link2, Paperclip, GitBranch, Maximize2, MoreHorizontal, PanelRight, ThumbsUp, Layers, FolderOpen, CornerDownRight, Plus, ChevronUp, Calendar as CalendarIcon } from "lucide-react"
+import { Pencil, X, Check, Link2, Paperclip, GitBranch, Maximize2, MoreHorizontal, PanelRight, ThumbsUp, Layers, FolderOpen, ListTree, Plus, ChevronUp, Calendar as CalendarIcon } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
 import { cn } from "@/lib/utils"
@@ -548,7 +548,7 @@ export function IssueDetail({ issue: issueProp, projectId, open, onClose }: Issu
                           }}
                           className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg bg-indigo-50/40 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100/70 hover:border-indigo-400 dark:hover:bg-indigo-950/50 dark:hover:border-indigo-600 hover:shadow-sm transition-all text-left group"
                         >
-                          <CornerDownRight className="h-3.5 w-3.5 text-indigo-400 dark:text-indigo-500 shrink-0" />
+                          <ListTree className="h-3.5 w-3.5 text-indigo-400 dark:text-indigo-500 shrink-0" />
                           <span className="font-mono text-[11px] font-medium text-indigo-700 dark:text-indigo-300 shrink-0">
                             {child.identifier}
                           </span>

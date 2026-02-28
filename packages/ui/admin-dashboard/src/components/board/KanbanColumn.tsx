@@ -33,12 +33,13 @@ interface KanbanColumnProps {
   color: string
   category: Category
   issues: Issue[]
+  childCounts?: Map<string, number>
   /** When true, this column is part of a sortable column context */
   sortable?: boolean
   onIssueClick?: (issue: Issue) => void
 }
 
-export function KanbanColumn({ id, label, color, category, issues, sortable, onIssueClick }: KanbanColumnProps) {
+export function KanbanColumn({ id, label, color, category, issues, childCounts, sortable, onIssueClick }: KanbanColumnProps) {
   const { setNodeRef: setDropRef, isOver } = useDroppable({ id })
 
   const {
@@ -94,6 +95,7 @@ export function KanbanColumn({ id, label, color, category, issues, sortable, onI
             <IssueCard
               key={issue.id}
               issue={issue}
+              childCount={childCounts?.get(issue.id) ?? 0}
               onClick={() => onIssueClick?.(issue)}
             />
           ))}

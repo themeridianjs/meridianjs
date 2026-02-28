@@ -29,7 +29,7 @@ import {
   Circle, Clock, ArrowRight, Eye, CheckCircle2, XCircle,
   Zap, ArrowUp, Minus, ArrowDown,
   Bug, Sparkles, CheckSquare, HelpCircle, Layers, FolderOpen,
-  CornerDownRight, ChevronUp, Calendar as CalendarIcon, X,
+  ListTree, ChevronUp, Calendar as CalendarIcon, X,
 } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
@@ -351,7 +351,7 @@ export function IssueDetailPage() {
                 <div className="px-5 py-2 divide-y divide-border/40">
                   {childIssues.map((child) => (
                     <div key={child.id} className="flex items-center gap-2 py-2 text-xs">
-                      <CornerDownRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                      <ListTree className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                       <button
                         onClick={() => navigate(`/${workspace}/projects/${projectKey}/issues/${child.id}`)}
                         className="font-mono text-muted-foreground hover:text-foreground transition-colors shrink-0"

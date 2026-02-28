@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from "react"
+import { useState, useCallback, useEffect, useRef, useMemo } from "react"
 import {
   DndContext,
   DragOverlay,
@@ -112,6 +112,14 @@ export function KanbanBoard({ issues, projectId, statuses, onIssueClick, onColum
   /** Prevents the server-sync useEffect from overwriting columns mid-drag. */
   const isDraggingRef = useRef(false)
   const qc = useQueryClient()
+
+  const childCounts = useMemo(() => {
+    const map = new Map<string, number>()
+    for (const issue of issues) {
+      if (issue.parent_id) map.set(issue.parent_id, (map.get(issue.parent_id) ?? 0) + 1)
+    }
+    return map
+  }, [issues])
 
   // When the server issues list changes (refetch, new issue, etc.) and no drag
   // is in progress, sync the local column map from the canonical server data.
@@ -391,6 +399,7 @@ export function KanbanBoard({ issues, projectId, statuses, onIssueClick, onColum
               color={status.color}
               category={status.category}
               issues={columns[status.key] ?? []}
+              childCounts={childCounts}
               sortable
               onIssueClick={onIssueClick}
             />
