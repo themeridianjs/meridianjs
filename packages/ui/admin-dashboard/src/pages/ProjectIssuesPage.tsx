@@ -150,12 +150,13 @@ function IssueRow({
             </Tooltip>
           )}
           {!isChild && !hasChildren && <span className="w-4 shrink-0" />}
-          {isChild && <span className="text-muted-foreground/40 shrink-0 text-xs">↳</span>}
+          {isChild && <ListTree className="h-3 w-3 text-muted-foreground/40 shrink-0" />}
           <span className={cn("text-sm text-foreground truncate", isChild && "text-muted-foreground")}>
             {issue.title}
           </span>
           {!isChild && hasChildren && (
-            <span className="shrink-0 text-[10px] text-muted-foreground/60 ml-1 font-mono">
+            <span className="shrink-0 flex items-center gap-0.5 ml-1 text-[10px] font-medium text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/50 px-1 py-0.5 rounded">
+              <ListTree className="h-2.5 w-2.5" />
               {children.length}
             </span>
           )}
