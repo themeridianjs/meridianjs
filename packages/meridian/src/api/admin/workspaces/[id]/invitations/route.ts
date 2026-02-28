@@ -1,7 +1,20 @@
 import type { Response } from "express"
 import { createInvitationWorkflow } from "../../../../../workflows/create-invitation.js"
 
+async function assertWorkspaceMembership(req: any, res: Response): Promise<boolean> {
+  const roles: string[] = req.user?.roles ?? []
+  if (roles.includes("super-admin") || roles.includes("admin")) return true
+  const workspaceMemberService = req.scope.resolve("workspaceMemberModuleService") as any
+  const membership = await workspaceMemberService.getMembership(req.params.id, req.user?.id)
+  if (!membership) {
+    res.status(403).json({ error: { message: "Forbidden — not a member of this workspace" } })
+    return false
+  }
+  return true
+}
+
 export const GET = async (req: any, res: Response) => {
+  if (!await assertWorkspaceMembership(req, res)) return
   const svc = req.scope.resolve("invitationModuleService") as any
   const [invitations, count] = await svc.listAndCountInvitations(
     { workspace_id: req.params.id },
@@ -11,6 +24,7 @@ export const GET = async (req: any, res: Response) => {
 }
 
 export const POST = async (req: any, res: Response) => {
+  if (!await assertWorkspaceMembership(req, res)) return
   const { email, role, app_role_id } = req.body
 
   if (!role || !["admin", "member"].includes(role)) {

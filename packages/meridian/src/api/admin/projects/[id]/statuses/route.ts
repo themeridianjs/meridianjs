@@ -24,6 +24,12 @@ export const POST = async (req: any, res: Response) => {
     return
   }
   const svc = req.scope.resolve("projectModuleService") as any
+  const project = await svc.retrieveProject(req.params.id).catch(() => null)
+  if (!project) { res.status(404).json({ error: { message: "Project not found" } }); return }
+  if (!await hasProjectAccess(req, project)) {
+    res.status(403).json({ error: { message: "Forbidden" } })
+    return
+  }
   const existing = await svc.listStatusesByProject(req.params.id)
   const position = existing.length > 0 ? Math.max(...existing.map((s: any) => s.position)) + 1 : 0
   const status = await svc.createProjectStatus({

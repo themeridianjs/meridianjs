@@ -1,8 +1,15 @@
 import type { Response } from "express"
+import { hasProjectAccess } from "../../../../../utils/project-access.js"
 
 export const PUT = async (req: any, res: Response) => {
   const { name, color, category, metadata } = req.body
   const svc = req.scope.resolve("projectModuleService") as any
+  const project = await svc.retrieveProject(req.params.id).catch(() => null)
+  if (!project) { res.status(404).json({ error: { message: "Project not found" } }); return }
+  if (!await hasProjectAccess(req, project)) {
+    res.status(403).json({ error: { message: "Forbidden" } })
+    return
+  }
   const payload: Record<string, unknown> = {}
   if (name !== undefined) payload.name = name
   if (color !== undefined) payload.color = color
@@ -15,6 +22,12 @@ export const PUT = async (req: any, res: Response) => {
 export const DELETE = async (req: any, res: Response) => {
   const svc = req.scope.resolve("projectModuleService") as any
   const issueSvc = req.scope.resolve("issueModuleService") as any
+  const project = await svc.retrieveProject(req.params.id).catch(() => null)
+  if (!project) { res.status(404).json({ error: { message: "Project not found" } }); return }
+  if (!await hasProjectAccess(req, project)) {
+    res.status(403).json({ error: { message: "Forbidden" } })
+    return
+  }
   const statuses = await svc.listStatusesByProject(req.params.id)
   const target = statuses.find((s: any) => s.id === req.params.statusId)
   if (!target) { res.status(404).json({ error: { message: "Status not found" } }); return }

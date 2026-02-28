@@ -33,7 +33,7 @@ export function authenticateJWT(req: any, res: Response, next: NextFunction): vo
     }
 
     try {
-      const payload = jwt.verify(token, config.projectConfig.jwtSecret) as any
+      const payload = jwt.verify(token, config.projectConfig.jwtSecret, { algorithms: ["HS256"] }) as any
 
       // Validate session is not revoked (stateful check)
       if (payload.jti) {

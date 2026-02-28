@@ -1,4 +1,4 @@
-import type { Response } from "express"
+import type { Response, NextFunction } from "express"
 import { requirePermission } from "@meridianjs/auth"
 
 export const GET = async (req: any, res: Response) => {
@@ -28,26 +28,30 @@ export const GET = async (req: any, res: Response) => {
   res.json({ members: enriched, count: enriched.length })
 }
 
-export const POST = async (req: any, res: Response) => {
+export const POST = async (req: any, res: Response, next: NextFunction) => {
   requirePermission("team:manage_members")(req, res, async () => {
-    const teamMemberService = req.scope.resolve("teamMemberModuleService") as any
-    const { user_id } = req.body
+    try {
+      const teamMemberService = req.scope.resolve("teamMemberModuleService") as any
+      const { user_id } = req.body
 
-    if (!user_id) {
-      res.status(400).json({ error: { message: "user_id is required" } })
-      return
+      if (!user_id) {
+        res.status(400).json({ error: { message: "user_id is required" } })
+        return
+      }
+
+      if (await teamMemberService.isMember(req.params.teamId, user_id)) {
+        res.status(409).json({ error: { message: "User is already a member of this team" } })
+        return
+      }
+
+      const member = await teamMemberService.createTeamMember({
+        team_id: req.params.teamId,
+        user_id,
+      })
+
+      res.status(201).json({ member })
+    } catch (err) {
+      next(err)
     }
-
-    if (await teamMemberService.isMember(req.params.teamId, user_id)) {
-      res.status(409).json({ error: { message: "User is already a member of this team" } })
-      return
-    }
-
-    const member = await teamMemberService.createTeamMember({
-      team_id: req.params.teamId,
-      user_id,
-    })
-
-    res.status(201).json({ member })
   })
 }

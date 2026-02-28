@@ -67,7 +67,7 @@ export class AuthModuleService extends MeridianService({}) {
     // all subsequent users default to member.
     let role: UserRole = input.role ?? "member"
     if (!input.role) {
-      const userCount = await userService.countUsers()
+      const [, userCount] = await userService.listAndCountUsers({}, { limit: 1 })
       if (userCount === 0) role = "super-admin"
     }
 
@@ -136,7 +136,7 @@ export class AuthModuleService extends MeridianService({}) {
 
   /** Verify a JWT and return its decoded payload. Throws if invalid or expired. */
   verifyToken(token: string, secret: string): JwtPayload {
-    return jwt.verify(token, secret) as JwtPayload
+    return jwt.verify(token, secret, { algorithms: ["HS256"] }) as JwtPayload
   }
 
   /** Resolve permissions for a given app_role_id — gracefully degrades if module not loaded. */

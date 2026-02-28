@@ -45,7 +45,6 @@ export const createInvitationWorkflow = createWorkflow(
         workspace_id: invitation.workspace_id,
         email: invitation.email,
         role: invitation.role,
-        token: invitation.token,
         created_by: input.created_by,
       },
     })

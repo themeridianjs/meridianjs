@@ -72,12 +72,12 @@ export class IssueModuleService extends MeridianService({
       throw Object.assign(new Error(`Project ${input.project_id} not found`), { status: 404 })
     }
 
-    // Get the next sequential number for this project
-    const existing = await issueRepo.find({ project_id: input.project_id })
-    const maxNumber = (existing as any[]).reduce(
-      (max: number, issue: any) => Math.max(max, issue.number ?? 0),
-      0
+    // Get the next sequential number for this project (fetch only the highest-numbered issue)
+    const [highest] = await issueRepo.find(
+      { project_id: input.project_id },
+      { orderBy: { number: "DESC" }, limit: 1 }
     )
+    const maxNumber = (highest as any)?.number ?? 0
     const nextNumber = maxNumber + 1
     const identifier = `${project.identifier}-${nextNumber}`
 

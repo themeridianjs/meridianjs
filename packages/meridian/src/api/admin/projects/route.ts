@@ -1,4 +1,4 @@
-import type { Response } from "express"
+import type { Response, NextFunction } from "express"
 import { requirePermission } from "@meridianjs/auth"
 import { createProjectWorkflow } from "../../../workflows/create-project.js"
 
@@ -52,32 +52,36 @@ export const GET = async (req: any, res: Response) => {
   res.json({ projects, count, limit, offset })
 }
 
-export const POST = async (req: any, res: Response) => {
+export const POST = async (req: any, res: Response, next: NextFunction) => {
   requirePermission("project:create")(req, res, async () => {
-    const projectMemberService = req.scope.resolve("projectMemberModuleService") as any
-    const { name, description, workspace_id, visibility, icon, color, identifier, initial_statuses, metadata } = req.body
-    if (!name || !workspace_id) {
-      res.status(400).json({ error: { message: "name and workspace_id are required" } })
-      return
+    try {
+      const projectMemberService = req.scope.resolve("projectMemberModuleService") as any
+      const { name, description, workspace_id, visibility, icon, color, identifier, initial_statuses, metadata } = req.body
+      if (!name || !workspace_id) {
+        res.status(400).json({ error: { message: "name and workspace_id are required" } })
+        return
+      }
+      const { result: project, errors, transaction_status } = await createProjectWorkflow(req.scope).run({
+        input: {
+          name, identifier, description: description ?? null, workspace_id,
+          visibility: visibility ?? "private", icon: icon ?? null, color: color ?? null,
+          owner_id: req.user?.id ?? null, actor_id: req.user?.id ?? null,
+          initial_statuses: initial_statuses ?? undefined,
+          metadata: metadata ?? null,
+        },
+      })
+      if (transaction_status === "reverted") {
+        const err = errors[0]
+        res.status((err as any).status ?? 500).json({ error: { message: err.message } })
+        return
+      }
+      // Auto-create project membership for the creator (manager role)
+      if (req.user?.id && project) {
+        await projectMemberService.ensureProjectMember(project.id, req.user.id, "manager")
+      }
+      res.status(201).json({ project })
+    } catch (err) {
+      next(err)
     }
-    const { result: project, errors, transaction_status } = await createProjectWorkflow(req.scope).run({
-      input: {
-        name, identifier, description: description ?? null, workspace_id,
-        visibility: visibility ?? "private", icon: icon ?? null, color: color ?? null,
-        owner_id: req.user?.id ?? null, actor_id: req.user?.id ?? null,
-        initial_statuses: initial_statuses ?? undefined,
-        metadata: metadata ?? null,
-      },
-    })
-    if (transaction_status === "reverted") {
-      const err = errors[0]
-      res.status((err as any).status ?? 500).json({ error: { message: err.message } })
-      return
-    }
-    // Auto-create project membership for the creator (manager role)
-    if (req.user?.id && project) {
-      await projectMemberService.ensureProjectMember(project.id, req.user.id, "manager")
-    }
-    res.status(201).json({ project })
   })
 }

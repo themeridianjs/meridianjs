@@ -1,4 +1,4 @@
-import type { Response } from "express"
+import type { Response, NextFunction } from "express"
 import { requirePermission } from "@meridianjs/auth"
 import { createIssueWorkflow } from "../../../workflows/create-issue.js"
 import { hasProjectAccess } from "../../utils/project-access.js"
@@ -31,32 +31,36 @@ export const GET = async (req: any, res: Response) => {
   res.json({ issues, count, limit, offset })
 }
 
-export const POST = async (req: any, res: Response) => {
+export const POST = async (req: any, res: Response, next: NextFunction) => {
   requirePermission("issue:create")(req, res, async () => {
-    const { title, project_id, workspace_id, description, type, priority, status,
-            assignee_ids, reporter_id, parent_id, start_date, due_date, estimate, sprint_id, task_list_id, metadata } = req.body
-    if (!title || !project_id || !workspace_id) {
-      res.status(400).json({ error: { message: "title, project_id and workspace_id are required" } })
-      return
+    try {
+      const { title, project_id, workspace_id, description, type, priority, status,
+              assignee_ids, reporter_id, parent_id, start_date, due_date, estimate, sprint_id, task_list_id, metadata } = req.body
+      if (!title || !project_id || !workspace_id) {
+        res.status(400).json({ error: { message: "title, project_id and workspace_id are required" } })
+        return
+      }
+      const { result: issue, errors, transaction_status } = await createIssueWorkflow(req.scope).run({
+        input: {
+          title, project_id, workspace_id, description, type, priority, status,
+          assignee_ids: Array.isArray(assignee_ids) ? assignee_ids : null,
+          reporter_id: reporter_id ?? (req.user?.id ?? null),
+          parent_id: parent_id ?? null,
+          start_date: start_date ? new Date(start_date) : null,
+          due_date: due_date ? new Date(due_date) : undefined,
+          estimate: estimate ?? null, sprint_id: sprint_id ?? null, task_list_id: task_list_id ?? null,
+          metadata: metadata ?? null,
+          actor_id: req.user?.id ?? null,
+        },
+      })
+      if (transaction_status === "reverted") {
+        const err = errors[0]
+        res.status((err as any).status ?? 500).json({ error: { message: err.message } })
+        return
+      }
+      res.status(201).json({ issue })
+    } catch (err) {
+      next(err)
     }
-    const { result: issue, errors, transaction_status } = await createIssueWorkflow(req.scope).run({
-      input: {
-        title, project_id, workspace_id, description, type, priority, status,
-        assignee_ids: Array.isArray(assignee_ids) ? assignee_ids : null,
-        reporter_id: reporter_id ?? (req.user?.id ?? null),
-        parent_id: parent_id ?? null,
-        start_date: start_date ? new Date(start_date) : null,
-        due_date: due_date ? new Date(due_date) : undefined,
-        estimate: estimate ?? null, sprint_id: sprint_id ?? null, task_list_id: task_list_id ?? null,
-        metadata: metadata ?? null,
-        actor_id: req.user?.id ?? null,
-      },
-    })
-    if (transaction_status === "reverted") {
-      const err = errors[0]
-      res.status((err as any).status ?? 500).json({ error: { message: err.message } })
-      return
-    }
-    res.status(201).json({ issue })
   })
 }
