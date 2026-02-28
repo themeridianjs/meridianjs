@@ -1,6 +1,13 @@
 import type { IModuleService, MeridianContainer } from "@meridianjs/types"
 import type { ModelDefinition } from "./dml.js"
 
+// Fields that must never be overwritten via the generated update* method.
+// Includes prototype-pollution vectors and auto-managed columns.
+const UPDATE_RESERVED = new Set([
+  "id", "created_at", "updated_at", "deleted_at",
+  "__proto__", "constructor", "prototype",
+])
+
 /**
  * Base class factory that auto-generates CRUD methods for each model.
  *
@@ -36,6 +43,8 @@ export function MeridianService(
         const capitalizedPlural = `${pluralName.charAt(0).toUpperCase()}${pluralName.slice(1)}`
 
         // list{Model}s(filters?, options?) → T[]
+        // Excludes soft-deleted records by default; pass { deleted_at: { $ne: null } }
+        // in filters to explicitly include them.
         const listMethod = `list${capitalizedPlural}`
         if (!hasCustomMethod(listMethod)) {
           this[listMethod] = async (
@@ -43,7 +52,7 @@ export function MeridianService(
             options: Record<string, unknown> = {}
           ) => {
             const repo = this.#container.resolve<Repository>(repoToken)
-            return repo.find(filters, options)
+            return repo.find({ deleted_at: null, ...filters }, options)
           }
         }
 
@@ -55,7 +64,7 @@ export function MeridianService(
             options: Record<string, unknown> = {}
           ) => {
             const repo = this.#container.resolve<Repository>(repoToken)
-            return repo.findAndCount(filters, options)
+            return repo.findAndCount({ deleted_at: null, ...filters }, options)
           }
         }
 
@@ -64,7 +73,7 @@ export function MeridianService(
         if (!hasCustomMethod(retrieveMethod)) {
           this[retrieveMethod] = async (id: string) => {
             const repo = this.#container.resolve<Repository>(repoToken)
-            return repo.findOneOrFail({ id })
+            return repo.findOneOrFail({ id, deleted_at: null })
           }
         }
 
@@ -87,8 +96,11 @@ export function MeridianService(
             data: Record<string, unknown>
           ) => {
             const repo = this.#container.resolve<Repository>(repoToken)
-            const entity = await repo.findOneOrFail({ id })
-            Object.assign(entity as object, data)
+            const entity = await repo.findOneOrFail({ id, deleted_at: null })
+            const safe = Object.fromEntries(
+              Object.entries(data).filter(([k]) => !UPDATE_RESERVED.has(k))
+            )
+            Object.assign(entity as object, safe)
             await repo.flush()
             return entity
           }
@@ -109,7 +121,7 @@ export function MeridianService(
         if (!hasCustomMethod(softDeleteMethod)) {
           this[softDeleteMethod] = async (id: string) => {
             const repo = this.#container.resolve<Repository>(repoToken)
-            const entity = await repo.findOneOrFail({ id }) as any
+            const entity = await repo.findOneOrFail({ id, deleted_at: null }) as any
             entity.deleted_at = new Date()
             await repo.flush()
             return entity

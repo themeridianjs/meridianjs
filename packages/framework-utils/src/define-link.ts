@@ -5,10 +5,12 @@ type LinkEndpointInput =
   | LinkEndpoint
 
 function normalizeEndpoint(input: LinkEndpointInput): LinkEndpoint {
-  if ("linkable" in input) {
-    return input as LinkEndpoint
+  // Discriminate on "tableName" (present on LinkableEntry) rather than "linkable"
+  // to avoid misclassifying a LinkableEntry whose tableName happens to be "linkable".
+  if ("tableName" in input) {
+    return { linkable: input as LinkableEntry }
   }
-  return { linkable: input as LinkableEntry }
+  return input as LinkEndpoint
 }
 
 /**

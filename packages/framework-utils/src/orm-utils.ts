@@ -17,7 +17,19 @@ import {
  * Automatically adds `created_at`, `updated_at`, and `deleted_at` timestamp
  * columns to every entity.
  */
+const RESERVED_TIMESTAMP_KEYS = ["created_at", "updated_at", "deleted_at"]
+
 export function dmlToEntitySchema(def: ModelDefinition): EntitySchema {
+  // Fail fast if the model schema tries to define a framework-managed column
+  for (const key of RESERVED_TIMESTAMP_KEYS) {
+    if (key in def.schema) {
+      throw new Error(
+        `Model "${def.tableName}" defines reserved column "${key}". ` +
+        `Meridian automatically manages created_at, updated_at, and deleted_at.`
+      )
+    }
+  }
+
   const properties: Record<string, any> = {}
 
   for (const [key, prop] of Object.entries(def.schema)) {
@@ -113,9 +125,13 @@ export function createRepository(em: EntityManager, entityName: string): Meridia
       return repo.find(filters as any, options as any)
     },
     async findAndCount(filters: object, options: object = {}) {
+      // Strip pagination keys from count query so the total reflects all matching
+      // records, not just the current page, while still applying any other options
+      // (e.g. extra where conditions passed via options).
+      const { limit, offset, ...countOptions } = options as any
       const [data, count] = await Promise.all([
         repo.find(filters as any, options as any),
-        repo.count(filters as any),
+        repo.count(filters as any, countOptions),
       ])
       return [data, count] as [unknown[], number]
     },
