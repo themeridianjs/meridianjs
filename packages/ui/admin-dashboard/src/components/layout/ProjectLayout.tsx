@@ -31,7 +31,8 @@ export function ProjectLayout() {
     if (isAtRoot) {
       navigate(`/${ws}/projects/${projectKey}/${tab}`, { replace: true })
     }
-  }, []) // run once on mount
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // intentionally run once on mount to consume the ?tab= query param
 
   const base = `/${ws}/projects/${projectKey}`
   const tabs: { to: string; label: string; icon: LucideIcon; end: boolean }[] = [

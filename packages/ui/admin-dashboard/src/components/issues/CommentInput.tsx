@@ -114,10 +114,17 @@ export function CommentInput({ issueId, compact, className, onSuccess }: Comment
 
   const canSubmit = !editorEmpty || pendingFiles.length > 0
 
+  const MAX_FILE_SIZE = 25 * 1024 * 1024 // 25 MB
+
   const addFiles = (files: File[]) => {
+    const oversized = files.filter((f) => f.size > MAX_FILE_SIZE)
+    if (oversized.length > 0) {
+      toast.error(`Files must be under 25 MB: ${oversized.map((f) => f.name).join(", ")}`)
+    }
+    const valid = files.filter((f) => f.size <= MAX_FILE_SIZE)
     setPendingFiles((prev) => {
       const existing = new Set(prev.map((f) => `${f.name}-${f.size}`))
-      return [...prev, ...files.filter((f) => !existing.has(`${f.name}-${f.size}`))]
+      return [...prev, ...valid.filter((f) => !existing.has(`${f.name}-${f.size}`))]
     })
   }
 

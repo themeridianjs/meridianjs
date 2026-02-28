@@ -31,7 +31,7 @@ export interface Comment {
   created_at: string
 }
 
-interface IssuesResponse {
+export interface IssuesResponse {
   issues: Issue[]
   count: number
 }
@@ -140,12 +140,12 @@ export function useUpdateIssue(id: string, projectId: string) {
     // the refetch on settle doesn't cause a visible flash or row reorder.
     onMutate: async (newData) => {
       await qc.cancelQueries({ queryKey: issueKeys.byProject(projectId) })
-      const previous = qc.getQueryData(issueKeys.byProject(projectId))
-      qc.setQueryData(issueKeys.byProject(projectId), (old: any) => {
+      const previous = qc.getQueryData<IssuesResponse>(issueKeys.byProject(projectId))
+      qc.setQueryData<IssuesResponse>(issueKeys.byProject(projectId), (old) => {
         if (!old) return old
         return {
           ...old,
-          issues: old.issues.map((issue: Issue) =>
+          issues: old.issues.map((issue) =>
             issue.id === id ? { ...issue, ...newData } : issue
           ),
         }
@@ -154,9 +154,9 @@ export function useUpdateIssue(id: string, projectId: string) {
     },
 
     // Roll back on error
-    onError: (_err, _vars, context: any) => {
+    onError: (_err, _vars, context: { previous?: IssuesResponse } | undefined) => {
       if (context?.previous) {
-        qc.setQueryData(issueKeys.byProject(projectId), context.previous)
+        qc.setQueryData<IssuesResponse>(issueKeys.byProject(projectId), context.previous)
       }
     },
 

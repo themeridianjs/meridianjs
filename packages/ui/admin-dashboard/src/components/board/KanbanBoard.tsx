@@ -16,6 +16,7 @@ import { SortableContext, arrayMove, horizontalListSortingStrategy } from "@dnd-
 import { useQueryClient } from "@tanstack/react-query"
 import type { Issue } from "@/api/hooks/useIssues"
 import { issueKeys } from "@/api/hooks/useIssues"
+import type { IssuesResponse } from "@/api/hooks/useIssues"
 import type { ProjectStatus } from "@/api/hooks/useProjectStatuses"
 import { KanbanColumn } from "./KanbanColumn"
 import { IssueCard } from "./IssueCard"
@@ -354,11 +355,11 @@ export function KanbanBoard({ issues, projectId, statuses, onIssueClick, onColum
         issueKeys.byProject(projectId)
       )
 
-      qc.setQueryData(issueKeys.byProject(projectId), (old: any) => {
+      qc.setQueryData<IssuesResponse>(issueKeys.byProject(projectId), (old) => {
         if (!old) return old
         return {
           ...old,
-          issues: old.issues.map((i: Issue) =>
+          issues: old.issues.map((i) =>
             i.id === activeId ? { ...i, status: overColKey } : i
           ),
         }

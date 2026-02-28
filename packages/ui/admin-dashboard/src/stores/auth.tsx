@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
+import { createContext, useContext, useState, type ReactNode } from "react"
 
 interface User {
   id: string
@@ -63,7 +63,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   })
   const [token, setToken] = useState<string | null>(() => {
-    return localStorage.getItem(TOKEN_KEY)
+    const storedToken = localStorage.getItem(TOKEN_KEY)
+    const storedUser = localStorage.getItem(USER_KEY)
+    // Clear orphaned token (token present but user data missing) synchronously
+    // at startup — avoids a useEffect with a stale closure.
+    if (storedToken && !storedUser) {
+      localStorage.removeItem(TOKEN_KEY)
+      return null
+    }
+    return storedToken
   })
   const [workspace, setWorkspaceState] = useState<WorkspaceRef | null>(() => {
     try {
@@ -108,12 +116,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.removeItem(WORKSPACE_KEY)
     }
   }
-
-  useEffect(() => {
-    if (token && !user) {
-      logout()
-    }
-  }, [])
 
   return (
     <AuthContext.Provider

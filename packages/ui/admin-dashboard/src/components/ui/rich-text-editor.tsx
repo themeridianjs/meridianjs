@@ -1,3 +1,4 @@
+import DOMPurify from "dompurify"
 import { useEditor, EditorContent } from "@tiptap/react"
 import StarterKit from "@tiptap/starter-kit"
 import Underline from "@tiptap/extension-underline"
@@ -160,7 +161,7 @@ export function RichTextContent({ html, className }: RichTextContentProps) {
   return (
     <div
       className={cn("meridian-editor", className)}
-      dangerouslySetInnerHTML={{ __html: html }}
+      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(html) }}
     />
   )
 }

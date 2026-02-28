@@ -33,7 +33,21 @@ export function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
+/** Returns true for relative URLs and same-origin absolute URLs. */
+function isSafeUrl(url: string): boolean {
+  if (url.startsWith("/")) return true
+  try {
+    return new URL(url).origin === window.location.origin
+  } catch {
+    return false
+  }
+}
+
 export function downloadFile(url: string, filename: string) {
+  if (!isSafeUrl(url)) {
+    console.error("downloadFile: blocked unsafe URL", url)
+    return
+  }
   const a = document.createElement("a")
   a.href = url
   a.download = filename
@@ -83,14 +97,14 @@ export function ViewerModal({ attachment, onClose }: ViewerModalProps) {
         </DrawerHeader>
 
         <DrawerBody className="flex items-center justify-center bg-black/5 dark:bg-black/30 min-h-[320px] max-h-[75vh] overflow-auto p-0">
-          {isImage(attachment.mime_type) && (
+          {isImage(attachment.mime_type) && isSafeUrl(attachment.url) && (
             <img
               src={attachment.url}
               alt={attachment.original_name}
               className="max-w-full max-h-[75vh] object-contain"
             />
           )}
-          {isVideo(attachment.mime_type) && (
+          {isVideo(attachment.mime_type) && isSafeUrl(attachment.url) && (
             <video
               src={attachment.url}
               controls
@@ -136,7 +150,7 @@ export function InlineAttachment({ attachment }: { attachment: Attachment }) {
           title={attachment.original_name}
         >
           <img
-            src={attachment.url}
+            src={isSafeUrl(attachment.url) ? attachment.url : ""}
             alt={attachment.original_name}
             className="max-h-48 max-w-xs object-cover"
           />
