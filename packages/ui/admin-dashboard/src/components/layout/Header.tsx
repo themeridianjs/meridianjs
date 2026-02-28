@@ -43,7 +43,7 @@ export function Header() {
 
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-sm">
-          <Icon className="h-4 w-4 text-muted-foreground" strokeWidth={1.5} />
+          <Icon className="h-4 w-4 text-indigo-600 dark:text-indigo-400" strokeWidth={1.5} />
           <span className="font-medium">{label}</span>
         </div>
 

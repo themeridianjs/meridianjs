@@ -58,7 +58,7 @@ export function IssueCard({ issue, childCount = 0, onClick }: IssueCardProps) {
       </p>
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 min-w-0">
-          <span className="text-[11px] font-mono text-muted-foreground shrink-0">
+          <span className="text-[11px] font-mono text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/50 px-1 py-0.5 rounded shrink-0">
             {issue.identifier}
           </span>
           {issue.parent_id && (

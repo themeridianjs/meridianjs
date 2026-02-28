@@ -96,8 +96,6 @@ export function IssueDetail({ issue: issueProp, projectId, open, onClose }: Issu
   const parentIssue = issue?.parent_id ? allIssues?.find((i) => i.id === issue.parent_id) : null
   const childIssues = allIssues?.filter((i) => i.parent_id === issue?.id) ?? []
   const currentTaskList = issue?.task_list_id ? taskLists?.find((tl) => tl.id === issue.task_list_id) : null
-  const currentStatusObj = projectStatuses?.find((s) => s.key === issue?.status)
-
   const statusOptions = projectStatuses && projectStatuses.length > 0
     ? Object.fromEntries(projectStatuses.map((s) => [s.key, s.name]))
     : ISSUE_STATUS_LABELS

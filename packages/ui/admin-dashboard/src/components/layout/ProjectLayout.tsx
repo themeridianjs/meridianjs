@@ -49,7 +49,7 @@ export function ProjectLayout() {
         {/* Project name row */}
         <div className="flex items-center gap-2.5 mb-4">
           {project && (
-            <span className="text-xs font-mono text-muted-foreground bg-muted border border-border px-2 py-0.5 rounded">
+            <span className="text-xs font-mono text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200 dark:border-indigo-800 px-2 py-0.5 rounded">
               {project.identifier}
             </span>
           )}

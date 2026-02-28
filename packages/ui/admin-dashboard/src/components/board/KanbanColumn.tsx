@@ -74,7 +74,10 @@ export function KanbanColumn({ id, label, color, category, issues, childCounts, 
         )}
         <CategoryIcon category={category} color={color} />
         <span className="text-xs font-medium text-foreground">{label}</span>
-        <span className="ml-1 text-[11px] text-muted-foreground bg-muted rounded-full px-1.5 py-0.5 tabular-nums min-w-[18px] text-center">
+        <span
+          className="ml-1 text-[11px] font-medium rounded-full px-1.5 py-0.5 tabular-nums min-w-[18px] text-center"
+          style={{ backgroundColor: hexToRgba(color, 0.12), color }}
+        >
           {issues.length}
         </span>
       </div>

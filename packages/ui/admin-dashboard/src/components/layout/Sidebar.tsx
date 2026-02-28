@@ -248,9 +248,14 @@ export function AppSidebar({ ...props }: SidebarProps) {
                 <SidebarMenu>
                   {projects.slice(0, 5).map((p) => (
                     <SidebarMenuItem key={p.id}>
-                      <SidebarMenuButton asChild isActive={p.identifier === projectKey} tooltip={p.name}>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={p.identifier === projectKey}
+                        tooltip={p.name}
+                        className="data-[active=true]:bg-indigo-50 dark:data-[active=true]:bg-indigo-950/50 data-[active=true]:text-indigo-700 dark:data-[active=true]:text-indigo-300"
+                      >
                         <NavLink to={`/${ws}/projects/${p.identifier}/board`}>
-                          <span className="font-mono text-[11px] text-sidebar-foreground/50 shrink-0">
+                          <span className="font-mono text-[10px] text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/50 px-1 py-0.5 rounded shrink-0">
                             {p.identifier}
                           </span>
                           <span className="truncate">{p.name}</span>
