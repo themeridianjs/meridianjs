@@ -248,6 +248,21 @@ export interface IQuery {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Storage
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface IStorageProvider {
+  /** Upload a file buffer to the given sub-directory. Returns the public URL and storage key. */
+  upload(
+    file: { buffer: Buffer; originalname: string; mimetype: string; size: number },
+    subDir: string
+  ): Promise<{ url: string; key: string }>
+
+  /** Delete a file by its public URL or storage key. */
+  delete(urlOrKey: string): Promise<void>
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Plugin
 // ─────────────────────────────────────────────────────────────────────────────
 

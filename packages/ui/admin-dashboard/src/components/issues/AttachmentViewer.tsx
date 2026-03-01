@@ -33,11 +33,12 @@ export function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
-/** Returns true for relative URLs and same-origin absolute URLs. */
+/** Returns true for relative URLs and any http/https absolute URL. */
 function isSafeUrl(url: string): boolean {
   if (url.startsWith("/")) return true
   try {
-    return new URL(url).origin === window.location.origin
+    const { protocol } = new URL(url)
+    return protocol === "http:" || protocol === "https:"
   } catch {
     return false
   }

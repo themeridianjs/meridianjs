@@ -1,14 +1,5 @@
 import type { Response } from "express"
-import path from "node:path"
-import { mkdirSync } from "node:fs"
-import { createUpload } from "../../../../../utils/upload.js"
-
-function getUploadDir(req: any): string {
-  const rootDir = req.scope.resolve("config")?.rootDir ?? process.cwd()
-  const uploadDir = path.join(rootDir, "uploads", "issue-attachments")
-  mkdirSync(uploadDir, { recursive: true })
-  return uploadDir
-}
+import { processUpload } from "../../../../../utils/upload.js"
 
 export const GET = async (req: any, res: Response) => {
   const issueService = req.scope.resolve("issueModuleService") as any
@@ -17,14 +8,8 @@ export const GET = async (req: any, res: Response) => {
 }
 
 export const POST = async (req: any, res: Response) => {
-  const uploadDir = getUploadDir(req)
-  const upload = createUpload(uploadDir)
-
-  await new Promise<void>((resolve, reject) => {
-    upload.single("file")(req, res, (err: any) => err ? reject(err) : resolve())
-  })
-
-  if (!req.file) {
+  const upload = await processUpload(req, res, "file", "issue-attachments")
+  if (!upload) {
     res.status(400).json({ error: { message: "No file uploaded. Use multipart/form-data with field name 'file'." } })
     return
   }
@@ -34,11 +19,15 @@ export const POST = async (req: any, res: Response) => {
   if (!issue) { res.status(404).json({ error: { message: "Issue not found." } }); return }
 
   const attachment = await issueService.createAttachment({
-    issue_id: req.params.id, comment_id: req.body?.comment_id || null,
-    filename: req.file.filename, original_name: req.file.originalname,
-    mime_type: req.file.mimetype, size: req.file.size,
-    url: `/uploads/issue-attachments/${req.file.filename}`,
-    uploader_id: req.user?.id ?? "system", workspace_id: issue.workspace_id,
+    issue_id: req.params.id,
+    comment_id: req.body?.comment_id || null,
+    filename: upload.filename,
+    original_name: upload.originalName,
+    mime_type: upload.mimetype,
+    size: upload.size,
+    url: upload.url,
+    uploader_id: req.user?.id ?? "system",
+    workspace_id: issue.workspace_id,
   })
   res.status(201).json({ attachment })
 }
