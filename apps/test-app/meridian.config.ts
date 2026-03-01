@@ -13,18 +13,17 @@ export default defineConfig({
     // Local test module (Phase 1 smoke test)
     { resolve: "./src/modules/hello-module/index.ts" },
     // Core domain modules are automatically loaded by the @meridianjs/meridian plugin
-    // Uncomment and set env vars to enable S3 uploads (see @meridianjs/storage-s3)
-    // {
-    //   resolve: "@meridianjs/storage-s3",
-    //   options: {
-    //     bucket: process.env.S3_BUCKET,
-    //     region: process.env.S3_REGION ?? "us-east-1",
-    //     accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-    //     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-    //     // cloudfrontUrl: process.env.CLOUDFRONT_URL,
-    //     // endpoint: process.env.S3_ENDPOINT,   // for MinIO / localstack
-    //   },
-    // },
+    {
+      resolve: "@meridianjs/storage-s3",
+      options: {
+        bucket: process.env.S3_BUCKET,
+        region: process.env.S3_REGION ?? "eu-west-2",
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+        cloudfrontUrl: process.env.CLOUDFRONT_URL,
+        // endpoint: process.env.S3_ENDPOINT,   // for MinIO / localstack
+      },
+    },
   ],
   plugins: [
     // Default meridian routes/workflows/links/subscribers
