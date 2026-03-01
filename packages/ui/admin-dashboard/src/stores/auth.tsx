@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, type ReactNode } from "react"
+import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
 
 interface User {
   id: string
@@ -53,10 +53,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const token = localStorage.getItem(TOKEN_KEY)
       if (!stored) return null
       const parsed = JSON.parse(stored) as User
-      // Ensure roles field is present — decode from token if missing
-      if (!Array.isArray(parsed.roles)) {
-        parsed.roles = token ? decodeTokenRoles(token) : []
-      }
+      // Always re-derive from JWT — localStorage user.roles is untrusted
+      parsed.roles = token ? decodeTokenRoles(token) : []
       return parsed
     } catch {
       return null
@@ -107,6 +105,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem(USER_KEY)
     localStorage.removeItem(WORKSPACE_KEY)
   }
+
+  useEffect(() => {
+    const handle = () => {
+      // Guard against double-logout when multiple in-flight requests all 401
+      if (localStorage.getItem(TOKEN_KEY)) logout()
+    }
+    window.addEventListener("meridian:unauthorized", handle)
+    return () => window.removeEventListener("meridian:unauthorized", handle)
+  }, [])
 
   const setWorkspace = (w: WorkspaceRef | null) => {
     setWorkspaceState(w)

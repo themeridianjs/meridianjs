@@ -30,6 +30,12 @@ function RequireAuth({ children }: { children: ReactNode }) {
   return <>{children}</>
 }
 
+function RequireSuperAdmin({ children }: { children: ReactNode }) {
+  const { user } = useAuth()
+  if (!user?.roles?.includes("super-admin")) return <Navigate to="/" replace />
+  return <>{children}</>
+}
+
 function RedirectIfAuth({ children }: { children: ReactNode }) {
   const { isAuthenticated } = useAuth()
   const { data: setupStatus } = useSetupStatus()
@@ -187,7 +193,7 @@ export function App() {
         </Route>
         <Route path="notifications" element={<NotificationsPage />} />
         <Route path="settings" element={<WorkspaceSettingsPage />} />
-        <Route path="roles" element={<RolesPage />} />
+        <Route path="roles" element={<RequireSuperAdmin><RolesPage /></RequireSuperAdmin>} />
       </Route>
 
       {/* Fallback */}

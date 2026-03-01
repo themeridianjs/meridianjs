@@ -46,6 +46,9 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     const message =
       (data as { error?: { message?: string } })?.error?.message ??
       `HTTP ${res.status}`
+    if (res.status === 401) {
+      window.dispatchEvent(new CustomEvent("meridian:unauthorized"))
+    }
     throw new ApiError(res.status, message, data)
   }
 
@@ -80,6 +83,9 @@ export const api = {
       try { data = await res.json() } catch { data = null }
       const message =
         (data as { error?: { message?: string } })?.error?.message ?? `HTTP ${res.status}`
+      if (res.status === 401) {
+        window.dispatchEvent(new CustomEvent("meridian:unauthorized"))
+      }
       throw new ApiError(res.status, message, data)
     }
 
