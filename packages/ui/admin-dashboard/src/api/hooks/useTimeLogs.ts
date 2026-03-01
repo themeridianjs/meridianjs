@@ -6,6 +6,7 @@ export interface TimeLog {
   issue_id: string
   user_id: string
   workspace_id: string
+  project_id: string | null
   duration_minutes: number | null
   description: string | null
   logged_date: string | null
@@ -13,6 +14,9 @@ export interface TimeLog {
   stopped_at: string | null
   source: "manual" | "timer"
   created_at: string
+  /** Enriched by reporting API only */
+  issue_identifier?: string | null
+  issue_title?: string | null
 }
 
 interface TimeLogsResponse {

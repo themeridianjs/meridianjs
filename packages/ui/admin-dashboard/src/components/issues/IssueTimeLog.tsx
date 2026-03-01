@@ -9,6 +9,7 @@ import {
   useDeleteTimeLog,
 } from "@/api/hooks/useTimeLogs"
 import type { TimeLog } from "@/api/hooks/useTimeLogs"
+import { useUserMap } from "@/api/hooks/useUsers"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -157,10 +158,12 @@ function LogTimeForm({ onSubmit, isPending, onCancel }: LogTimeFormProps) {
 
 function TimeLogRow({
   entry,
+  userName,
   onDelete,
   isDeleting,
 }: {
   entry: TimeLog
+  userName?: string
   onDelete: (id: string) => void
   isDeleting: boolean
 }) {
@@ -198,6 +201,9 @@ function TimeLogRow({
           >
             {isActive ? "Running" : entry.source === "timer" ? "Timer" : "Manual"}
           </Badge>
+          {userName && (
+            <span className="text-[11px] text-muted-foreground">{userName}</span>
+          )}
         </div>
 
         {entry.description && (
@@ -238,6 +244,7 @@ export function IssueTimeLog({ issueId, className }: IssueTimeLogProps) {
 
   const { data: timeLogsData, isLoading } = useTimeLogs(issueId)
   const { data: activeTimer } = useActiveTimer(issueId)
+  const { data: userMap } = useUserMap()
   const logTime = useLogTime(issueId)
   const startTimer = useStartTimer(issueId)
   const stopTimer = useStopTimer(issueId)
@@ -367,6 +374,7 @@ export function IssueTimeLog({ issueId, className }: IssueTimeLogProps) {
               <TimeLogRow
                 key={entry.id}
                 entry={entry}
+                userName={userMap?.get(entry.user_id)?.name}
                 onDelete={handleDelete}
                 isDeleting={deleteTimeLog.isPending}
               />

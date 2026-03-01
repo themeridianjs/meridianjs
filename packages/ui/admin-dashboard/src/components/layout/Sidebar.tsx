@@ -8,6 +8,7 @@ import {
   ChevronsUpDown,
   LogOut,
   Shield,
+  BarChart2,
 } from "lucide-react"
 import { useProjects } from "@/api/hooks/useProjects"
 import { useWorkspaces } from "@/api/hooks/useWorkspaces"
@@ -190,6 +191,7 @@ export function AppSidebar({ ...props }: SidebarProps) {
   const isNotificationsActive = location.pathname.includes("/notifications")
   const isSettingsActive = location.pathname.includes("/settings")
   const isRolesActive = location.pathname.includes("/roles")
+  const isReportingActive = location.pathname.startsWith("/reporting")
   const isSuperAdmin = user?.roles?.includes("super-admin") ?? false
 
   return (
@@ -231,6 +233,16 @@ export function AppSidebar({ ...props }: SidebarProps) {
                   <NavLink to={`/${ws}/notifications`}>
                     <Bell />
                     <span>Notifications</span>
+                  </NavLink>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+
+              {/* Reporting */}
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={isReportingActive} tooltip="Reporting">
+                  <NavLink to="/reporting">
+                    <BarChart2 />
+                    <span>Reporting</span>
                   </NavLink>
                 </SidebarMenuButton>
               </SidebarMenuItem>

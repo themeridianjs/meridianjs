@@ -40,6 +40,7 @@ export interface CreateManualTimeLogInput {
   issue_id: string
   user_id: string
   workspace_id: string
+  project_id?: string
   duration_minutes: number
   description?: string
   logged_date?: Date
@@ -179,7 +180,7 @@ export class IssueModuleService extends MeridianService({
    * Start a timer for a user on an issue.
    * Throws if the user already has an active timer on this issue.
    */
-  async startTimer(issueId: string, userId: string, workspaceId: string): Promise<any> {
+  async startTimer(issueId: string, userId: string, workspaceId: string, projectId?: string): Promise<any> {
     const repo = this.container.resolve<any>("timeLogRepository")
 
     const active = await repo.findOne({
@@ -199,6 +200,7 @@ export class IssueModuleService extends MeridianService({
       issue_id: issueId,
       user_id: userId,
       workspace_id: workspaceId,
+      project_id: projectId ?? null,
       source: "timer",
       started_at: new Date(),
     })
@@ -246,6 +248,48 @@ export class IssueModuleService extends MeridianService({
       started_at: { $ne: null },
       stopped_at: null,
     }) ?? null
+  }
+
+  /** Query time logs for reporting — supports filtering by user, project, workspace, and date range.
+   *  Each returned entry is enriched with `issue_identifier` and `issue_title`. */
+  async listTimeLogsForReporting(filters: {
+    user_id?: string
+    workspace_id?: string
+    project_id?: string
+    logged_date?: Record<string, unknown>
+  }): Promise<any[]> {
+    const repo = this.container.resolve<any>("timeLogRepository")
+    const issueRepo = this.container.resolve<any>("issueRepository")
+    const where: Record<string, unknown> = {}
+
+    if (filters.user_id) where.user_id = filters.user_id
+    if (filters.workspace_id) where.workspace_id = filters.workspace_id
+    if (filters.logged_date) where.logged_date = filters.logged_date
+
+    // For project filtering, resolve via issue IDs to catch logs without denormalized project_id
+    let issueCache: Map<string, any> | null = null
+    if (filters.project_id) {
+      const issues = await issueRepo.find({ project_id: filters.project_id })
+      if ((issues as any[]).length === 0) return []
+      issueCache = new Map((issues as any[]).map((i: any) => [i.id, i]))
+      where.issue_id = { $in: [...issueCache.keys()] }
+    }
+
+    const logs = await repo.find(where, { orderBy: { logged_date: "DESC" } })
+    if ((logs as any[]).length === 0) return []
+
+    // Enrich with issue identifier + title (reuse cache if already loaded above)
+    if (!issueCache) {
+      const uniqueIssueIds = [...new Set((logs as any[]).map((l: any) => l.issue_id))]
+      const issues = await issueRepo.find({ id: { $in: uniqueIssueIds } })
+      issueCache = new Map((issues as any[]).map((i: any) => [i.id, i]))
+    }
+
+    return (logs as any[]).map((l: any) => ({
+      ...l,
+      issue_identifier: issueCache!.get(l.issue_id)?.identifier ?? null,
+      issue_title: issueCache!.get(l.issue_id)?.title ?? null,
+    }))
   }
 
   /** Delete a time log entry by ID. */

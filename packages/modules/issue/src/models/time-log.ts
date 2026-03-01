@@ -5,6 +5,7 @@ const TimeLog = model.define("time_log", {
   issue_id: model.text(),
   user_id: model.text(),
   workspace_id: model.text(),
+  project_id: model.text().nullable(),
   /** Total duration in minutes. null when a timer is still running. */
   duration_minutes: model.number().nullable(),
   description: model.text().nullable(),
@@ -18,6 +19,8 @@ const TimeLog = model.define("time_log", {
 }, [
   { columns: ["issue_id"] },
   { columns: ["user_id"] },
+  { columns: ["project_id"] },
+  { columns: ["workspace_id"] },
 ])
 
 export default TimeLog

@@ -1,11 +1,11 @@
 import { NavLink, Outlet, useParams, useNavigate, useSearchParams, useLocation } from "react-router-dom"
 import { useEffect } from "react"
-import { Zap, GitBranch, LayoutDashboard, Lock, CalendarRange } from "lucide-react"
+import { Zap, GitBranch, LayoutDashboard, Lock, CalendarRange, BarChart2 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import { useProjectByKey } from "@/api/hooks/useProjects"
 import { ApiError } from "@/api/client"
 
-const PROJECT_TAB_ROUTES = ["board", "issues", "sprints", "timeline", "access"] as const
+const PROJECT_TAB_ROUTES = ["board", "issues", "sprints", "timeline", "access", "reports"] as const
 
 export function ProjectLayout() {
   const { projectKey, workspace: ws } = useParams<{ projectKey: string; workspace: string }>()
@@ -41,6 +41,7 @@ export function ProjectLayout() {
     { to: `${base}/sprints`, label: "Sprints", icon: Zap, end: true },
     { to: `${base}/timeline`, label: "Timeline", icon: CalendarRange, end: true },
     { to: `${base}/access`, label: "Access", icon: Lock, end: true },
+    { to: `${base}/reports`, label: "Reports", icon: BarChart2, end: true },
   ]
 
   return (

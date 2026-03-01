@@ -18,6 +18,7 @@ export const POST = async (req: any, res: Response) => {
   if (!issue) { res.status(404).json({ error: { message: "Issue not found." } }); return }
   const entry = await issueService.createManualTimeLog({
     issue_id: req.params.id, user_id: req.user?.id ?? "system", workspace_id: issue.workspace_id,
+    project_id: issue.project_id ?? undefined,
     duration_minutes, description: description ?? null,
     logged_date: logged_date ? new Date(logged_date) : undefined,
   })

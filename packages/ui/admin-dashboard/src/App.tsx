@@ -6,6 +6,7 @@ import { useSetupStatus } from "@/api/hooks/useAuth"
 import { useRealtimeEvents } from "@/hooks/useRealtimeEvents"
 import { AppShell } from "@/components/layout/AppShell"
 import { ProjectLayout } from "@/components/layout/ProjectLayout"
+import { ReportingLayout } from "@/components/layout/ReportingLayout"
 import { CommandPalette } from "@/components/CommandPalette"
 import { LoginPage } from "@/pages/LoginPage"
 import { RegisterPage } from "@/pages/RegisterPage"
@@ -21,6 +22,8 @@ import { SprintsPage } from "@/pages/SprintsPage"
 import { WorkspaceSettingsPage } from "@/pages/WorkspaceSettingsPage"
 import { RolesPage } from "@/pages/RolesPage"
 import { InviteAcceptPage } from "@/pages/InviteAcceptPage"
+import { ReportingPage } from "@/pages/ReportingPage"
+import { ProjectReportsPage } from "@/pages/ProjectReportsPage"
 
 const ProjectTimelinePage = lazy(() => import("@/pages/ProjectTimelinePage").then(m => ({ default: m.ProjectTimelinePage })))
 
@@ -151,6 +154,18 @@ export function App() {
       {/* Invite accept — fully public, no auth required */}
       <Route path="/invite/:token" element={<InviteAcceptPage />} />
 
+      {/* Global reporting — auth required, no workspace in URL */}
+      <Route
+        path="/reporting"
+        element={
+          <RequireAuth>
+            <ReportingLayout />
+          </RequireAuth>
+        }
+      >
+        <Route index element={<ReportingPage />} />
+      </Route>
+
       {/* Workspace setup — auth required, no workspace needed */}
       <Route
         path="/setup"
@@ -190,6 +205,7 @@ export function App() {
           <Route path="sprints" element={<SprintsPage />} />
           <Route path="timeline" element={<Suspense fallback={<div className="flex items-center justify-center h-full text-sm text-muted-foreground">Loading…</div>}><ProjectTimelinePage /></Suspense>} />
           <Route path="access" element={<ProjectAccessPage />} />
+          <Route path="reports" element={<ProjectReportsPage />} />
         </Route>
         <Route path="notifications" element={<NotificationsPage />} />
         <Route path="settings" element={<WorkspaceSettingsPage />} />

@@ -1,5 +1,5 @@
 import { useLocation, useParams, Link } from "react-router-dom"
-import { Bell, Layers, GitBranch, LayoutDashboard, Settings } from "lucide-react"
+import { Bell, Layers, GitBranch, LayoutDashboard, Settings, Zap, CalendarRange, Lock, BarChart2 } from "lucide-react"
 import { ThemeToggle } from "@/components/theme/ThemeToggle"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
@@ -19,6 +19,14 @@ function useBreadcrumb() {
     return { icon: Layers, label: project ? `${project.name} / Board` : "Board" }
   if (path.includes("/issues"))
     return { icon: GitBranch, label: project ? `${project.name} / Issues` : "Issues" }
+  if (path.includes("/sprints"))
+    return { icon: Zap, label: project ? `${project.name} / Sprints` : "Sprints" }
+  if (path.includes("/timeline"))
+    return { icon: CalendarRange, label: project ? `${project.name} / Timeline` : "Timeline" }
+  if (path.includes("/access"))
+    return { icon: Lock, label: project ? `${project.name} / Access` : "Access" }
+  if (path.includes("/reports"))
+    return { icon: BarChart2, label: project ? `${project.name} / Reports` : "Reports" }
   if (path.endsWith("/projects"))
     return { icon: LayoutDashboard, label: "Projects" }
   if (path.includes("/notifications"))
