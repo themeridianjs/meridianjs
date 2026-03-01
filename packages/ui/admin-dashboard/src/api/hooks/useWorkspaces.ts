@@ -7,6 +7,7 @@ export interface Workspace {
   name: string
   slug: string
   plan: string
+  logo_url: string | null
   created_at: string
   updated_at: string
 }
@@ -44,6 +45,26 @@ export function useUpdateWorkspace(id: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["workspaces"] })
     },
+  })
+}
+
+export function useUploadWorkspaceLogo(id: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (file: File) => {
+      const form = new FormData()
+      form.append("logo", file)
+      return api.upload<{ workspace: Workspace }>(`/admin/workspaces/${id}/logo`, form)
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["workspaces"] }),
+  })
+}
+
+export function useRemoveWorkspaceLogo(id: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => api.delete<{ workspace: Workspace }>(`/admin/workspaces/${id}/logo`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["workspaces"] }),
   })
 }
 

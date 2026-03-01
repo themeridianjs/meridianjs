@@ -55,11 +55,15 @@ function WorkspaceSwitcher() {
               size="lg"
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
-              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-foreground text-background shrink-0">
-                <span className="text-[13px] font-bold">
-                  {(workspace?.name?.[0] ?? "M").toUpperCase()}
-                </span>
-              </div>
+              {workspace?.logo_url ? (
+                <img src={workspace.logo_url} alt={workspace.name} className="size-8 rounded-lg object-cover shrink-0" />
+              ) : (
+                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-foreground text-background shrink-0">
+                  <span className="text-[13px] font-bold">
+                    {(workspace?.name?.[0] ?? "M").toUpperCase()}
+                  </span>
+                </div>
+              )}
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-semibold">{workspace?.name ?? "Meridian"}</span>
                 <span className="truncate text-xs text-sidebar-foreground/60">{workspace?.slug ?? ""}</span>
@@ -81,13 +85,17 @@ function WorkspaceSwitcher() {
                 key={w.id}
                 className="cursor-pointer gap-2 p-2"
                 onClick={() => {
-                  setWorkspace({ id: w.id, name: w.name, slug: w.slug })
+                  setWorkspace({ id: w.id, name: w.name, slug: w.slug, logo_url: w.logo_url })
                   navigate(`/${w.slug}/projects`)
                 }}
               >
-                <div className="flex size-6 items-center justify-center rounded-sm bg-foreground text-background shrink-0">
-                  <span className="text-[10px] font-bold">{w.name[0].toUpperCase()}</span>
-                </div>
+                {w.logo_url ? (
+                  <img src={w.logo_url} alt={w.name} className="size-6 rounded-sm object-cover shrink-0" />
+                ) : (
+                  <div className="flex size-6 items-center justify-center rounded-sm bg-foreground text-background shrink-0">
+                    <span className="text-[10px] font-bold">{w.name[0].toUpperCase()}</span>
+                  </div>
+                )}
                 <span className="flex-1 truncate">{w.name}</span>
                 {w.id === workspace?.id && (
                   <Check className="size-3.5 text-muted-foreground shrink-0" />

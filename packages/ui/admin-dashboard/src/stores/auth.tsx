@@ -13,6 +13,7 @@ export interface WorkspaceRef {
   id: string
   name: string
   slug: string
+  logo_url?: string | null
 }
 
 interface AuthState {

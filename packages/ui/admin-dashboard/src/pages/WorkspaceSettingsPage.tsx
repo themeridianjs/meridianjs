@@ -1,8 +1,10 @@
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useRef } from "react"
 import { useSearchParams } from "react-router-dom"
 import {
   useWorkspaces,
   useUpdateWorkspace,
+  useUploadWorkspaceLogo,
+  useRemoveWorkspaceLogo,
   useInvitations,
   useCreateInvitation,
   useRevokeInvitation,
@@ -492,6 +494,9 @@ function GeneralTab({ workspaceId }: { workspaceId: string }) {
   const { data: workspaces, isLoading } = useWorkspaces()
   const workspace = workspaces?.find((w) => w.id === wsRef?.id)
   const updateWorkspace = useUpdateWorkspace(workspaceId)
+  const uploadLogo = useUploadWorkspaceLogo(workspaceId)
+  const removeLogo = useRemoveWorkspaceLogo(workspaceId)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [name, setName] = useState("")
 
   useEffect(() => {
@@ -506,12 +511,36 @@ function GeneralTab({ workspaceId }: { workspaceId: string }) {
       { name: name.trim() },
       {
         onSuccess: (data) => {
-          setWorkspace({ id: data.workspace.id, name: data.workspace.name, slug: data.workspace.slug })
+          setWorkspace({ id: data.workspace.id, name: data.workspace.name, slug: data.workspace.slug, logo_url: data.workspace.logo_url })
           toast.success("Workspace updated")
         },
         onError: () => toast.error("Failed to update workspace"),
       }
     )
+  }
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    uploadLogo.mutate(file, {
+      onSuccess: (data) => {
+        setWorkspace({ id: data.workspace.id, name: data.workspace.name, slug: data.workspace.slug, logo_url: data.workspace.logo_url })
+        toast.success("Logo updated")
+      },
+      onError: () => toast.error("Failed to upload logo"),
+    })
+    // Reset input so same file can be re-selected
+    if (fileInputRef.current) fileInputRef.current.value = ""
+  }
+
+  const handleLogoRemove = () => {
+    removeLogo.mutate(undefined, {
+      onSuccess: (data) => {
+        setWorkspace({ id: data.workspace.id, name: data.workspace.name, slug: data.workspace.slug, logo_url: null })
+        toast.success("Logo removed")
+      },
+      onError: () => toast.error("Failed to remove logo"),
+    })
   }
 
   return (
@@ -520,6 +549,58 @@ function GeneralTab({ workspaceId }: { workspaceId: string }) {
         <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
           Workspace details
         </span>
+      </div>
+
+      <div className="grid grid-cols-[180px_1fr] items-center gap-4 px-6 py-3.5 border-b border-border">
+        <span className="text-sm text-muted-foreground">Logo</span>
+        {isLoading ? (
+          <div className="flex items-center gap-3">
+            <div className="size-12 rounded-lg bg-muted animate-pulse" />
+          </div>
+        ) : (
+          <div className="flex items-center gap-3">
+            {workspace?.logo_url ? (
+              <img
+                src={workspace.logo_url}
+                alt="Workspace logo"
+                className="size-12 rounded-lg object-cover shrink-0 border border-border"
+              />
+            ) : (
+              <div className="flex size-12 items-center justify-center rounded-lg bg-foreground text-background shrink-0">
+                <span className="text-lg font-bold">
+                  {(workspace?.name?.[0] ?? "M").toUpperCase()}
+                </span>
+              </div>
+            )}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/gif,image/webp"
+              className="hidden"
+              onChange={handleLogoUpload}
+            />
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadLogo.isPending}
+            >
+              {uploadLogo.isPending ? "Uploading…" : "Upload logo"}
+            </Button>
+            {workspace?.logo_url && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-8 text-muted-foreground"
+                onClick={handleLogoRemove}
+                disabled={removeLogo.isPending}
+              >
+                {removeLogo.isPending ? "Removing…" : "Remove"}
+              </Button>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-[180px_1fr] items-center gap-4 px-6 py-3.5 border-b border-border">

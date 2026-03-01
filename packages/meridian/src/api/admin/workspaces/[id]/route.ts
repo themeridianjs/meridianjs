@@ -23,9 +23,10 @@ export const PUT = async (req: any, res: Response, next: NextFunction) => {
   requirePermission("workspace:update")(req, res, async () => {
     try {
       const workspaceService = req.scope.resolve("workspaceModuleService") as any
-      const { name } = req.body
+      const { name, logo_url } = req.body
       const updates: Record<string, unknown> = {}
       if (name !== undefined) updates.name = name.trim()
+      if (logo_url !== undefined) updates.logo_url = logo_url
 
       const workspace = await workspaceService.updateWorkspace(req.params.id, updates)
       res.json({ workspace })
