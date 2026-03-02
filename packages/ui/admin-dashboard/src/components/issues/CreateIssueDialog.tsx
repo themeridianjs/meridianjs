@@ -22,7 +22,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
-import { ExternalLink, Calendar as CalendarIcon, X } from "lucide-react"
+import { ExternalLink, Calendar as CalendarIcon, X, RefreshCw } from "lucide-react"
+import { Switch } from "@/components/ui/switch"
 import { toast } from "sonner"
 import { ISSUE_STATUS_LABELS, ISSUE_PRIORITY_LABELS, ISSUE_TYPE_LABELS } from "@/lib/constants"
 
@@ -56,6 +57,9 @@ export function CreateIssueDialog({ open, onClose, projectId, defaultStatus = "b
   const [taskListId, setTaskListId] = useState<string>(defaultTaskListId ?? "")
   const [startDate, setStartDate] = useState<Date | undefined>(undefined)
   const [dueDate, setDueDate] = useState<Date | undefined>(undefined)
+  const [isRecurring, setIsRecurring] = useState(false)
+  const [recurrenceFrequency, setRecurrenceFrequency] = useState<"weekly" | "monthly">("weekly")
+  const [recurrenceEndDate, setRecurrenceEndDate] = useState<Date | undefined>(undefined)
   const createIssue = useCreateIssue()
   const { data: projectStatuses } = useProjectStatuses(projectId)
   const { data: sprints } = useSprints(projectId || undefined)
@@ -78,6 +82,9 @@ export function CreateIssueDialog({ open, onClose, projectId, defaultStatus = "b
     setTaskListId(defaultTaskListId ?? "")
     setStartDate(undefined)
     setDueDate(undefined)
+    setIsRecurring(false)
+    setRecurrenceFrequency("weekly")
+    setRecurrenceEndDate(undefined)
     onClose()
   }
 
@@ -85,7 +92,17 @@ export function CreateIssueDialog({ open, onClose, projectId, defaultStatus = "b
     e.preventDefault()
     if (!title.trim()) return
     createIssue.mutate(
-      { title: title.trim(), description: description.trim() || undefined, status, priority, type, project_id: projectId, workspace_id: workspaceRef!.id, assignee_ids: assigneeIds.length > 0 ? assigneeIds : undefined, sprint_id: sprintId || null, task_list_id: taskListId || null, parent_id: defaultParentId || null, start_date: startDate ? format(startDate, "yyyy-MM-dd") : null, due_date: dueDate ? format(dueDate, "yyyy-MM-dd") : null },
+      {
+        title: title.trim(), description: description.trim() || undefined, status, priority, type,
+        project_id: projectId, workspace_id: workspaceRef!.id,
+        assignee_ids: assigneeIds.length > 0 ? assigneeIds : undefined,
+        sprint_id: sprintId || null, task_list_id: taskListId || null,
+        parent_id: defaultParentId || null,
+        start_date: startDate ? format(startDate, "yyyy-MM-dd") : null,
+        due_date: dueDate ? format(dueDate, "yyyy-MM-dd") : null,
+        recurrence_frequency: isRecurring ? recurrenceFrequency : undefined,
+        recurrence_end_date: isRecurring && recurrenceEndDate ? format(recurrenceEndDate, "yyyy-MM-dd") : undefined,
+      },
       {
         onSuccess: () => {
           toast.success("Issue created")
@@ -280,6 +297,69 @@ export function CreateIssueDialog({ open, onClose, projectId, defaultStatus = "b
                 />
               </PopoverContent>
             </Popover>
+          </div>
+          {/* ── Recurring ── */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Switch
+                id="recurring"
+                checked={isRecurring}
+                onCheckedChange={setIsRecurring}
+              />
+              <Label htmlFor="recurring" className="cursor-pointer font-normal flex items-center gap-1.5">
+                <RefreshCw className="h-3.5 w-3.5 text-muted-foreground" />
+                Recurring
+              </Label>
+            </div>
+            {isRecurring && (
+              <div className="space-y-3 pl-4 border-l-2 border-indigo-200 dark:border-indigo-800">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label>Frequency</Label>
+                    <Select value={recurrenceFrequency} onValueChange={(v) => setRecurrenceFrequency(v as "weekly" | "monthly")}>
+                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="weekly" className="text-xs">Weekly</SelectItem>
+                        <SelectItem value="monthly" className="text-xs">Monthly</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Until <span className="text-xs text-muted-foreground font-normal">Optional</span></Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button
+                          type="button"
+                          className="flex items-center gap-2 h-8 w-full rounded-md border border-input px-3 text-xs bg-transparent hover:bg-accent transition-colors text-left"
+                        >
+                          <CalendarIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                          <span className={recurrenceEndDate ? "text-foreground" : "text-muted-foreground"}>
+                            {recurrenceEndDate ? format(recurrenceEndDate, "MMM d, yyyy") : "No end date"}
+                          </span>
+                          {recurrenceEndDate && (
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); setRecurrenceEndDate(undefined) }}
+                              className="ml-auto text-muted-foreground hover:text-foreground transition-colors"
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={recurrenceEndDate}
+                          onSelect={setRecurrenceEndDate}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
           </DrawerBody>
           <DrawerFooter className="flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-2">

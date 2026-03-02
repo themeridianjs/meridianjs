@@ -22,8 +22,10 @@ import {
   Circle, Clock, ArrowRight, Eye, CheckCircle2, XCircle,
   Zap, ArrowUp, Minus, ArrowDown,
   Bug, Sparkles, CheckSquare, HelpCircle, Calendar as CalendarIcon, X,
-  Layers, FolderOpen,
+  Layers, FolderOpen, RefreshCw,
 } from "lucide-react"
+import { Switch } from "@/components/ui/switch"
+import { Label } from "@/components/ui/label"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
 import { format } from "date-fns"
@@ -125,6 +127,9 @@ export function IssueNewPage() {
   const [taskListId, setTaskListId] = useState("")
   const [startDate, setStartDate] = useState<Date | undefined>(undefined)
   const [dueDate, setDueDate] = useState<Date | undefined>(undefined)
+  const [isRecurring, setIsRecurring] = useState(false)
+  const [recurrenceFrequency, setRecurrenceFrequency] = useState<"weekly" | "monthly">("weekly")
+  const [recurrenceEndDate, setRecurrenceEndDate] = useState<Date | undefined>(undefined)
 
   const { data: project } = useProjectByKey(projectKey ?? "")
   const projectId = project?.id ?? ""
@@ -170,6 +175,8 @@ export function IssueNewPage() {
         task_list_id: taskListId || null,
         start_date: startDate ? format(startDate, "yyyy-MM-dd") : null,
         due_date: dueDate ? format(dueDate, "yyyy-MM-dd") : null,
+        recurrence_frequency: isRecurring ? recurrenceFrequency : undefined,
+        recurrence_end_date: isRecurring && recurrenceEndDate ? format(recurrenceEndDate, "yyyy-MM-dd") : undefined,
       },
       {
         onSuccess: (data) => {
@@ -404,6 +411,65 @@ export function IssueNewPage() {
                     />
                   </PopoverContent>
                 </Popover>
+              </PropertyRow>
+              {/* ── Recurring ── */}
+              <PropertyRow label="Recurring">
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 pl-1">
+                    <Switch
+                      id="new-recurring"
+                      checked={isRecurring}
+                      onCheckedChange={setIsRecurring}
+                    />
+                    <Label htmlFor="new-recurring" className="cursor-pointer font-normal text-xs flex items-center gap-1.5">
+                      <RefreshCw className="h-3 w-3 text-muted-foreground" />
+                      {isRecurring ? recurrenceFrequency.charAt(0).toUpperCase() + recurrenceFrequency.slice(1) : "Off"}
+                    </Label>
+                  </div>
+                  {isRecurring && (
+                    <div className="space-y-2 pl-1 border-l-2 border-indigo-200 dark:border-indigo-800">
+                      <Select value={recurrenceFrequency} onValueChange={(v) => setRecurrenceFrequency(v as "weekly" | "monthly")}>
+                        <SelectTrigger className="h-7 text-xs border-0 bg-transparent px-0 gap-1.5 focus:ring-0 hover:bg-accent rounded-md pl-1">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="weekly" className="text-xs">Weekly</SelectItem>
+                          <SelectItem value="monthly" className="text-xs">Monthly</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <button
+                            type="button"
+                            className="flex items-center gap-1.5 h-7 px-1 rounded text-xs bg-transparent hover:bg-accent transition-colors focus:outline-none w-full text-left"
+                          >
+                            <CalendarIcon className="h-3 w-3 shrink-0 text-muted-foreground" />
+                            <span className={recurrenceEndDate ? "text-foreground" : "text-muted-foreground"}>
+                              {recurrenceEndDate ? format(recurrenceEndDate, "MMM d, yyyy") : "No end date"}
+                            </span>
+                            {recurrenceEndDate && (
+                              <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); setRecurrenceEndDate(undefined) }}
+                                className="ml-auto text-muted-foreground hover:text-foreground transition-colors"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            )}
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={recurrenceEndDate}
+                            onSelect={setRecurrenceEndDate}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  )}
+                </div>
               </PropertyRow>
             </div>
 

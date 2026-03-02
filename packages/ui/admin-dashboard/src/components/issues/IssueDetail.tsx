@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import { format } from "date-fns"
 import type { Issue } from "@/api/hooks/useIssues"
+import { useOrgCalendar, useHolidays } from "@/api/hooks/useOrgSettings"
+import { countBusinessDays } from "@/lib/businessDays"
 import { useUpdateIssue, useIssues, useIssue } from "@/api/hooks/useIssues"
 import { useProjectStatuses } from "@/api/hooks/useProjectStatuses"
 import { useSprints, type Sprint } from "@/api/hooks/useSprints"
@@ -30,7 +32,8 @@ import {
   ISSUE_TYPE_LABELS,
 } from "@/lib/constants"
 import { RichTextEditor, RichTextContent } from "@/components/ui/rich-text-editor"
-import { Pencil, X, Check, Link2, Paperclip, GitBranch, Maximize2, MoreHorizontal, PanelRight, ThumbsUp, Layers, FolderOpen, ListTree, Plus, ChevronUp, Calendar as CalendarIcon } from "lucide-react"
+import { Pencil, X, Check, Link2, Paperclip, GitBranch, Maximize2, MoreHorizontal, PanelRight, ThumbsUp, Layers, FolderOpen, ListTree, Plus, ChevronUp, Calendar as CalendarIcon, RefreshCw } from "lucide-react"
+import { Switch } from "@/components/ui/switch"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
 import { cn } from "@/lib/utils"
@@ -91,6 +94,8 @@ export function IssueDetail({ issue: issueProp, projectId, open, onClose }: Issu
   const { data: sprints } = useSprints(projectId || undefined)
   const { data: taskLists } = useTaskLists(projectId || undefined)
   const { data: allIssues } = useIssues(projectId || undefined)
+  const { data: orgCalendar } = useOrgCalendar()
+  const { data: holidays = [] } = useHolidays(new Date().getFullYear())
   const activeSprints = (sprints ?? []).filter((s) => s.status !== "completed")
 
   const parentIssue = issue?.parent_id ? allIssues?.find((i) => i.id === issue.parent_id) : null
@@ -185,6 +190,53 @@ export function IssueDetail({ issue: issueProp, projectId, open, onClose }: Issu
       {
         onSuccess: () => toast.success(date ? "Due date set" : "Due date cleared"),
         onError: () => toast.error("Failed to update due date"),
+      }
+    )
+  }
+
+  const handleRecurrenceToggle = (checked: boolean) => {
+    if (checked) {
+      const base = issue.start_date ? new Date(issue.start_date) : new Date()
+      const next = new Date(base)
+      next.setDate(next.getDate() + 7)
+      updateIssue.mutate(
+        { recurrence_frequency: "weekly", next_occurrence_date: format(next, "yyyy-MM-dd"), recurrence_end_date: null },
+        {
+          onSuccess: () => toast.success("Recurrence enabled"),
+          onError: () => toast.error("Failed to enable recurrence"),
+        }
+      )
+    } else {
+      updateIssue.mutate(
+        { recurrence_frequency: null, next_occurrence_date: null, recurrence_end_date: null },
+        {
+          onSuccess: () => toast.success("Recurrence stopped"),
+          onError: () => toast.error("Failed to stop recurrence"),
+        }
+      )
+    }
+  }
+
+  const handleRecurrenceFrequencyChange = (freq: "weekly" | "monthly") => {
+    const base = issue.start_date ? new Date(issue.start_date) : new Date()
+    const next = new Date(base)
+    if (freq === "weekly") next.setDate(next.getDate() + 7)
+    else next.setMonth(next.getMonth() + 1)
+    updateIssue.mutate(
+      { recurrence_frequency: freq, next_occurrence_date: format(next, "yyyy-MM-dd") },
+      {
+        onSuccess: () => toast.success("Frequency updated"),
+        onError: () => toast.error("Failed to update frequency"),
+      }
+    )
+  }
+
+  const handleRecurrenceEndDateChange = (date: Date | undefined) => {
+    updateIssue.mutate(
+      { recurrence_end_date: date ? format(date, "yyyy-MM-dd") : null },
+      {
+        onSuccess: () => toast.success(date ? "End date set" : "End date cleared"),
+        onError: () => toast.error("Failed to update end date"),
       }
     )
   }
@@ -289,6 +341,18 @@ export function IssueDetail({ issue: issueProp, projectId, open, onClose }: Issu
                   <span className="text-[10px] font-semibold tracking-widest uppercase text-violet-500 dark:text-violet-400">
                     {ISSUE_TYPE_LABELS[issue.type] ?? issue.type}
                   </span>
+                  {issue.recurrence_frequency && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 px-1.5 py-0.5 rounded">
+                      <RefreshCw className="h-2.5 w-2.5" />
+                      Repeats {issue.recurrence_frequency === "weekly" ? "Weekly" : "Monthly"}
+                    </span>
+                  )}
+                  {issue.recurrence_source_id && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-medium text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded">
+                      <RefreshCw className="h-2.5 w-2.5" />
+                      Recurring instance
+                    </span>
+                  )}
                 </div>
                 <h2 className="text-[17px] font-semibold leading-snug text-zinc-900 dark:text-zinc-50">
                   {issue.title}
@@ -463,6 +527,19 @@ export function IssueDetail({ issue: issueProp, projectId, open, onClose }: Issu
                     </PopoverContent>
                   </Popover>
                 </div>
+                {issue?.start_date && issue?.due_date && orgCalendar?.working_days && (() => {
+                  const biz = countBusinessDays(
+                    new Date(issue.start_date!),
+                    new Date(issue.due_date!),
+                    orgCalendar.working_days,
+                    holidays
+                  )
+                  return (
+                    <div className="shrink-0 self-end pb-1 text-[11px] text-muted-foreground whitespace-nowrap">
+                      {biz} biz day{biz !== 1 ? "s" : ""}
+                    </div>
+                  )
+                })()}
                 <div className="flex-1 min-w-0">
                   <FieldLabel>Due Date</FieldLabel>
                   <Popover>
@@ -495,6 +572,73 @@ export function IssueDetail({ issue: issueProp, projectId, open, onClose }: Issu
                     </PopoverContent>
                   </Popover>
                 </div>
+              </div>
+
+              <Divider />
+
+              {/* ── Recurrence ── */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <FieldLabel>Recurring</FieldLabel>
+                  <Switch
+                    checked={!!issue.recurrence_frequency}
+                    onCheckedChange={handleRecurrenceToggle}
+                    disabled={updateIssue.isPending}
+                  />
+                </div>
+                {issue.recurrence_frequency && (
+                  <div className="space-y-2 pl-3 border-l-2 border-indigo-200 dark:border-indigo-800">
+                    <div>
+                      <p className="text-[10px] font-medium text-muted-foreground mb-1">Frequency</p>
+                      <Select
+                        value={issue.recurrence_frequency}
+                        onValueChange={(v) => handleRecurrenceFrequencyChange(v as "weekly" | "monthly")}
+                      >
+                        <SelectTrigger className="h-7 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="weekly" className="text-xs">Weekly</SelectItem>
+                          <SelectItem value="monthly" className="text-xs">Monthly</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-medium text-muted-foreground mb-1">
+                        Until <span className="font-normal">(optional)</span>
+                      </p>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <button className="flex items-center gap-1 h-7 w-full px-2 rounded border border-input text-xs hover:bg-accent transition-colors text-left">
+                            <CalendarIcon className="h-3 w-3 shrink-0 text-muted-foreground" />
+                            <span className={issue.recurrence_end_date ? "text-foreground" : "text-muted-foreground"}>
+                              {issue.recurrence_end_date ? format(new Date(issue.recurrence_end_date), "MMM d, yyyy") : "No end date"}
+                            </span>
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={issue.recurrence_end_date ? new Date(issue.recurrence_end_date) : undefined}
+                            onSelect={handleRecurrenceEndDateChange}
+                            initialFocus
+                          />
+                          {issue.recurrence_end_date && (
+                            <div className="border-t px-3 py-2">
+                              <button
+                                onClick={() => handleRecurrenceEndDateChange(undefined)}
+                                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors"
+                              >
+                                <X className="h-3 w-3" />
+                                Clear end date
+                              </button>
+                            </div>
+                          )}
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <Divider />

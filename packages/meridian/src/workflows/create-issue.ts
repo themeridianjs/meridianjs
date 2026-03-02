@@ -25,6 +25,20 @@ export interface CreateIssueInput {
   task_list_id?: string | null
   actor_id?: string | null
   metadata?: Record<string, unknown> | null
+  recurrence_frequency?: "weekly" | "monthly" | null
+  recurrence_end_date?: Date | null
+}
+
+function computeFirstOccurrence(input: CreateIssueInput): Date | null {
+  if (!input.recurrence_frequency) return null
+  const base = input.start_date ? new Date(input.start_date) : new Date()
+  const d = new Date(base)
+  if (input.recurrence_frequency === "weekly") {
+    d.setDate(d.getDate() + 7)
+  } else {
+    d.setMonth(d.getMonth() + 1)
+  }
+  return d
 }
 
 const createIssueStep = createStep(
@@ -39,6 +53,9 @@ const createIssueStep = createStep(
       start_date: input.start_date ?? null, due_date: input.due_date, estimate: input.estimate ?? null,
       sprint_id: input.sprint_id ?? null, task_list_id: input.task_list_id ?? null,
       metadata: input.metadata ?? null,
+      recurrence_frequency: input.recurrence_frequency ?? null,
+      recurrence_end_date: input.recurrence_end_date ?? null,
+      next_occurrence_date: computeFirstOccurrence(input),
     })
     return new StepResponse(issue, { issueId: issue.id })
   },

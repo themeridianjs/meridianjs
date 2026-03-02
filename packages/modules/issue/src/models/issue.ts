@@ -29,6 +29,14 @@ const Issue = model.define("issue", {
   estimate: model.number().nullable(),
   /** Arbitrary key/value storage for custom integrations */
   metadata: model.json().nullable(),
+  /** Recurrence frequency — set on the template issue */
+  recurrence_frequency: model.enum(["weekly", "monthly"]).nullable(),
+  /** Optional hard stop date for the recurrence */
+  recurrence_end_date: model.date().nullable(),
+  /** Date when the cron job should next fire for this template */
+  next_occurrence_date: model.date().nullable(),
+  /** Set on instance issues only — ID of the template that spawned this issue */
+  recurrence_source_id: model.text().nullable(),
 }, [
   { columns: ["project_id"] },
   { columns: ["workspace_id"] },

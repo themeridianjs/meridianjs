@@ -22,6 +22,10 @@ export interface CreateIssueInput {
   estimate?: number
   sprint_id?: string | null
   task_list_id?: string | null
+  recurrence_frequency?: "weekly" | "monthly" | null
+  recurrence_end_date?: Date | null
+  next_occurrence_date?: Date | null
+  recurrence_source_id?: string | null
 }
 
 export interface CreateAttachmentInput {
@@ -92,6 +96,17 @@ export class IssueModuleService extends MeridianService({
     })
     await issueRepo.persistAndFlush(issue)
     return issue
+  }
+
+  /** Return all template issues whose next_occurrence_date is due (≤ end of today). */
+  async listDueRecurringIssues(): Promise<any[]> {
+    const repo = this.container.resolve<any>("issueRepository")
+    const endOfToday = new Date()
+    endOfToday.setHours(23, 59, 59, 999)
+    return repo.find({
+      recurrence_frequency: { $ne: null },
+      next_occurrence_date: { $ne: null, $lte: endOfToday },
+    })
   }
 
   /** List issues for a project with optional filters. */

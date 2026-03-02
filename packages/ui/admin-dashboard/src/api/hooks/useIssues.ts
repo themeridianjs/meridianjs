@@ -18,6 +18,10 @@ export interface Issue {
   start_date?: string | null
   due_date?: string | null
   metadata?: Record<string, unknown> | null
+  recurrence_frequency?: "weekly" | "monthly" | null
+  recurrence_end_date?: string | null
+  next_occurrence_date?: string | null
+  recurrence_source_id?: string | null
   created_at: string
   updated_at: string
 }
@@ -51,6 +55,8 @@ interface CreateIssueInput {
   start_date?: string | null
   due_date?: string | null
   metadata?: Record<string, unknown> | null
+  recurrence_frequency?: "weekly" | "monthly"
+  recurrence_end_date?: string
 }
 
 interface UpdateIssueInput {
@@ -66,6 +72,9 @@ interface UpdateIssueInput {
   start_date?: string | null
   due_date?: string | null
   metadata?: Record<string, unknown> | null
+  recurrence_frequency?: "weekly" | "monthly" | null
+  recurrence_end_date?: string | null
+  next_occurrence_date?: string | null
 }
 
 export interface Activity {
