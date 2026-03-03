@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button"
+import { BASE_URL } from "@/api/client"
 
 interface Props {
   flow: "login" | "register" | "invite"
@@ -9,7 +10,7 @@ interface Props {
 
 export function GoogleSignInButton({ flow, inviteToken, label, disabled }: Props) {
   const handleClick = () => {
-    const url = `/auth/google?flow=${flow}${inviteToken ? `&invite_token=${encodeURIComponent(inviteToken)}` : ""}`
+    const url = `${BASE_URL}/auth/google?flow=${flow}${inviteToken ? `&invite_token=${encodeURIComponent(inviteToken)}` : ""}`
     window.location.href = url
   }
 

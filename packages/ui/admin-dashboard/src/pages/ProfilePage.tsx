@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Skeleton } from "@/components/ui/skeleton"
 import { toast } from "sonner"
 import { Camera, Trash2, User, CheckCircle2, XCircle } from "lucide-react"
+import { BASE_URL } from "@/api/client"
 
 // ── Google icon ───────────────────────────────────────────────────────────────
 
@@ -97,7 +98,7 @@ export function ProfilePage() {
   const handleConnectGoogle = async () => {
     try {
       const token = localStorage.getItem("meridian_token")
-      const res = await fetch("/auth/google/link", {
+      const res = await fetch(`${BASE_URL}/auth/google/link`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       if (!res.ok) {
@@ -106,7 +107,7 @@ export function ProfilePage() {
         return
       }
       const { url } = await res.json() as { url: string }
-      window.location.href = url
+      window.location.href = url  // url is an absolute Google OAuth URL, no prefix needed
     } catch {
       toast.error("Failed to initiate Google connection")
     }

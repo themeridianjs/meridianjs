@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { useAuth } from "@/stores/auth"
 import { Button } from "@/components/ui/button"
+import { BASE_URL } from "@/api/client"
 
 export function GoogleCallbackPage() {
   const [error, setError] = useState<string | null>(null)
@@ -36,7 +37,7 @@ export function GoogleCallbackPage() {
 
     const finish = async () => {
       // Exchange the one-time code for the real JWT
-      const exchangeRes = await fetch("/auth/google/exchange", {
+      const exchangeRes = await fetch(`${BASE_URL}/auth/google/exchange`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ code }),
@@ -49,7 +50,7 @@ export function GoogleCallbackPage() {
       const { token } = await exchangeRes.json() as { token: string }
 
       // Fetch user profile using the JWT
-      const profileRes = await fetch("/admin/users/me", {
+      const profileRes = await fetch(`${BASE_URL}/admin/users/me`, {
         headers: { Authorization: `Bearer ${token}` },
       })
 
