@@ -5,6 +5,7 @@ export default defineConfig({
     databaseUrl: process.env.DATABASE_URL ?? "postgresql://arjusmoon@localhost:5432/meridian_test",
     jwtSecret: process.env.JWT_SECRET ?? "super-secret-jwt-key-for-testing-only",
     httpPort: 9000,
+    maxChildIssueDepth:3
   },
   modules: [
     // Infrastructure (optional — swap for @meridianjs/event-bus-redis in production)
@@ -13,6 +14,15 @@ export default defineConfig({
     // Local test module (Phase 1 smoke test)
     { resolve: "./src/modules/hello-module/index.ts" },
     // Core domain modules are automatically loaded by the @meridianjs/meridian plugin
+    {
+      resolve: "@meridianjs/email-ses",
+      options: {
+        fromAddress: process.env.SES_FROM_ADDRESS ?? "no-reply@arjusmoon.com",
+        region: process.env.SES_REGION ?? process.env.S3_REGION ?? "ap-south-1",
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+      },
+    },
     {
       resolve: "@meridianjs/storage-s3",
       options: {

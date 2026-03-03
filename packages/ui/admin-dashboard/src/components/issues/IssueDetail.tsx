@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom"
 import { format } from "date-fns"
 import type { Issue } from "@/api/hooks/useIssues"
 import { useOrgCalendar, useHolidays } from "@/api/hooks/useOrgSettings"
+import { useAppConfig } from "@/api/hooks/useAppConfig"
 import { countBusinessDays } from "@/lib/businessDays"
 import { useUpdateIssue, useIssues, useIssue } from "@/api/hooks/useIssues"
 import { useProjectStatuses } from "@/api/hooks/useProjectStatuses"
@@ -32,13 +33,23 @@ import {
   ISSUE_TYPE_LABELS,
 } from "@/lib/constants"
 import { RichTextEditor, RichTextContent } from "@/components/ui/rich-text-editor"
-import { Pencil, X, Check, Link2, Paperclip, GitBranch, Maximize2, MoreHorizontal, PanelRight, ThumbsUp, Layers, FolderOpen, ListTree, Plus, ChevronUp, Calendar as CalendarIcon, RefreshCw } from "lucide-react"
+import { Pencil, X, Check, Link2, Paperclip, GitBranch, Maximize2, MoreHorizontal, PanelRight, ThumbsUp, Layers, FolderOpen, ListTree, Plus, ChevronUp, ChevronDown, ChevronRight, Calendar as CalendarIcon, RefreshCw } from "lucide-react"
 import { Switch } from "@/components/ui/switch"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import { WidgetZone } from "@/components/WidgetZone"
+
+function getIssueDepth(issue: Issue, allIssues: Issue[]): number {
+  let depth = 0
+  let current: Issue | undefined = issue
+  while (current?.parent_id) {
+    current = allIssues.find(i => i.id === current!.parent_id)
+    depth++
+  }
+  return depth
+}
 
 function sprintDateRange(sprint: Sprint): string | null {
   if (!sprint.start_date && !sprint.end_date) return null
@@ -88,6 +99,7 @@ export function IssueDetail({ issue: issueProp, projectId, open, onClose }: Issu
   const [editDescription, setEditDescription] = useState("")
   const [activeActivityTab, setActiveActivityTab] = useState<ActivityTab>("comments")
   const [createChildOpen, setCreateChildOpen] = useState(false)
+  const [expandedChildren, setExpandedChildren] = useState<Set<string>>(new Set())
 
   const updateIssue = useUpdateIssue(issue?.id ?? "", projectId)
   const { data: projectStatuses } = useProjectStatuses(projectId)
@@ -97,6 +109,11 @@ export function IssueDetail({ issue: issueProp, projectId, open, onClose }: Issu
   const { data: orgCalendar } = useOrgCalendar()
   const { data: holidays = [] } = useHolidays(new Date().getFullYear())
   const activeSprints = (sprints ?? []).filter((s) => s.status !== "completed")
+
+  const { data: appConfig } = useAppConfig()
+  const maxDepth = appConfig?.maxChildIssueDepth ?? 1
+  const issueDepth = issue ? getIssueDepth(issue, allIssues ?? []) : 0
+  const canAddChild = issueDepth < maxDepth
 
   const parentIssue = issue?.parent_id ? allIssues?.find((i) => i.id === issue.parent_id) : null
   const childIssues = allIssues?.filter((i) => i.parent_id === issue?.id) ?? []
@@ -284,7 +301,7 @@ export function IssueDetail({ issue: issueProp, projectId, open, onClose }: Issu
             <div className="flex items-center">
               {iconBtn(ThumbsUp, "Upvote")}
               {iconBtn(Paperclip, "Attachments")}
-              {iconBtn(GitBranch, "Add sub-issue", () => setCreateChildOpen(true))}
+              {canAddChild && iconBtn(GitBranch, "Add sub-issue", () => setCreateChildOpen(true))}
               {iconBtn(Link2, "Copy link", () => {
                 navigator.clipboard.writeText(`${window.location.origin}/${workspace}/projects/${projectKey}/issues/${issue.id}`)
                 toast.success("Link copied")
@@ -644,7 +661,7 @@ export function IssueDetail({ issue: issueProp, projectId, open, onClose }: Issu
               <Divider />
 
               {/* ── Child Issues ── */}
-              {!issue.parent_id && (
+              {canAddChild && (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] font-semibold tracking-[0.08em] uppercase text-zinc-900 dark:text-zinc-100">
@@ -681,24 +698,76 @@ export function IssueDetail({ issue: issueProp, projectId, open, onClose }: Issu
                     </button>
                   ) : (
                     <div className="space-y-1">
-                      {childIssues.map((child) => (
-                        <button
-                          key={child.id}
-                          onClick={() => {
-                            onClose()
-                            navigate(`/${workspace}/projects/${projectKey}/issues/${child.id}`)
-                          }}
-                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg bg-indigo-50/40 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100/70 hover:border-indigo-400 dark:hover:bg-indigo-950/50 dark:hover:border-indigo-600 hover:shadow-sm transition-all text-left group"
-                        >
-                          <ListTree className="h-3.5 w-3.5 text-indigo-400 dark:text-indigo-500 shrink-0" />
-                          <span className="font-mono text-[11px] font-medium text-indigo-700 dark:text-indigo-300 shrink-0">
-                            {child.identifier}
-                          </span>
-                          <span className="text-xs text-zinc-700 dark:text-zinc-300 truncate group-hover:text-zinc-900 dark:group-hover:text-zinc-100 transition-colors">
-                            {child.title}
-                          </span>
-                        </button>
-                      ))}
+                      {childIssues.map((child) => {
+                        const grandchildren = (allIssues ?? []).filter(i => i.parent_id === child.id)
+                        const hasGrandchildren = grandchildren.length > 0
+                        const isExpanded = expandedChildren.has(child.id)
+                        return (
+                          <div key={child.id}>
+                            <div className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg bg-indigo-50/40 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100/70 hover:border-indigo-400 dark:hover:bg-indigo-950/50 dark:hover:border-indigo-600 hover:shadow-sm transition-all group">
+                              {hasGrandchildren ? (
+                                <button
+                                  onClick={() => setExpandedChildren(prev => {
+                                    const next = new Set(prev)
+                                    next.has(child.id) ? next.delete(child.id) : next.add(child.id)
+                                    return next
+                                  })}
+                                  className="shrink-0 text-indigo-400 dark:text-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-300 transition-colors"
+                                >
+                                  {isExpanded
+                                    ? <ChevronDown className="h-3.5 w-3.5" />
+                                    : <ChevronRight className="h-3.5 w-3.5" />}
+                                </button>
+                              ) : (
+                                <ListTree className="h-3.5 w-3.5 text-indigo-400 dark:text-indigo-500 shrink-0" />
+                              )}
+                              <button
+                                onClick={() => {
+                                  onClose()
+                                  navigate(`/${workspace}/projects/${projectKey}/issues/${child.id}`)
+                                }}
+                                className="flex items-center gap-2.5 flex-1 min-w-0 text-left"
+                              >
+                                <span className="font-mono text-[11px] font-medium text-indigo-700 dark:text-indigo-300 shrink-0">
+                                  {child.identifier}
+                                </span>
+                                <span className="text-xs text-zinc-700 dark:text-zinc-300 truncate group-hover:text-zinc-900 dark:group-hover:text-zinc-100 transition-colors">
+                                  {child.title}
+                                </span>
+                                {hasGrandchildren && (
+                                  <span className="ml-auto shrink-0 flex items-center gap-0.5 text-[10px] font-medium text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/50 px-1 py-0.5 rounded">
+                                    <ListTree className="h-2.5 w-2.5" />
+                                    {grandchildren.length}
+                                  </span>
+                                )}
+                              </button>
+                            </div>
+
+                            {hasGrandchildren && isExpanded && (
+                              <div className="mt-1 ml-6 space-y-1">
+                                {grandchildren.map((grand) => (
+                                  <button
+                                    key={grand.id}
+                                    onClick={() => {
+                                      onClose()
+                                      navigate(`/${workspace}/projects/${projectKey}/issues/${grand.id}`)
+                                    }}
+                                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg bg-indigo-50/20 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900 hover:bg-indigo-100/70 hover:border-indigo-400 dark:hover:bg-indigo-950/50 dark:hover:border-indigo-600 hover:shadow-sm transition-all text-left group"
+                                  >
+                                    <ListTree className="h-3.5 w-3.5 text-indigo-300 dark:text-indigo-600 shrink-0" />
+                                    <span className="font-mono text-[11px] font-medium text-indigo-600 dark:text-indigo-400 shrink-0">
+                                      {grand.identifier}
+                                    </span>
+                                    <span className="text-xs text-zinc-600 dark:text-zinc-400 truncate group-hover:text-zinc-900 dark:group-hover:text-zinc-100 transition-colors">
+                                      {grand.title}
+                                    </span>
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
                     </div>
                   )}
                 </div>

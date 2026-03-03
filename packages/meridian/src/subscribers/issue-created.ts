@@ -1,5 +1,6 @@
 import type { SubscriberArgs, SubscriberConfig } from "@meridianjs/types"
 import { sseManager } from "@meridianjs/framework"
+import { emailHtml } from "./_email-helper.js"
 
 interface IssueCreatedData {
   issue_id: string
@@ -31,6 +32,36 @@ export default async function handler({ event, container }: SubscriberArgs<Issue
     issue_id: data.issue_id,
     project_id: data.project_id,
   })
+
+  // ── Email ──────────────────────────────────────────────────────────────────
+  try {
+    const emailService = container.resolve("emailService") as any
+    const userService  = container.resolve("userModuleService") as any
+    const issueService = container.resolve("issueModuleService") as any
+    const issue = await issueService.retrieveIssue(data.issue_id)
+
+    const recipientIds = new Set<string>()
+    if (data.assignee_ids) data.assignee_ids.forEach(id => recipientIds.add(id))
+    if (data.reporter_id && data.reporter_id !== data.actor_id) recipientIds.add(data.reporter_id)
+
+    await Promise.allSettled([...recipientIds].map(async (userId) => {
+      const user = await userService.retrieveUser(userId)
+      if (!user?.email) return
+      const isAssignee = data.assignee_ids?.includes(userId)
+      await emailService.send({
+        to: user.email,
+        subject: `New issue: [${issue.identifier}] ${issue.title}`,
+        text: isAssignee
+          ? `You've been assigned to new issue ${issue.identifier}: "${issue.title}".`
+          : `A new issue ${issue.identifier} was created: "${issue.title}".`,
+        html: emailHtml(isAssignee
+          ? `You've been assigned to new issue <strong>${issue.identifier}</strong>: "${issue.title}".`
+          : `A new issue <strong>${issue.identifier}</strong> was created: "${issue.title}".`),
+      })
+    }))
+  } catch (err) {
+    console.error("[email] issue.created:", err)
+  }
 }
 
 export const config: SubscriberConfig = { event: "issue.created" }

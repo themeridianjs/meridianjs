@@ -1,5 +1,6 @@
 import type { SubscriberArgs, SubscriberConfig } from "@meridianjs/types"
 import { sseManager } from "@meridianjs/framework"
+import { emailHtml } from "./_email-helper.js"
 
 interface ProjectMemberAddedData {
   project_id: string
@@ -29,6 +30,23 @@ export default async function handler({ event, container }: SubscriberArgs<Proje
     project_id: data.project_id,
     user_id: data.user_id,
   })
+
+  // ── Email ──────────────────────────────────────────────────────────────────
+  try {
+    const emailService = container.resolve("emailService") as any
+    const userService  = container.resolve("userModuleService") as any
+    const user = await userService.retrieveUser(data.user_id)
+    if (user?.email) {
+      await emailService.send({
+        to: user.email,
+        subject: `You've been added to project "${data.project_name}"`,
+        text: `You've been added to the project "${data.project_name}".`,
+        html: emailHtml(`You've been added to the project <strong>"${data.project_name}"</strong>.`),
+      })
+    }
+  } catch (err) {
+    console.error("[email] project.member_added:", err)
+  }
 }
 
 export const config: SubscriberConfig = { event: "project.member_added" }

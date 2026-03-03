@@ -7,6 +7,8 @@ import { useIssues, issueKeys } from "@/api/hooks/useIssues"
 import type { Issue } from "@/api/hooks/useIssues"
 import { useProjectStatuses } from "@/api/hooks/useProjectStatuses"
 import { useSprints } from "@/api/hooks/useSprints"
+import { useOrgCalendar, useHolidays } from "@/api/hooks/useOrgSettings"
+import { countBusinessDays } from "@/lib/businessDays"
 import { api } from "@/api/client"
 import {
   GanttProvider,
@@ -98,6 +100,8 @@ export function ProjectTimelinePage() {
   const { data: issues = [] } = useIssues(projectId || undefined)
   const { data: statuses = [] } = useProjectStatuses(projectId || undefined)
   const { data: sprints = [] } = useSprints(projectId || undefined)
+  const { data: orgCalendar } = useOrgCalendar()
+  const { data: holidays = [] } = useHolidays(new Date().getFullYear())
 
   const updateMutation = useMutation({
     mutationFn: ({ id, start_date, due_date }: { id: string; start_date: string | null; due_date: string | null }) =>
@@ -109,6 +113,18 @@ export function ProjectTimelinePage() {
   })
 
   const statusColorMap = Object.fromEntries(statuses.map((s) => [s.key, s.color]))
+
+  // Build business day duration label for a scheduled issue (shown in sidebar)
+  const getIssueDuration = (issue: Issue): string | undefined => {
+    if (!issue.start_date || !issue.due_date || !orgCalendar?.working_days) return undefined
+    const biz = countBusinessDays(
+      new Date(issue.start_date),
+      new Date(issue.due_date),
+      orgCalendar.working_days,
+      holidays
+    )
+    return `${biz} business day${biz !== 1 ? "s" : ""}`
+  }
 
   // Split issues into scheduled (have due_date) and unscheduled (no due_date)
   const scheduledIssues = issues.filter((i) => i.due_date)
@@ -188,6 +204,7 @@ export function ProjectTimelinePage() {
                     <GanttSidebarItem
                       key={issue.id}
                       feature={issueToFeature(issue, statusColorMap[issue.status] ?? "#94a3b8")}
+                      duration={getIssueDuration(issue)}
                       onSelectItem={handleSelectIssue}
                     />
                   ))}
@@ -202,6 +219,7 @@ export function ProjectTimelinePage() {
                   <GanttSidebarItem
                     key={issue.id}
                     feature={issueToFeature(issue, statusColorMap[issue.status] ?? "#94a3b8")}
+                      duration={getIssueDuration(issue)}
                     onSelectItem={handleSelectIssue}
                   />
                 ))}

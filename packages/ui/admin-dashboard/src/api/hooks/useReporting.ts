@@ -30,6 +30,6 @@ export function useReportingTimeLogs(filters: ReportingFilters, options?: { enab
       })
       return api.get<ReportingTimeLogsResponse>(`/admin/reporting/time-logs?${params}`)
     },
-    enabled: options?.enabled ?? Object.values(filters).some(Boolean),
+    enabled: options?.enabled ?? (Object.values(filters).some(Boolean) || !!filters.workspace_id),
   })
 }

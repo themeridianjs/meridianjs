@@ -3,6 +3,7 @@ import {
   Layers,
   Bell,
   Settings,
+  Settings2,
   Search,
   Check,
   ChevronsUpDown,
@@ -199,7 +200,9 @@ export function AppSidebar({ ...props }: SidebarProps) {
   const isNotificationsActive = location.pathname.includes("/notifications")
   const isSettingsActive = location.pathname.includes("/settings")
   const isRolesActive = location.pathname.includes("/roles")
-  const isReportingActive = location.pathname.startsWith("/reporting")
+  const isWorkspaceReportingActive = location.pathname === `/${ws}/reporting`
+  const isGlobalReportingActive = location.pathname.startsWith("/reporting")
+  const isOrgSettingsActive = location.pathname.startsWith("/org/settings")
   const isSuperAdmin = user?.roles?.includes("super-admin") ?? false
 
   return (
@@ -245,12 +248,12 @@ export function AppSidebar({ ...props }: SidebarProps) {
                 </SidebarMenuButton>
               </SidebarMenuItem>
 
-              {/* Reporting */}
+              {/* Reports (workspace-scoped) */}
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isReportingActive} tooltip="Reporting">
-                  <NavLink to="/reporting">
+                <SidebarMenuButton asChild isActive={isWorkspaceReportingActive} tooltip="Reports">
+                  <NavLink to={`/${ws}/reporting`}>
                     <BarChart2 />
-                    <span>Reporting</span>
+                    <span>Reports</span>
                   </NavLink>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -288,6 +291,32 @@ export function AppSidebar({ ...props }: SidebarProps) {
             </SidebarGroup>
           </>
         )}
+
+        {/* Global section */}
+        <SidebarSeparator />
+        <SidebarGroup>
+          <SidebarGroupLabel>Global</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={isGlobalReportingActive} tooltip="Global Reports">
+                  <NavLink to="/reporting">
+                    <BarChart2 />
+                    <span>Global Reports</span>
+                  </NavLink>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={isOrgSettingsActive} tooltip="Org Settings">
+                  <NavLink to="/org/settings">
+                    <Settings2 />
+                    <span>Org Settings</span>
+                  </NavLink>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
 
         {/* Settings / Roles — pushed to bottom */}
         <SidebarGroup className="mt-auto">

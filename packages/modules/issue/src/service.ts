@@ -77,6 +77,26 @@ export class IssueModuleService extends MeridianService({
       throw Object.assign(new Error(`Project ${input.project_id} not found`), { status: 404 })
     }
 
+    if (input.parent_id) {
+      const config = this.container.resolve("config") as any
+      const maxDepth: number = config?.projectConfig?.maxChildIssueDepth ?? 1
+
+      let depth = 1
+      let currentParentId: string | null = input.parent_id
+      while (currentParentId) {
+        const parent: any = await issueRepo.findOne({ id: currentParentId })
+        if (!parent) break
+        currentParentId = parent.parent_id ?? null
+        if (currentParentId) depth++
+        if (depth > maxDepth) {
+          throw Object.assign(
+            new Error(`Child issues are limited to ${maxDepth} level(s) deep`),
+            { status: 400 }
+          )
+        }
+      }
+    }
+
     // Get the next sequential number for this project (fetch only the highest-numbered issue)
     const [highest] = await issueRepo.find(
       { project_id: input.project_id },

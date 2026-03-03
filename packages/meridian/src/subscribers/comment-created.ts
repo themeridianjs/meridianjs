@@ -1,5 +1,6 @@
 import type { SubscriberArgs, SubscriberConfig } from "@meridianjs/types"
 import { sseManager } from "@meridianjs/framework"
+import { emailHtml } from "./_email-helper.js"
 
 interface CommentCreatedData {
   comment_id: string
@@ -36,6 +37,25 @@ export default async function handler({ event, container }: SubscriberArgs<Comme
     comment_id: data.comment_id,
     issue_id: data.issue_id,
   })
+
+  // ── Email ──────────────────────────────────────────────────────────────────
+  try {
+    const emailService = container.resolve("emailService") as any
+    const userService  = container.resolve("userModuleService") as any
+
+    await Promise.allSettled([...recipients].map(async (userId) => {
+      const user = await userService.retrieveUser(userId)
+      if (!user?.email) return
+      await emailService.send({
+        to: user.email,
+        subject: `New comment on [${issue.identifier}]: ${issue.title}`,
+        text: `A comment was added on issue ${issue.identifier}: "${issue.title}" that you're involved with.`,
+        html: emailHtml(`A comment was added on issue <strong>${issue.identifier}</strong>: "${issue.title}" that you're involved with.`),
+      })
+    }))
+  } catch (err) {
+    console.error("[email] comment.created:", err)
+  }
 }
 
 export const config: SubscriberConfig = { event: "comment.created" }

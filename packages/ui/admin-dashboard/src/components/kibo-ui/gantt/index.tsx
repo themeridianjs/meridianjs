@@ -461,21 +461,24 @@ export type GanttSidebarItemProps = {
   feature: GanttFeature;
   onSelectItem?: (id: string) => void;
   className?: string;
+  /** Override the auto-calculated duration label (e.g. "3 business days") */
+  duration?: string;
 };
 
 export const GanttSidebarItem: FC<GanttSidebarItemProps> = ({
   feature,
   onSelectItem,
   className,
+  duration: durationOverride,
 }) => {
   const gantt = useContext(GanttContext);
   const tempEndAt =
     feature.endAt && isSameDay(feature.startAt, feature.endAt)
       ? addDays(feature.endAt, 1)
       : feature.endAt;
-  const duration = tempEndAt
+  const duration = durationOverride ?? (tempEndAt
     ? formatDistance(feature.startAt, tempEndAt)
-    : `${formatDistance(feature.startAt, new Date())} so far`;
+    : `${formatDistance(feature.startAt, new Date())} so far`);
 
   const handleClick: MouseEventHandler<HTMLDivElement> = (event) => {
     if (event.target === event.currentTarget) {

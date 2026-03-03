@@ -35,8 +35,21 @@ const CORE_MODULES = [
   "@meridianjs/org-calendar",
 ]
 
+class ConsoleEmailService {
+  async send({ to, subject, text }: { to: string; subject: string; text?: string }): Promise<void> {
+    console.log(`[Email] → ${to} | ${subject}`)
+    if (text) console.log(`[Email]   ${text}`)
+  }
+}
+
 export default async function register(ctx: PluginRegistrationContext): Promise<void> {
   for (const resolve of CORE_MODULES) {
     await ctx.addModule({ resolve })
+  }
+  // Register console fallback if no email provider module was configured
+  try {
+    ctx.container.resolve("emailService")
+  } catch {
+    ctx.container.register({ emailService: new ConsoleEmailService() })
   }
 }

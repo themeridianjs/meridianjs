@@ -58,6 +58,8 @@ export interface ProjectConfig {
     origin: string | string[]
     credentials?: boolean
   }
+  /** Max levels of child issue nesting. Default: 1 (children allowed, grandchildren not). */
+  maxChildIssueDepth?: number
 }
 
 export interface MeridianConfig {
@@ -260,6 +262,21 @@ export interface IStorageProvider {
 
   /** Delete a file by its public URL or storage key. */
   delete(urlOrKey: string): Promise<void>
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Email
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface EmailSendOptions {
+  to: string
+  subject: string
+  html?: string
+  text?: string
+}
+
+export interface IEmailService {
+  send(options: EmailSendOptions): Promise<void>
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

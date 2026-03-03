@@ -1,7 +1,7 @@
 {
-  "name": "@meridianjs/issue",
-  "version": "0.1.7",
-  "description": "Meridian issue module — Issue and Comment domain models",
+  "name": "@meridianjs/email-ses",
+  "version": "0.1.1",
+  "description": "AWS SES email provider module for Meridian",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
@@ -25,10 +25,8 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@meridianjs/framework-utils": "^0.1.0",
-    "@meridianjs/types": "^0.1.0",
-    "@mikro-orm/core": "^6.4.3",
-    "@mikro-orm/postgresql": "^6.4.3"
+    "@aws-sdk/client-ses": "^3.0.0",
+    "@meridianjs/types": "^0.1.0"
   },
   "devDependencies": {
     "tsup": "^8.3.5",

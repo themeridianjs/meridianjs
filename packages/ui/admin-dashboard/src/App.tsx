@@ -7,6 +7,7 @@ import { useRealtimeEvents } from "@/hooks/useRealtimeEvents"
 import { AppShell } from "@/components/layout/AppShell"
 import { ProjectLayout } from "@/components/layout/ProjectLayout"
 import { ReportingLayout } from "@/components/layout/ReportingLayout"
+import { OrgSettingsLayout } from "@/components/layout/OrgSettingsLayout"
 import { CommandPalette } from "@/components/CommandPalette"
 import { LoginPage } from "@/pages/LoginPage"
 import { RegisterPage } from "@/pages/RegisterPage"
@@ -24,8 +25,10 @@ import { RolesPage } from "@/pages/RolesPage"
 import { InviteAcceptPage } from "@/pages/InviteAcceptPage"
 import { ReportingPage } from "@/pages/ReportingPage"
 import { ProjectReportsPage } from "@/pages/ProjectReportsPage"
+import { OrgSettingsPage } from "@/pages/OrgSettingsPage"
 
 const ProjectTimelinePage = lazy(() => import("@/pages/ProjectTimelinePage").then(m => ({ default: m.ProjectTimelinePage })))
+const WorkspaceReportingPage = lazy(() => import("@/pages/WorkspaceReportingPage").then(m => ({ default: m.WorkspaceReportingPage })))
 
 function RequireAuth({ children }: { children: ReactNode }) {
   const { isAuthenticated } = useAuth()
@@ -166,6 +169,18 @@ export function App() {
         <Route index element={<ReportingPage />} />
       </Route>
 
+      {/* Org settings — auth required, no workspace in URL */}
+      <Route
+        path="/org/settings"
+        element={
+          <RequireAuth>
+            <OrgSettingsLayout />
+          </RequireAuth>
+        }
+      >
+        <Route index element={<OrgSettingsPage />} />
+      </Route>
+
       {/* Workspace setup — auth required, no workspace needed */}
       <Route
         path="/setup"
@@ -208,6 +223,7 @@ export function App() {
           <Route path="reports" element={<ProjectReportsPage />} />
         </Route>
         <Route path="notifications" element={<NotificationsPage />} />
+        <Route path="reporting" element={<Suspense fallback={<div className="flex items-center justify-center h-full text-sm text-muted-foreground">Loading…</div>}><WorkspaceReportingPage /></Suspense>} />
         <Route path="settings" element={<WorkspaceSettingsPage />} />
         <Route path="roles" element={<RequireSuperAdmin><RolesPage /></RequireSuperAdmin>} />
       </Route>

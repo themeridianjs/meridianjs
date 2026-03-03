@@ -37,7 +37,7 @@ function ChartTooltip({ active, payload, label }: any) {
   )
 }
 
-export function ReportingPage() {
+export function ReportingPage({ workspaceId }: { workspaceId?: string }) {
   const [from, setFrom] = useState<Date | undefined>(undefined)
   const [to, setTo] = useState<Date | undefined>(undefined)
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([])
@@ -56,7 +56,7 @@ export function ReportingPage() {
   const projectMap = useMemo(() => new Map(projects.map((p) => [p.id, p])), [projects])
 
   const { data, isLoading } = useReportingTimeLogs(
-    { from: fromStr, to: toStr },
+    { from: fromStr, to: toStr, workspace_id: workspaceId },
     { enabled: true }
   )
 

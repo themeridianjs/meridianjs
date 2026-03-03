@@ -13,6 +13,8 @@ import {
 import { useProjectByKey } from "@/api/hooks/useProjects"
 import { useSprints, useUpdateSprint, useDeleteSprint, type Sprint } from "@/api/hooks/useSprints"
 import { useIssues } from "@/api/hooks/useIssues"
+import { useOrgCalendar, useHolidays, type WorkingDays, type OrgHoliday } from "@/api/hooks/useOrgSettings"
+import { countBusinessDays } from "@/lib/businessDays"
 import { CreateSprintDialog } from "@/components/sprints/CreateSprintDialog"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -50,9 +52,11 @@ interface SprintRowProps {
   sprint: Sprint
   projectId: string
   issueCount: number
+  workingDays?: WorkingDays | null
+  holidays?: OrgHoliday[]
 }
 
-function SprintRow({ sprint, projectId, issueCount }: SprintRowProps) {
+function SprintRow({ sprint, projectId, issueCount, workingDays, holidays = [] }: SprintRowProps) {
   const update = useUpdateSprint(sprint.id, projectId)
   const deleteSprint = useDeleteSprint(projectId)
   const cfg = STATUS_CONFIG[sprint.status]
@@ -117,13 +121,26 @@ function SprintRow({ sprint, projectId, issueCount }: SprintRowProps) {
       </div>
 
       {/* Date range */}
-      <div className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0 w-52">
+      <div className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0 w-64">
         <CalendarRange className="h-3.5 w-3.5 shrink-0" />
         {hasStart || hasEnd ? (
           <span>
             {hasStart ? format(new Date(sprint.start_date!), "MMM d") : "—"}
             {" → "}
             {hasEnd ? format(new Date(sprint.end_date!), "MMM d, yyyy") : "—"}
+            {hasStart && hasEnd && workingDays && (() => {
+              const biz = countBusinessDays(
+                new Date(sprint.start_date!),
+                new Date(sprint.end_date!),
+                workingDays,
+                holidays
+              )
+              return (
+                <span className="ml-1.5 text-[11px] text-muted-foreground/70">
+                  ({biz} biz day{biz !== 1 ? "s" : ""})
+                </span>
+              )
+            })()}
           </span>
         ) : (
           <span className="italic">No dates set</span>
@@ -191,6 +208,8 @@ export function SprintsPage() {
 
   const { data: sprints, isLoading } = useSprints(projectId || undefined)
   const { data: issues } = useIssues(projectId || undefined)
+  const { data: orgCalendar } = useOrgCalendar()
+  const { data: holidays = [] } = useHolidays(new Date().getFullYear())
 
   // Count issues per sprint (client-side, issues may already be cached)
   const issueCounts = (issues ?? []).reduce<Record<string, number>>((acc, issue) => {
@@ -266,6 +285,8 @@ export function SprintsPage() {
                         sprint={sprint}
                         projectId={projectId}
                         issueCount={issueCounts[sprint.id] ?? 0}
+                        workingDays={orgCalendar?.working_days}
+                        holidays={holidays}
                       />
                     ))}
                   </div>

@@ -87,6 +87,7 @@ interface IssueRowProps {
   onOpen: (issue: Issue) => void
   isChild?: boolean
   children?: Issue[]
+  childrenMap?: Record<string, Issue[]>
   onAddChild?: (parentId: string) => void
 }
 
@@ -102,6 +103,7 @@ function IssueRow({
   onOpen,
   isChild = false,
   children = [],
+  childrenMap,
   onAddChild,
 }: IssueRowProps) {
   const navigate = useNavigate()
@@ -146,7 +148,7 @@ function IssueRow({
           "bg-white dark:bg-card group-hover:bg-[#f9fafb] dark:group-hover:bg-muted/30",
           isChild && "bg-[#f8f9fa] dark:bg-muted/20",
         )}>
-          {!isChild && hasChildren && (
+          {hasChildren ? (
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
@@ -160,13 +162,15 @@ function IssueRow({
               </TooltipTrigger>
               <TooltipContent side="top">{expanded ? "Collapse" : "Expand"}</TooltipContent>
             </Tooltip>
+          ) : isChild ? (
+            <ListTree className="h-3 w-3 text-muted-foreground/40 shrink-0" />
+          ) : (
+            <span className="w-4 shrink-0" />
           )}
-          {!isChild && !hasChildren && <span className="w-4 shrink-0" />}
-          {isChild && <ListTree className="h-3 w-3 text-muted-foreground/40 shrink-0" />}
           <span className={cn("text-sm text-foreground truncate", isChild && "text-muted-foreground")}>
             {issue.title}
           </span>
-          {!isChild && hasChildren && (
+          {hasChildren && (
             <span className="shrink-0 flex items-center gap-0.5 ml-1 text-[10px] font-medium text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/50 px-1 py-0.5 rounded">
               <ListTree className="h-2.5 w-2.5" />
               {children.length}
@@ -377,7 +381,7 @@ function IssueRow({
       </div>
 
       {/* Children (expanded) */}
-      {!isChild && expanded && children.map((child) => (
+      {expanded && children.map((child) => (
         <IssueRow
           key={child.id}
           issue={child}
@@ -390,6 +394,9 @@ function IssueRow({
           projectKey={projectKey}
           onOpen={onOpen}
           isChild
+          children={childrenMap?.[child.id] ?? []}
+          childrenMap={childrenMap}
+          onAddChild={onAddChild}
         />
       ))}
     </>
@@ -550,6 +557,7 @@ function TaskListGroup({
                 projectKey={projectKey}
                 onOpen={onOpen}
                 children={childrenMap[issue.id] ?? []}
+                childrenMap={childrenMap}
                 onAddChild={onAddChild}
               />
             ))
