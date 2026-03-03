@@ -133,20 +133,21 @@ function renderOptionalModuleBlock(id: OptionalModuleId, vars: ProjectTemplateVa
       resolve: "@meridianjs/email-ses",
       options: {
         fromAddress: process.env.EMAIL_FROM ?? "noreply@example.com",
-        region: process.env.AWS_REGION ?? "us-east-1",
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID ?? "",
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY ?? "",
+        region: process.env.AWS_SES_REGION ?? "us-east-1",
+        accessKeyId: process.env.AWS_SES_ACCESS_KEY_ID ?? "",
+        secretAccessKey: process.env.AWS_SES_SECRET_ACCESS_KEY ?? "",
       },
     },`
     case "storage-s3":
       return `    {
       resolve: "@meridianjs/storage-s3",
       options: {
-        bucket: process.env.S3_BUCKET ?? "",
-        region: process.env.AWS_REGION ?? "us-east-1",
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID ?? "",
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY ?? "",
-        // endpoint: process.env.S3_ENDPOINT, // uncomment for R2 / MinIO
+        bucket: process.env.AWS_S3_BUCKET ?? "",
+        region: process.env.AWS_S3_REGION ?? "us-east-1",
+        accessKeyId: process.env.AWS_S3_ACCESS_KEY_ID ?? "",
+        secretAccessKey: process.env.AWS_S3_SECRET_ACCESS_KEY ?? "",
+        // cloudfrontUrl: process.env.AWS_CLOUDFRONT_URL, // optional, for generating public URLs
+        // endpoint: process.env.AWS_S3_ENDPOINT, // uncomment for R2 / MinIO
       },
     },`
   }
@@ -334,16 +335,19 @@ GOOGLE_CLIENT_SECRET=`)
 
   if (mods.includes("storage-s3")) {
     sections.push(`# File storage (S3 / compatible)
-S3_BUCKET=
-# S3_ENDPOINT=  # uncomment for R2 / MinIO`)
+AWS_S3_BUCKET=
+AWS_S3_REGION=us-east-1
+AWS_S3_ACCESS_KEY_ID=
+AWS_S3_SECRET_ACCESS_KEY=
+# AWS_CLOUDFRONT_URL=  # optional, for generating public URLs
+# AWS_S3_ENDPOINT=     # uncomment for R2 / MinIO`)
   }
 
-  const hasAws = mods.includes("email-ses") || mods.includes("storage-s3")
-  if (hasAws) {
-    sections.push(`# AWS credentials (used by ${[mods.includes("email-ses") ? "SES" : "", mods.includes("storage-s3") ? "S3" : ""].filter(Boolean).join(" + ")})
-AWS_REGION=us-east-1
-AWS_ACCESS_KEY_ID=
-AWS_SECRET_ACCESS_KEY=`)
+  if (mods.includes("email-ses")) {
+    sections.push(`# Email — AWS SES credentials
+AWS_SES_REGION=us-east-1
+AWS_SES_ACCESS_KEY_ID=
+AWS_SES_SECRET_ACCESS_KEY=`)
   }
 
   const optionalEnv = sections.length > 0 ? "\n" + sections.join("\n\n") : ""
