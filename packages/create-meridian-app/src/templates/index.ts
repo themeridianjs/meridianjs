@@ -53,6 +53,7 @@ export function renderPackageJson(vars: ProjectTemplateVars): string {
         typescript: "^5.4.0",
         tsx: "^4.0.0",
         "@types/node": "^22.0.0",
+        "@types/express": "^5.0.0",
       },
     },
     null,
