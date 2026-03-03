@@ -12,6 +12,10 @@ export interface Project {
   identifier: string
   description?: string
   status: string
+  visibility?: string
+  icon?: string | null
+  color?: string | null
+  share_token?: string | null
   metadata?: Record<string, unknown> | null
   created_at: string
   updated_at: string
@@ -29,11 +33,23 @@ interface CreateProjectInput {
   workspace_id: string
 }
 
+export interface ProjectActivity {
+  id: string
+  entity_type: string
+  entity_id: string
+  actor_id: string
+  action: string
+  changes?: Record<string, { from: unknown; to: unknown }> | null
+  workspace_id: string
+  created_at: string
+}
+
 export const projectKeys = {
   all: ["projects"] as const,
   list: () => [...projectKeys.all, "list"] as const,
   detail: (id: string) => [...projectKeys.all, id] as const,
   byKey: (key: string) => [...projectKeys.all, "key", key] as const,
+  activities: (id: string) => [...projectKeys.all, id, "activities"] as const,
 }
 
 export function useProjects() {
@@ -157,5 +173,36 @@ export function useDeleteProject() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: projectKeys.list() })
     },
+  })
+}
+
+export function useGenerateShareToken(projectId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => api.post<{ share_url: string; project: Project }>(`/admin/projects/${projectId}/share`, {}),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: projectKeys.detail(projectId) })
+      qc.invalidateQueries({ queryKey: projectKeys.list() })
+    },
+  })
+}
+
+export function useRevokeShareToken(projectId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => api.delete<{ project: Project }>(`/admin/projects/${projectId}/share`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: projectKeys.detail(projectId) })
+      qc.invalidateQueries({ queryKey: projectKeys.list() })
+    },
+  })
+}
+
+export function useProjectActivities(projectId: string) {
+  return useQuery({
+    queryKey: projectKeys.activities(projectId),
+    queryFn: () => api.get<{ activities: ProjectActivity[] }>(`/admin/projects/${projectId}/activities`),
+    select: (data) => data.activities,
+    enabled: !!projectId,
   })
 }

@@ -36,6 +36,14 @@ export const POST = async (req: any, res: Response, next: NextFunction) => {
         },
       }).catch(() => {})
 
+      const activityService = req.scope.resolve("activityModuleService") as any
+      activityService.recordActivity({
+        entity_type: "project", entity_id: project.id,
+        actor_id: req.user?.id ?? "system", action: "member_added",
+        workspace_id: project.workspace_id,
+        changes: { user_id: { from: null, to: user_id }, role: { from: null, to: role ?? "member" } },
+      }).catch(() => {})
+
       res.status(201).json({ ok: true })
     } catch (err) {
       next(err)

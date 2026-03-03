@@ -23,6 +23,15 @@ export const POST = async (req: any, res: Response, next: NextFunction) => {
       }
 
       await projectMemberService.ensureProjectTeam(project.id, team_id)
+
+      const activityService = req.scope.resolve("activityModuleService") as any
+      activityService.recordActivity({
+        entity_type: "project", entity_id: project.id,
+        actor_id: req.user?.id ?? "system", action: "team_added",
+        workspace_id: project.workspace_id,
+        changes: { team_id: { from: null, to: team_id } },
+      }).catch(() => {})
+
       res.status(201).json({ ok: true })
     } catch (err) {
       next(err)

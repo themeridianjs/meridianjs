@@ -30,6 +30,7 @@ interface KanbanBoardProps {
   statuses: ProjectStatus[]
   onIssueClick?: (issue: Issue) => void
   onColumnsReorder?: (orderedIds: string[]) => void
+  readOnly?: boolean
 }
 
 type ColumnMap = Record<string, Issue[]>
@@ -98,7 +99,7 @@ function mergeColumnsWithServer(
   return newMap
 }
 
-export function KanbanBoard({ issues, projectId, statuses, onIssueClick, onColumnsReorder }: KanbanBoardProps) {
+export function KanbanBoard({ issues, projectId, statuses, onIssueClick, onColumnsReorder, readOnly = false }: KanbanBoardProps) {
   const [columnOrder, setColumnOrder] = useState<string[]>(() => statuses.map((s) => s.id))
   const [columns, setColumns] = useState<ColumnMap>(() => groupByStatus(issues, statuses))
   const [activeIssue, setActiveIssue] = useState<Issue | null>(null)
@@ -155,7 +156,10 @@ export function KanbanBoard({ issues, projectId, statuses, onIssueClick, onColum
   })
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+    useSensor(PointerSensor, readOnly
+      ? { activationConstraint: { distance: Infinity } }
+      : { activationConstraint: { distance: 5 } }
+    )
   )
 
   // When dragging a column, only consider other columns as drop targets.
@@ -419,7 +423,7 @@ export function KanbanBoard({ issues, projectId, statuses, onIssueClick, onColum
           ))}
         </SortableContext>
 
-        <AddStatusColumn projectId={projectId} />
+        {!readOnly && <AddStatusColumn projectId={projectId} />}
       </div>
 
       <DragOverlay>

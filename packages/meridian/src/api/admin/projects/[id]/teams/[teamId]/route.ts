@@ -17,6 +17,15 @@ export const DELETE = async (req: any, res: Response, next: NextFunction) => {
       }
 
       await projectMemberService.removeProjectTeam(project.id, req.params.teamId)
+
+      const activityService = req.scope.resolve("activityModuleService") as any
+      activityService.recordActivity({
+        entity_type: "project", entity_id: project.id,
+        actor_id: req.user?.id ?? "system", action: "team_removed",
+        workspace_id: project.workspace_id,
+        changes: { team_id: { from: req.params.teamId, to: null } },
+      }).catch(() => {})
+
       res.status(204).send()
     } catch (err) {
       next(err)

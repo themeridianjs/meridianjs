@@ -25,7 +25,9 @@ import { RolesPage } from "@/pages/RolesPage"
 import { InviteAcceptPage } from "@/pages/InviteAcceptPage"
 import { ReportingPage } from "@/pages/ReportingPage"
 import { ProjectReportsPage } from "@/pages/ProjectReportsPage"
+import { ProjectActivityPage } from "@/pages/ProjectActivityPage"
 import { OrgSettingsPage } from "@/pages/OrgSettingsPage"
+import { PublicProjectPage } from "@/pages/public/PublicProjectPage"
 
 const ProjectTimelinePage = lazy(() => import("@/pages/ProjectTimelinePage").then(m => ({ default: m.ProjectTimelinePage })))
 const WorkspaceReportingPage = lazy(() => import("@/pages/WorkspaceReportingPage").then(m => ({ default: m.WorkspaceReportingPage })))
@@ -157,6 +159,9 @@ export function App() {
       {/* Invite accept — fully public, no auth required */}
       <Route path="/invite/:token" element={<InviteAcceptPage />} />
 
+      {/* Public project share — no auth required */}
+      <Route path="/share/:token" element={<PublicProjectPage />} />
+
       {/* Global reporting — auth required, no workspace in URL */}
       <Route
         path="/reporting"
@@ -221,6 +226,7 @@ export function App() {
           <Route path="timeline" element={<Suspense fallback={<div className="flex items-center justify-center h-full text-sm text-muted-foreground">Loading…</div>}><ProjectTimelinePage /></Suspense>} />
           <Route path="access" element={<ProjectAccessPage />} />
           <Route path="reports" element={<ProjectReportsPage />} />
+          <Route path="activity" element={<ProjectActivityPage />} />
         </Route>
         <Route path="notifications" element={<NotificationsPage />} />
         <Route path="reporting" element={<Suspense fallback={<div className="flex items-center justify-center h-full text-sm text-muted-foreground">Loading…</div>}><WorkspaceReportingPage /></Suspense>} />

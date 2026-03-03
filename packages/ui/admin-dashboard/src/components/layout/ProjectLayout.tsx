@@ -1,18 +1,33 @@
 import { NavLink, Outlet, useParams, useNavigate, useSearchParams, useLocation } from "react-router-dom"
-import { useEffect } from "react"
-import { Zap, GitBranch, LayoutDashboard, Lock, CalendarRange, BarChart2 } from "lucide-react"
+import { useEffect, useState } from "react"
+import { Zap, GitBranch, LayoutDashboard, Lock, CalendarRange, BarChart2, Share2, Activity } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import { useProjectByKey } from "@/api/hooks/useProjects"
+import { useProjectAccess } from "@/api/hooks/useProjectAccess"
+import { useAuth } from "@/stores/auth"
+import { Button } from "@/components/ui/button"
+import { ShareProjectDialog } from "@/components/projects/ShareProjectDialog"
 import { ApiError } from "@/api/client"
 
-const PROJECT_TAB_ROUTES = ["board", "issues", "sprints", "timeline", "access", "reports"] as const
+const PROJECT_TAB_ROUTES = ["board", "issues", "sprints", "timeline", "access", "reports", "activity"] as const
 
 export function ProjectLayout() {
   const { projectKey, workspace: ws } = useParams<{ projectKey: string; workspace: string }>()
   const { data: project, error } = useProjectByKey(projectKey ?? "")
+  const { user } = useAuth()
+  const { data: projectAccess } = useProjectAccess(project?.id ?? "")
+  const [shareOpen, setShareOpen] = useState(false)
   const navigate = useNavigate()
   const location = useLocation()
   const [searchParams] = useSearchParams()
+
+  // Show Share button only for workspace/project admins and project managers
+  const userRoles = user?.roles ?? []
+  const isPrivileged = userRoles.includes("super-admin") || userRoles.includes("admin")
+  const isProjectManager = projectAccess?.members.some(
+    (m) => m.user_id === user?.id && m.role === "manager"
+  )
+  const canShare = isPrivileged || isProjectManager
 
   // Redirect to projects list if access is denied or project doesn't exist
   useEffect(() => {
@@ -42,6 +57,7 @@ export function ProjectLayout() {
     { to: `${base}/timeline`, label: "Timeline", icon: CalendarRange, end: true },
     { to: `${base}/access`, label: "Access", icon: Lock, end: true },
     { to: `${base}/reports`, label: "Reports", icon: BarChart2, end: true },
+    { to: `${base}/activity`, label: "Activity", icon: Activity, end: true },
   ]
 
   return (
@@ -61,23 +77,33 @@ export function ProjectLayout() {
         </div>
 
         {/* Tab bar */}
-        <div className="flex -mb-px">
-          {tabs.map(({ to, label, icon: Icon, end }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={end}
-              className={({ isActive }) =>
-                `flex items-center gap-1.5 px-3 py-2 text-sm border-b-2 transition-colors ${isActive
-                  ? "border-foreground text-foreground font-medium"
-                  : "border-transparent text-muted-foreground hover:text-foreground"
-                }`
-              }
-            >
-              <Icon className="h-3.5 w-3.5" strokeWidth={1.5} />
-              {label}
-            </NavLink>
-          ))}
+        <div className="flex items-center -mb-px">
+          <div className="flex flex-1">
+            {tabs.map(({ to, label, icon: Icon, end }) => (
+              <NavLink
+                key={to}
+                to={to}
+                end={end}
+                className={({ isActive }) =>
+                  `flex items-center gap-1.5 px-3 py-2 text-sm border-b-2 transition-colors ${isActive
+                    ? "border-foreground text-foreground font-medium"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                  }`
+                }
+              >
+                <Icon className="h-3.5 w-3.5" strokeWidth={1.5} />
+                {label}
+              </NavLink>
+            ))}
+          </div>
+          {canShare && project && (
+            <div className="pb-px pr-1">
+              <Button variant="ghost" size="sm" onClick={() => setShareOpen(true)} className="h-7 px-2 text-xs text-muted-foreground">
+                <Share2 className="h-3.5 w-3.5 mr-1" />
+                Share
+              </Button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -85,6 +111,14 @@ export function ProjectLayout() {
       <div className="flex flex-col flex-1 min-h-0">
         <Outlet />
       </div>
+
+      {project && (
+        <ShareProjectDialog
+          open={shareOpen}
+          onClose={() => setShareOpen(false)}
+          project={project}
+        />
+      )}
     </div>
   )
 }

@@ -1,4 +1,5 @@
 import { MeridianService } from "@meridianjs/framework-utils"
+import { randomBytes } from "crypto"
 import type { MeridianContainer } from "@meridianjs/types"
 import ProjectModel from "./models/project.js"
 import LabelModel from "./models/label.js"
@@ -90,6 +91,27 @@ export class ProjectModuleService extends MeridianService({
   async listStatusesByProject(projectId: string): Promise<any[]> {
     const repo = this.container.resolve<any>("projectStatusRepository")
     return repo.find({ project_id: projectId }, { orderBy: { position: "ASC" } })
+  }
+
+  /** Generate a random share token and set visibility to "public". */
+  async generateShareToken(projectId: string): Promise<any> {
+    const token = randomBytes(32).toString("hex")
+    return this.updateProject(projectId, { share_token: token, visibility: "public" })
+  }
+
+  /** Remove the share token and set visibility back to "private". */
+  async revokeShareToken(projectId: string): Promise<any> {
+    return this.updateProject(projectId, { share_token: null, visibility: "private" })
+  }
+
+  /** Find a project by share token. Returns null if not found or not public. */
+  async retrieveProjectByShareToken(token: string): Promise<any | null> {
+    const repo = this.container.resolve<any>("projectRepository")
+    try {
+      return await repo.findOneOrFail({ share_token: token, visibility: "public" })
+    } catch {
+      return null
+    }
   }
 
   /** Update position field for each status to match the provided orderedIds index. */
