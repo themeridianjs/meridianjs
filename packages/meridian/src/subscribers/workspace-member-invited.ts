@@ -59,7 +59,8 @@ export default async function handler({ event, container }: SubscriberArgs<Works
       ),
     })
   } catch (err) {
-    console.error("[email] workspace.member_invited:", err)
+    const logger = container.resolve("logger") as any
+    logger.error(`[email] workspace.member_invited: ${err instanceof Error ? err.message : String(err)}`)
   }
 }
 

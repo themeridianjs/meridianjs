@@ -34,7 +34,8 @@ export async function loadSubscribers(
   const files = await fs.readdir(subscribersDir)
 
   for (const file of files) {
-    if (/\.d\.(ts|mts)$/.test(file)) continue // skip declaration files
+    if (file.startsWith("_")) continue            // skip helper/utility files
+    if (/\.d\.(ts|mts)$/.test(file)) continue    // skip declaration files
     if (!/\.(ts|mts|js|mjs|cjs)$/.test(file)) continue
 
     const fullPath = path.join(subscribersDir, file)

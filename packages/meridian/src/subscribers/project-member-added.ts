@@ -46,7 +46,8 @@ export default async function handler({ event, container }: SubscriberArgs<Proje
       })
     }
   } catch (err) {
-    console.error("[email] project.member_added:", err)
+    const logger = container.resolve("logger") as any
+    logger.error(`[email] project.member_added: ${err instanceof Error ? err.message : String(err)}`)
   }
 }
 

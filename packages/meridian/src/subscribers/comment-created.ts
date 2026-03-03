@@ -55,7 +55,8 @@ export default async function handler({ event, container }: SubscriberArgs<Comme
       })
     }))
   } catch (err) {
-    console.error("[email] comment.created:", err)
+    const logger = container.resolve("logger") as any
+    logger.error(`[email] comment.created: ${err instanceof Error ? err.message : String(err)}`)
   }
 }
 

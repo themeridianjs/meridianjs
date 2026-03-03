@@ -57,7 +57,8 @@ export default async function handler({ event, container }: SubscriberArgs<Issue
         })
     )
   } catch (err) {
-    console.error("[email] issue.assigned:", err)
+    const logger = container.resolve("logger") as any
+    logger.error(`[email] issue.assigned: ${err instanceof Error ? err.message : String(err)}`)
   }
 }
 

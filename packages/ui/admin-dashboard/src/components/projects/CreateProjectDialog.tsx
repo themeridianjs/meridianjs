@@ -203,7 +203,7 @@ export function CreateProjectDialog({ open, onClose }: CreateProjectDialogProps)
   }
 
   return (
-    <Drawer open={open} onOpenChange={(o) => !o && handleClose()}>
+    <Drawer open={open} onOpenChange={(o) => !o && handleClose()} dismissible={false}>
       <DrawerContent className="max-w-md">
         <DrawerHeader>
           <DrawerTitle>New project</DrawerTitle>
