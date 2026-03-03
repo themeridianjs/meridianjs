@@ -1,6 +1,6 @@
 import type { SubscriberArgs, SubscriberConfig } from "@meridianjs/types"
 import { sseManager } from "@meridianjs/framework"
-import { emailHtml } from "./_email-helper.js"
+import { emailHtml, resolveTemplate } from "./_email-helper.js"
 
 interface IssueAssignedData {
   issue_id: string
@@ -47,11 +47,12 @@ export default async function handler({ event, container }: SubscriberArgs<Issue
         .map(async (userId: string) => {
           const user = await userService.retrieveUser(userId)
           if (!user?.email) return
+          const tpl = resolveTemplate(container, "issue.assigned", { issue, user })
           await emailService.send({
             to: user.email,
-            subject: `[${issue.identifier}] You've been assigned: ${issue.title}`,
-            text: `You've been assigned to issue ${issue.identifier}: "${issue.title}".`,
-            html: emailHtml(`You've been assigned to <strong>${issue.identifier}</strong>: "${issue.title}".`),
+            subject: tpl?.subject ?? `[${issue.identifier}] You've been assigned: ${issue.title}`,
+            text: tpl?.text ?? `You've been assigned to issue ${issue.identifier}: "${issue.title}".`,
+            html: tpl?.html ?? emailHtml(`You've been assigned to <strong>${issue.identifier}</strong>: "${issue.title}".`),
           })
         })
     )

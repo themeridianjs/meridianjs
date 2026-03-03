@@ -1,5 +1,5 @@
 import type { SubscriberArgs, SubscriberConfig } from "@meridianjs/types"
-import { emailHtml } from "./_email-helper.js"
+import { emailHtml, resolveTemplate } from "./_email-helper.js"
 
 interface WorkspaceMemberInvitedData {
   invitation_id: string
@@ -42,11 +42,17 @@ export default async function handler({ event, container }: SubscriberArgs<Works
     const appUrl = process.env.APP_URL ?? "http://localhost:9000"
     const inviteLink = `${appUrl}/invite/${invitation.token}`
 
+    const tpl = resolveTemplate(container, "workspace.member_invited", {
+      workspace: { name: workspace.name },
+      inviter: { name: inviterName },
+      invitation: { token: invitation.token, role: roleDisplay },
+      invitee: { email: data.email },
+    })
     await emailService.send({
       to: data.email,
-      subject: `${inviterName} invited you to join "${workspace.name}" on Meridian`,
-      text: `${inviterName} has invited you to join "${workspace.name}" as a ${roleDisplay}.\n\nAccept your invitation here: ${inviteLink}`,
-      html: emailHtml(
+      subject: tpl?.subject ?? `${inviterName} invited you to join "${workspace.name}" on Meridian`,
+      text: tpl?.text ?? `${inviterName} has invited you to join "${workspace.name}" as a ${roleDisplay}.\n\nAccept your invitation here: ${inviteLink}`,
+      html: tpl?.html ?? emailHtml(
         `<strong>${inviterName}</strong> has invited you to join <strong>${workspace.name}</strong> as a <strong>${roleDisplay}</strong>.<br/><br/>` +
         `<a href="${inviteLink}" style="display:inline-block;padding:10px 20px;background:#4f46e5;color:#fff;text-decoration:none;border-radius:6px;font-weight:600">Accept Invitation</a><br/><br/>` +
         `Or copy this link: <a href="${inviteLink}">${inviteLink}</a>`

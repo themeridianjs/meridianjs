@@ -18,7 +18,8 @@ import type {
  */
 export async function loadSubscribers(
   container: MeridianContainer,
-  subscribersDir: string
+  subscribersDir: string,
+  disabledEvents: string[] = []
 ): Promise<void> {
   const logger = container.resolve<ILogger>("logger")
 
@@ -62,6 +63,10 @@ export async function loadSubscribers(
     const events = Array.isArray(config.event) ? config.event : [config.event]
 
     for (const eventName of events) {
+      if (disabledEvents.includes(eventName)) {
+        logger.debug(`Subscriber ${file} skipped (disabled by plugin config)`)
+        continue
+      }
       eventBus.subscribe(eventName, (args) =>
         handler({ ...args, container })
       )

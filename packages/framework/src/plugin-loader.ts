@@ -101,7 +101,7 @@ export async function loadPlugins(
 
     // ── 5. Auto-scan routes / subscribers / jobs ────────────────────────────
     if (scanRoot) {
-      await autoScanPlugin(scanRoot, container, logger, server)
+      await autoScanPlugin(scanRoot, container, logger, server, plugin.disableSubscribers ?? [])
     }
 
     logger.info(`Plugin loaded: ${plugin.resolve}`)
@@ -116,7 +116,8 @@ async function autoScanPlugin(
   scanRoot: string,
   container: MeridianContainer,
   logger: ILogger,
-  server?: any
+  server?: any,
+  disabledEvents: string[] = []
 ): Promise<void> {
   const candidates = [
     scanRoot,                          // pluginRoot already points to compiled dir
@@ -137,7 +138,7 @@ async function autoScanPlugin(
     // Found a valid candidate — scan all sub-dirs
     await Promise.all([
       server ? loadRoutes(server, container, apiDir) : Promise.resolve(),
-      loadSubscribers(container, path.join(candidate, "subscribers")),
+      loadSubscribers(container, path.join(candidate, "subscribers"), disabledEvents),
       loadJobs(container, path.join(candidate, "jobs")),
       loadLinks(container, path.join(candidate, "links")),
     ])

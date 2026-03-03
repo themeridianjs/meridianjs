@@ -1,6 +1,6 @@
 import type { SubscriberArgs, SubscriberConfig } from "@meridianjs/types"
 import { sseManager } from "@meridianjs/framework"
-import { emailHtml } from "./_email-helper.js"
+import { emailHtml, resolveTemplate } from "./_email-helper.js"
 
 interface ProjectMemberAddedData {
   project_id: string
@@ -37,11 +37,12 @@ export default async function handler({ event, container }: SubscriberArgs<Proje
     const userService  = container.resolve("userModuleService") as any
     const user = await userService.retrieveUser(data.user_id)
     if (user?.email) {
+      const tpl = resolveTemplate(container, "project.member_added", { project: { name: data.project_name }, user })
       await emailService.send({
         to: user.email,
-        subject: `You've been added to project "${data.project_name}"`,
-        text: `You've been added to the project "${data.project_name}".`,
-        html: emailHtml(`You've been added to the project <strong>"${data.project_name}"</strong>.`),
+        subject: tpl?.subject ?? `You've been added to project "${data.project_name}"`,
+        text: tpl?.text ?? `You've been added to the project "${data.project_name}".`,
+        html: tpl?.html ?? emailHtml(`You've been added to the project <strong>"${data.project_name}"</strong>.`),
       })
     }
   } catch (err) {

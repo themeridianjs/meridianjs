@@ -77,6 +77,7 @@ export interface ModuleConfig {
 export interface PluginConfig {
   resolve: string
   options?: Record<string, unknown>
+  disableSubscribers?: string[]
 }
 
 export interface AdminConfig {
@@ -277,6 +278,17 @@ export interface EmailSendOptions {
 
 export interface IEmailService {
   send(options: EmailSendOptions): Promise<void>
+}
+
+export interface EmailTemplateOverride {
+  subject?: string
+  text?: string
+  html?: string
+}
+
+export interface IEmailTemplateService {
+  /** Return an override object for the given event + contextual data, or null to use defaults. */
+  render(event: string, data: unknown): EmailTemplateOverride | null
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

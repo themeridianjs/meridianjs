@@ -1,6 +1,6 @@
 import type { SubscriberArgs, SubscriberConfig } from "@meridianjs/types"
 import { sseManager } from "@meridianjs/framework"
-import { emailHtml } from "./_email-helper.js"
+import { emailHtml, resolveTemplate } from "./_email-helper.js"
 
 interface IssueCreatedData {
   issue_id: string
@@ -48,13 +48,14 @@ export default async function handler({ event, container }: SubscriberArgs<Issue
       const user = await userService.retrieveUser(userId)
       if (!user?.email) return
       const isAssignee = data.assignee_ids?.includes(userId)
+      const tpl = resolveTemplate(container, "issue.created", { issue, user, isAssignee: !!isAssignee })
       await emailService.send({
         to: user.email,
-        subject: `New issue: [${issue.identifier}] ${issue.title}`,
-        text: isAssignee
+        subject: tpl?.subject ?? `New issue: [${issue.identifier}] ${issue.title}`,
+        text: tpl?.text ?? (isAssignee
           ? `You've been assigned to new issue ${issue.identifier}: "${issue.title}".`
-          : `A new issue ${issue.identifier} was created: "${issue.title}".`,
-        html: emailHtml(isAssignee
+          : `A new issue ${issue.identifier} was created: "${issue.title}".`),
+        html: tpl?.html ?? emailHtml(isAssignee
           ? `You've been assigned to new issue <strong>${issue.identifier}</strong>: "${issue.title}".`
           : `A new issue <strong>${issue.identifier}</strong> was created: "${issue.title}".`),
       })
