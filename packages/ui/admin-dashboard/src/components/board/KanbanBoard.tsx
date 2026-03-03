@@ -122,6 +122,18 @@ export function KanbanBoard({ issues, projectId, statuses, onIssueClick, onColum
     return map
   }, [issues])
 
+  // Keep columnOrder in sync with statuses: append new IDs, prune deleted ones.
+  // Must run before the issues sync so new columns are registered in SortableContext.
+  useEffect(() => {
+    setColumnOrder((prev) => {
+      const statusIds = new Set(statuses.map((s) => s.id))
+      const filtered = prev.filter((id) => statusIds.has(id))
+      const newIds = statuses.map((s) => s.id).filter((id) => !prev.includes(id))
+      if (filtered.length === prev.length && newIds.length === 0) return prev
+      return [...filtered, ...newIds]
+    })
+  }, [statuses])
+
   // When the server issues list changes (refetch, new issue, etc.) and no drag
   // is in progress, sync the local column map from the canonical server data.
   // We use mergeColumnsWithServer instead of a full rebuild so that
@@ -390,7 +402,7 @@ export function KanbanBoard({ issues, projectId, statuses, onIssueClick, onColum
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
-      <div className="flex gap-4 h-full overflow-x-auto px-6 py-4 pb-6">
+      <div className="flex gap-4 min-h-full overflow-x-auto px-6 py-4 pb-6">
         <SortableContext items={columnOrder} strategy={horizontalListSortingStrategy}>
           {orderedStatuses.map((status) => (
             <KanbanColumn

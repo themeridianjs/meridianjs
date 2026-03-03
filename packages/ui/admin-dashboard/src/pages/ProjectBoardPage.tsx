@@ -45,7 +45,7 @@ export function ProjectBoardPage() {
         <WidgetZone zone="project.board.before" props={{ projectId }} />
 
         {/* Board — only this area scrolls */}
-        <div className="flex-1 min-h-0">
+        <div className="flex-1 min-h-0 overflow-y-auto">
           {isLoading ? (
             <div className="flex gap-4 px-6 py-6">
               {[1, 2, 3, 4].map((i) => (
