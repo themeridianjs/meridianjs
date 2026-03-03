@@ -95,22 +95,15 @@ export function ProfilePage() {
     )
   }
 
-  const handleConnectGoogle = async () => {
-    try {
-      const token = localStorage.getItem("meridian_token")
-      const res = await fetch(`${BASE_URL}/auth/google/link`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({})) as { error?: { message?: string } }
-        toast.error(data.error?.message ?? "Failed to get Google auth URL")
-        return
-      }
-      const { url } = await res.json() as { url: string }
-      window.location.href = url  // url is an absolute Google OAuth URL, no prefix needed
-    } catch {
-      toast.error("Failed to initiate Google connection")
+  const handleConnectGoogle = () => {
+    const token = localStorage.getItem("meridian_token")
+    if (!token) {
+      toast.error("You must be logged in to connect Google")
+      return
     }
+    // Full-page navigation so the server's Set-Cookie (nonce) is stored correctly.
+    // Cross-origin XHR silently drops Set-Cookie, causing CSRF failures.
+    window.location.href = `${BASE_URL}/auth/google/link?token=${encodeURIComponent(token)}`
   }
 
   const handleUnlinkGoogle = () => {

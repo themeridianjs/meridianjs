@@ -3,17 +3,21 @@ import jwt from "jsonwebtoken"
 import type { Response } from "express"
 
 /**
- * GET /auth/google/link
- * Returns a Google OAuth URL for the link flow (connecting Google to an existing account).
- * Requires a valid Bearer token in the Authorization header (manually verified here
- * because /auth/* middleware does not apply JWT authentication).
+ * GET /auth/google/link?token=<jwt>
+ * Initiates the Google OAuth link flow (connecting Google to an existing account).
+ * The JWT is accepted via query param so this can be a full-page navigation —
+ * which is required to ensure the nonce cookie is stored correctly (cross-origin
+ * XHR responses silently discard Set-Cookie headers in all modern browsers).
  */
 export const GET = async (req: any, res: Response) => {
-  // Manually verify the Bearer token
+  // Accept token from query param (full-page navigation) or Authorization header (fallback)
   const authHeader = req.headers.authorization as string | undefined
-  const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null
+  const token =
+    (req.query as { token?: string }).token ||
+    (authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null)
+
   if (!token) {
-    res.status(401).json({ error: { message: "Authorization header required" } })
+    res.status(401).json({ error: { message: "token query parameter or Authorization header required" } })
     return
   }
 
@@ -55,5 +59,5 @@ export const GET = async (req: any, res: Response) => {
   })
 
   const url: string = googleOAuthService.getAuthUrl(state)
-  res.json({ url })
+  res.redirect(302, url)
 }
