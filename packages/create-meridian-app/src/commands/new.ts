@@ -14,6 +14,7 @@ import {
   renderEnvExample,
   renderReadme,
   renderAdminWidgetsIndex,
+  type OptionalModuleId,
 } from "../templates/index.js"
 import { writeFile, mkdirWithKeep } from "../utils.js"
 
@@ -90,6 +91,19 @@ export async function runNew(projectName?: string): Promise<void> {
         initial: 5174,
       },
       {
+        type: "multiselect" as const,
+        name: "optionalModules",
+        message: "Optional modules (Space to toggle, Return to confirm)",
+        choices: [
+          { title: "Google OAuth  — sign in with Google",  value: "google-oauth"    },
+          { title: "Email — SendGrid",                     value: "email-sendgrid"  },
+          { title: "Email — Resend",                       value: "email-resend"    },
+          { title: "Email — AWS SES",                      value: "email-ses"       },
+          { title: "File storage — AWS S3 / compatible",   value: "storage-s3"      },
+        ],
+        hint: "none selected = add manually later",
+      },
+      {
         type: "confirm",
         name: "installDeps",
         message: "Install dependencies now?",
@@ -105,6 +119,7 @@ export async function runNew(projectName?: string): Promise<void> {
     httpPort: answers.httpPort as number,
     dashboard: answers.dashboard as boolean,
     dashboardPort: (answers.dashboardPort as number | undefined) ?? 5174,
+    optionalModules: (answers.optionalModules as OptionalModuleId[] | undefined) ?? [],
   }
 
   // ── 4. Scaffold files ───────────────────────────────────────────────────

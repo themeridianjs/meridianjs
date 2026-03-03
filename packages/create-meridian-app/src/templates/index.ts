@@ -3,12 +3,20 @@
  * self-contained (no extra file-copy step needed after npm install).
  */
 
+export type OptionalModuleId =
+  | "google-oauth"
+  | "email-sendgrid"
+  | "email-resend"
+  | "email-ses"
+  | "storage-s3"
+
 export interface ProjectTemplateVars {
   name: string          // e.g. "my-app"
   databaseUrl: string   // e.g. "postgresql://..."
   httpPort: number
   dashboardPort: number
   dashboard: boolean
+  optionalModules: OptionalModuleId[]
 }
 
 // ─── Project-level files ───────────────────────────────────────────────────
@@ -47,6 +55,9 @@ export function renderPackageJson(vars: ProjectTemplateVars): string {
         "@meridianjs/meridian": "latest",
         "dotenv": "^16.0.0",
         ...(vars.dashboard ? { "@meridianjs/admin-dashboard": "latest" } : {}),
+        ...Object.fromEntries(
+          vars.optionalModules.map((id) => [`@meridianjs/${id}`, "latest"])
+        ),
       },
       devDependencies: {
         "create-meridian-app": "latest",
@@ -87,7 +98,65 @@ export function renderTsConfig(): string {
   )
 }
 
+// ─── Optional module config blocks ─────────────────────────────────────────
+
+function renderOptionalModuleBlock(id: OptionalModuleId, vars: ProjectTemplateVars): string {
+  switch (id) {
+    case "google-oauth":
+      return `    {
+      resolve: "@meridianjs/google-oauth",
+      options: {
+        clientId: process.env.GOOGLE_CLIENT_ID ?? "",
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
+        callbackUrl: "http://localhost:${vars.httpPort}/auth/google/callback",
+        frontendUrl: "http://localhost:${vars.dashboardPort}",
+      },
+    },`
+    case "email-sendgrid":
+      return `    {
+      resolve: "@meridianjs/email-sendgrid",
+      options: {
+        apiKey: process.env.SENDGRID_API_KEY ?? "",
+        fromAddress: process.env.EMAIL_FROM ?? "noreply@example.com",
+      },
+    },`
+    case "email-resend":
+      return `    {
+      resolve: "@meridianjs/email-resend",
+      options: {
+        apiKey: process.env.RESEND_API_KEY ?? "",
+        fromAddress: process.env.EMAIL_FROM ?? "noreply@example.com",
+      },
+    },`
+    case "email-ses":
+      return `    {
+      resolve: "@meridianjs/email-ses",
+      options: {
+        fromAddress: process.env.EMAIL_FROM ?? "noreply@example.com",
+        region: process.env.AWS_REGION ?? "us-east-1",
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID ?? "",
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY ?? "",
+      },
+    },`
+    case "storage-s3":
+      return `    {
+      resolve: "@meridianjs/storage-s3",
+      options: {
+        bucket: process.env.S3_BUCKET ?? "",
+        region: process.env.AWS_REGION ?? "us-east-1",
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID ?? "",
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY ?? "",
+        // endpoint: process.env.S3_ENDPOINT, // uncomment for R2 / MinIO
+      },
+    },`
+  }
+}
+
 export function renderMeridianConfig(vars: ProjectTemplateVars): string {
+  const optBlocks = vars.optionalModules
+    .map((id) => renderOptionalModuleBlock(id, vars))
+    .join("\n")
+
   return `import { defineConfig } from "@meridianjs/framework"
 import dotenv from "dotenv"
 dotenv.config()
@@ -104,7 +173,7 @@ export default defineConfig({
   modules: [
     // Infrastructure — swap for @meridianjs/event-bus-redis in production
     { resolve: "@meridianjs/event-bus-local" },
-    // Core domain modules are automatically loaded by the @meridianjs/meridian plugin
+    // Core domain modules are automatically loaded by the @meridianjs/meridian plugin${optBlocks ? `\n${optBlocks}` : ""}
   ],
   plugins: [
     { resolve: "@meridianjs/meridian" },
@@ -246,12 +315,44 @@ Thumbs.db
 }
 
 export function renderEnvExample(vars: ProjectTemplateVars): string {
+  const mods = vars.optionalModules
+  const sections: string[] = []
+
+  if (mods.includes("google-oauth")) {
+    sections.push(`# Google OAuth
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=`)
+  }
+
+  const hasEmail = mods.includes("email-sendgrid") || mods.includes("email-resend") || mods.includes("email-ses")
+  if (hasEmail) {
+    const emailLines = ["# Email", "EMAIL_FROM=noreply@example.com"]
+    if (mods.includes("email-sendgrid")) emailLines.push("SENDGRID_API_KEY=")
+    if (mods.includes("email-resend"))   emailLines.push("RESEND_API_KEY=")
+    sections.push(emailLines.join("\n"))
+  }
+
+  if (mods.includes("storage-s3")) {
+    sections.push(`# File storage (S3 / compatible)
+S3_BUCKET=
+# S3_ENDPOINT=  # uncomment for R2 / MinIO`)
+  }
+
+  const hasAws = mods.includes("email-ses") || mods.includes("storage-s3")
+  if (hasAws) {
+    sections.push(`# AWS credentials (used by ${[mods.includes("email-ses") ? "SES" : "", mods.includes("storage-s3") ? "S3" : ""].filter(Boolean).join(" + ")})
+AWS_REGION=us-east-1
+AWS_ACCESS_KEY_ID=
+AWS_SECRET_ACCESS_KEY=`)
+  }
+
+  const optionalEnv = sections.length > 0 ? "\n" + sections.join("\n\n") : ""
+
   return `# Copy this file to .env and fill in your values
 DATABASE_URL=${vars.databaseUrl}
 PORT=${vars.httpPort}
 JWT_SECRET=changeme-replace-in-production
-${vars.dashboard ? `DASHBOARD_PORT=${vars.dashboardPort}` : ""}
-`.trimEnd() + "\n"
+${vars.dashboard ? `DASHBOARD_PORT=${vars.dashboardPort}\n` : ""}${optionalEnv}`.trimEnd() + "\n"
 }
 
 export function renderReadme(vars: ProjectTemplateVars): string {
