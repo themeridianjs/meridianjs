@@ -3,6 +3,7 @@ import { api } from "../client"
 
 export interface AppConfig {
   maxChildIssueDepth: number
+  googleOAuthEnabled: boolean
 }
 
 export function useAppConfig() {

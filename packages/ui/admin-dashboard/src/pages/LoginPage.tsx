@@ -1,8 +1,9 @@
 import { useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
-import { useLogin } from "@/api/hooks/useAuth"
+import { useLogin, useSetupStatus } from "@/api/hooks/useAuth"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { GoogleSignInButton } from "@/components/ui/GoogleSignInButton"
 import { toast } from "sonner"
 import { Eye, EyeOff } from "lucide-react"
 
@@ -12,6 +13,7 @@ export function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const navigate = useNavigate()
   const login = useLogin()
+  const { data: setupStatus } = useSetupStatus()
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -83,6 +85,17 @@ export function LoginPage() {
             </Button>
           </div>
         </form>
+
+        {setupStatus?.googleOAuthEnabled && (
+          <div className="mt-4 space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="h-px flex-1 bg-border" />
+              <span className="text-xs text-muted-foreground">or</span>
+              <div className="h-px flex-1 bg-border" />
+            </div>
+            <GoogleSignInButton flow="login" />
+          </div>
+        )}
 
         <p className="text-sm text-center text-muted-foreground mt-6">
           Don't have an account?{" "}

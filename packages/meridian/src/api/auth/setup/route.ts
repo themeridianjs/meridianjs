@@ -6,12 +6,22 @@ import type { Request, Response } from "express"
  * Returns whether the app needs first-time setup (no users registered yet).
  */
 export const GET = async (req: any, res: Response) => {
+  let needsSetup = false
   try {
     const userService = req.scope.resolve("userModuleService") as any
     const count = await userService.countUsers()
-    res.json({ needsSetup: count === 0 })
+    needsSetup = count === 0
   } catch {
     // userModuleService not configured — assume setup not needed
-    res.json({ needsSetup: false })
   }
+
+  let googleOAuthEnabled = false
+  try {
+    req.scope.resolve("googleOAuthService")
+    googleOAuthEnabled = true
+  } catch {
+    // googleOAuthService not registered — feature disabled
+  }
+
+  res.json({ needsSetup, googleOAuthEnabled })
 }

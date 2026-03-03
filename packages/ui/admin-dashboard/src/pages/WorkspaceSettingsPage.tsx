@@ -65,18 +65,30 @@ import {
   ChevronDown,
   ChevronRight,
   UserPlus,
-  AlertCircle,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-// Permissions that imply workspace-level admin access
-const ADMIN_PERMS = ["workspace:update", "workspace:delete", "workspace:create"]
+type SystemRole = "super-admin" | "admin" | "member"
 
-/** Derive workspace role from selected app role's permissions. */
-function resolveWorkspaceRole(appRoleId: string, appRoles: AppRole[]): "admin" | "member" {
-  const role = appRoles.find((r) => r.id === appRoleId)
-  if (!role) return "member"
-  return ADMIN_PERMS.some((p) => role.permissions.includes(p)) ? "admin" : "member"
+function systemRoleLabel(role: SystemRole): string {
+  if (role === "super-admin") return "Super Admin"
+  if (role === "admin") return "Admin"
+  return "Member"
+}
+
+function SystemRoleSelect({ value, onChange }: { value: SystemRole; onChange: (v: SystemRole) => void }) {
+  return (
+    <Select value={value} onValueChange={(v) => onChange(v as SystemRole)}>
+      <SelectTrigger className="h-9">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="super-admin">Super Admin</SelectItem>
+        <SelectItem value="admin">Admin</SelectItem>
+        <SelectItem value="member">Member</SelectItem>
+      </SelectContent>
+    </Select>
+  )
 }
 
 // ── Copy button ───────────────────────────────────────────────────────────────
@@ -111,7 +123,7 @@ interface InviteMemberDialogProps {
   workspaceId: string
 }
 
-function RoleSelectControl({
+function AppRoleSelect({
   value,
   onChange,
   appRoles,
@@ -120,27 +132,17 @@ function RoleSelectControl({
   onChange: (v: string) => void
   appRoles: AppRole[] | undefined
 }) {
-  if (!appRoles || appRoles.length === 0) {
-    return (
-      <div className="flex items-start gap-2 px-3 py-2.5 border border-border rounded-lg bg-muted/40 text-xs text-muted-foreground">
-        <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-        <span>
-          No roles created yet.{" "}
-          <a href="?tab=roles" className="underline hover:text-foreground transition-colors">
-            Create roles
-          </a>{" "}
-          before inviting members.
-        </span>
-      </div>
-    )
-  }
+  if (!appRoles || appRoles.length === 0) return null
 
   return (
-    <Select value={value} onValueChange={onChange}>
+    <Select value={value || "none"} onValueChange={(v) => onChange(v === "none" ? "" : v)}>
       <SelectTrigger className="h-9">
-        <SelectValue placeholder="Select a role…" />
+        <SelectValue placeholder="No custom role" />
       </SelectTrigger>
       <SelectContent>
+        <SelectItem value="none">
+          <span className="text-muted-foreground">No custom role</span>
+        </SelectItem>
         {appRoles.map((r) => (
           <SelectItem key={r.id} value={r.id}>
             <div className="flex flex-col">
@@ -161,10 +163,12 @@ function InviteMemberDialog({ open, onClose, workspaceId }: InviteMemberDialogPr
   // Existing-user mode state
   const [search, setSearch] = useState("")
   const [selectedUserId, setSelectedUserId] = useState("")
-  const [addRole, setAddRole] = useState<string>("")
+  const [addSystemRole, setAddSystemRole] = useState<SystemRole>("member")
+  const [addAppRoleId, setAddAppRoleId] = useState<string>("")
   // Invite mode state
   const [email, setEmail] = useState("")
-  const [inviteRole, setInviteRole] = useState<string>("")
+  const [inviteSystemRole, setInviteSystemRole] = useState<SystemRole>("member")
+  const [inviteAppRoleId, setInviteAppRoleId] = useState<string>("")
   const [createdInvitation, setCreatedInvitation] = useState<Invitation | null>(null)
 
   const { data: allUsers = [] } = useUsers()
@@ -190,24 +194,24 @@ function InviteMemberDialog({ open, onClose, workspaceId }: InviteMemberDialogPr
 
   useEffect(() => {
     if (open) {
-      const defaultRole = appRoles && appRoles.length > 0 ? appRoles[0].id : ""
       setSearch("")
       setSelectedUserId("")
-      setAddRole(defaultRole)
+      setAddSystemRole("member")
+      setAddAppRoleId("")
       setEmail("")
-      setInviteRole(defaultRole)
+      setInviteSystemRole("member")
+      setInviteAppRoleId("")
       setCreatedInvitation(null)
       setMode("existing")
     }
-  }, [open, appRoles])
-
-  const roleLabel = (roleId: string) => appRoles?.find((r) => r.id === roleId)?.name ?? "Member"
+  }, [open])
 
   const handleAddExisting = () => {
-    if (!selectedUserId || !addRole) return
-    const wsRole = resolveWorkspaceRole(addRole, appRoles ?? [])
+    if (!selectedUserId) return
+    // workspace_member.role only supports "admin" | "member"
+    const wsRole: "admin" | "member" = addSystemRole === "member" ? "member" : "admin"
     addMember.mutate(
-      { user_id: selectedUserId, role: wsRole, app_role_id: addRole },
+      { user_id: selectedUserId, role: wsRole, app_role_id: addAppRoleId || null },
       {
         onSuccess: () => {
           toast.success("Member added")
@@ -220,13 +224,11 @@ function InviteMemberDialog({ open, onClose, workspaceId }: InviteMemberDialogPr
 
   const handleInvite = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!inviteRole) return
-    const wsRole = resolveWorkspaceRole(inviteRole, appRoles ?? [])
     createInvitation.mutate(
       {
         email: email.trim() || undefined,
-        role: wsRole,
-        app_role_id: inviteRole,
+        role: inviteSystemRole,
+        app_role_id: inviteAppRoleId || null,
       },
       {
         onSuccess: (data) => {
@@ -340,8 +342,16 @@ function InviteMemberDialog({ open, onClose, workspaceId }: InviteMemberDialogPr
               <>
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-muted-foreground">Role</label>
-                  <RoleSelectControl value={addRole} onChange={setAddRole} appRoles={appRoles} />
+                  <SystemRoleSelect value={addSystemRole} onChange={setAddSystemRole} />
                 </div>
+                {appRoles && appRoles.length > 0 && (
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-muted-foreground">
+                      Custom role <span className="font-normal">(optional)</span>
+                    </label>
+                    <AppRoleSelect value={addAppRoleId} onChange={setAddAppRoleId} appRoles={appRoles} />
+                  </div>
+                )}
                 <div className="flex justify-end gap-2 pt-1">
                   <Button type="button" variant="outline" size="sm" onClick={onClose}>
                     Cancel
@@ -349,7 +359,7 @@ function InviteMemberDialog({ open, onClose, workspaceId }: InviteMemberDialogPr
                   <Button
                     type="button"
                     size="sm"
-                    disabled={!selectedUserId || !addRole || addMember.isPending}
+                    disabled={!selectedUserId || addMember.isPending}
                     onClick={handleAddExisting}
                   >
                     {addMember.isPending ? "Adding…" : "Add to workspace"}
@@ -381,13 +391,21 @@ function InviteMemberDialog({ open, onClose, workspaceId }: InviteMemberDialogPr
             </div>
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">Role</label>
-              <RoleSelectControl value={inviteRole} onChange={setInviteRole} appRoles={appRoles} />
+              <SystemRoleSelect value={inviteSystemRole} onChange={setInviteSystemRole} />
             </div>
+            {appRoles && appRoles.length > 0 && (
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">
+                  Custom role <span className="font-normal">(optional)</span>
+                </label>
+                <AppRoleSelect value={inviteAppRoleId} onChange={setInviteAppRoleId} appRoles={appRoles} />
+              </div>
+            )}
             <div className="flex justify-end gap-2 pt-1">
               <Button type="button" variant="outline" size="sm" onClick={onClose}>
                 Cancel
               </Button>
-              <Button type="submit" size="sm" disabled={!inviteRole || createInvitation.isPending}>
+              <Button type="submit" size="sm" disabled={createInvitation.isPending}>
                 {createInvitation.isPending ? "Creating…" : "Create invitation"}
               </Button>
             </div>
@@ -405,7 +423,7 @@ function InviteMemberDialog({ open, onClose, workspaceId }: InviteMemberDialogPr
                 "anyone you want to invite"
               )}
               . They will join as{" "}
-              <span className="font-medium text-foreground">{roleLabel(inviteRole)}</span>.
+              <span className="font-medium text-foreground">{systemRoleLabel(inviteSystemRole)}</span>.
             </p>
             <div className="flex items-start gap-2 p-3 bg-muted/50 rounded-lg border border-border">
               <Link2 className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5" />
@@ -451,11 +469,13 @@ function InvitationRow({ invitation, workspaceId }: { invitation: Invitation; wo
           </p>
           <span className={cn(
             "inline-flex items-center text-[11px] px-1.5 py-0.5 rounded font-medium",
-            invitation.role === "admin"
+            invitation.role === "super-admin"
+              ? "bg-purple-50 text-purple-700 dark:bg-purple-950/30 dark:text-purple-300"
+              : invitation.role === "admin"
               ? "bg-indigo/10 text-indigo"
               : "bg-muted text-muted-foreground"
           )}>
-            {invitation.role === "admin" ? "Admin" : "Member"}
+            {invitation.role === "super-admin" ? "Super Admin" : invitation.role === "admin" ? "Admin" : "Member"}
           </span>
         </div>
         <div className="flex items-center gap-2 mt-0.5">

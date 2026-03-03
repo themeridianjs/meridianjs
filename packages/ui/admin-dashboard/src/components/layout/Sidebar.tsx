@@ -125,7 +125,7 @@ function WorkspaceSwitcher() {
 function NavUser() {
   const { user, logout } = useAuth()
   const initials = user
-    ? `${user.first_name?.[0] ?? ""}${user.last_name?.[0] ?? ""}`.toUpperCase() || user.email[0].toUpperCase()
+    ? `${user.first_name?.[0] ?? ""}${user.last_name?.[0] ?? ""}`.toUpperCase() || user.email?.[0]?.toUpperCase() || "?"
     : "?"
   const fullName = user
     ? [user.first_name, user.last_name].filter(Boolean).join(" ") || user.email
@@ -257,6 +257,16 @@ export function AppSidebar({ ...props }: SidebarProps) {
                   </NavLink>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+
+              {/* Workspace Settings */}
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={isSettingsActive} tooltip="Settings">
+                  <NavLink to={`/${ws}/settings`}>
+                    <Settings />
+                    <span>Workspace settings</span>
+                  </NavLink>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -332,14 +342,6 @@ export function AppSidebar({ ...props }: SidebarProps) {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               )}
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isSettingsActive} tooltip="Settings">
-                  <NavLink to={`/${ws}/settings`}>
-                    <Settings />
-                    <span>Settings</span>
-                  </NavLink>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

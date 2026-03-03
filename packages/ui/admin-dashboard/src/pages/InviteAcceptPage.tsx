@@ -2,10 +2,11 @@ import { useState } from "react"
 import { useParams, Link, useNavigate } from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
 import { api } from "@/api/client"
-import { useRegisterViaInvite } from "@/api/hooks/useAuth"
+import { useRegisterViaInvite, useSetupStatus } from "@/api/hooks/useAuth"
 import { useAuth } from "@/stores/auth"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { GoogleSignInButton } from "@/components/ui/GoogleSignInButton"
 import { ShieldCheck, UserRound, Building2, Eye, EyeOff } from "lucide-react"
 import { toast } from "sonner"
 
@@ -29,6 +30,7 @@ export function InviteAcceptPage() {
   const navigate = useNavigate()
 
   const { data, isLoading, error } = useInviteDetails(token ?? "")
+  const { data: setupStatus } = useSetupStatus()
   const register = useRegisterViaInvite(token ?? "")
 
   const [firstName, setFirstName] = useState("")
@@ -199,6 +201,17 @@ export function InviteAcceptPage() {
                 </div>
               </form>
             </div>
+
+            {setupStatus?.googleOAuthEnabled && (
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="h-px flex-1 bg-border" />
+                  <span className="text-xs text-muted-foreground">or</span>
+                  <div className="h-px flex-1 bg-border" />
+                </div>
+                <GoogleSignInButton flow="invite" inviteToken={token} label="Accept with Google" />
+              </div>
+            )}
 
             <p className="text-sm text-center text-muted-foreground">
               Already have an account?{" "}

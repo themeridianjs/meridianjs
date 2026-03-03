@@ -9,7 +9,7 @@ import { emitEventStep } from "./emit-event.js"
 export interface CreateInvitationInput {
   workspace_id: string
   email?: string | null
-  role: "admin" | "member"
+  role: "super-admin" | "admin" | "member"
   app_role_id?: string | null
   created_by: string
 }

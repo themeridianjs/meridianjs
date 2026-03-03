@@ -74,7 +74,7 @@ export interface Invitation {
   id: string
   workspace_id: string
   email: string | null
-  role: "admin" | "member"
+  role: "super-admin" | "admin" | "member"
   app_role_id: string | null
   token: string
   status: "pending" | "accepted" | "revoked"
@@ -102,7 +102,7 @@ export function useInvitations(workspaceId: string) {
 export function useCreateInvitation(workspaceId: string) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (data: { email?: string; role: "admin" | "member"; app_role_id?: string | null }) =>
+    mutationFn: (data: { email?: string; role: "super-admin" | "admin" | "member"; app_role_id?: string | null }) =>
       api.post<{ invitation: Invitation }>(
         `/admin/workspaces/${workspaceId}/invitations`,
         data

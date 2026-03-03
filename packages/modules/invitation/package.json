@@ -1,6 +1,6 @@
 {
   "name": "@meridianjs/invitation",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Meridian invitation module — workspace invitation management",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -34,6 +34,10 @@
     "tsup": "^8.3.5",
     "typescript": "*"
   },
-  "files": ["dist"],
-  "publishConfig": { "access": "public" }
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
 }

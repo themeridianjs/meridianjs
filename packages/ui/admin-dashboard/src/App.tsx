@@ -28,6 +28,7 @@ import { ProjectReportsPage } from "@/pages/ProjectReportsPage"
 import { ProjectActivityPage } from "@/pages/ProjectActivityPage"
 import { OrgSettingsPage } from "@/pages/OrgSettingsPage"
 import { PublicProjectPage } from "@/pages/public/PublicProjectPage"
+import { GoogleCallbackPage } from "@/pages/GoogleCallbackPage"
 
 const ProjectTimelinePage = lazy(() => import("@/pages/ProjectTimelinePage").then(m => ({ default: m.ProjectTimelinePage })))
 const WorkspaceReportingPage = lazy(() => import("@/pages/WorkspaceReportingPage").then(m => ({ default: m.WorkspaceReportingPage })))
@@ -158,6 +159,9 @@ export function App() {
 
       {/* Invite accept — fully public, no auth required */}
       <Route path="/invite/:token" element={<InviteAcceptPage />} />
+
+      {/* Google OAuth callback — fully public, outside /auth/* prefix so Vite proxy doesn't intercept */}
+      <Route path="/oauth/google/callback" element={<GoogleCallbackPage />} />
 
       {/* Public project share — no auth required */}
       <Route path="/share/:token" element={<PublicProjectPage />} />

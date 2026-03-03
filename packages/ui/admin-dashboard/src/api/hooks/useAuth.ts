@@ -24,11 +24,11 @@ interface AuthResponse {
   token: string
 }
 
-/** Checks if the app needs first-time setup (no users registered yet). */
+/** Checks if the app needs first-time setup and which optional features are available. */
 export function useSetupStatus() {
   return useQuery({
     queryKey: ["setup-status"],
-    queryFn: () => api.get<{ needsSetup: boolean }>("/auth/setup"),
+    queryFn: () => api.get<{ needsSetup: boolean; googleOAuthEnabled: boolean }>("/auth/setup"),
     staleTime: 60_000,
     retry: false,
   })

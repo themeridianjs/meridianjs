@@ -48,6 +48,15 @@ export default defineConfig({
         // endpoint: process.env.S3_ENDPOINT,   // for MinIO / localstack
       },
     },
+    { 
+      resolve: "@meridianjs/google-oauth", 
+      options: {
+        clientId: process.env.GOOGLE_CLIENT_ID,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+        callbackUrl: process.env.GOOGLE_REDIRECT_URI ?? "http://localhost:9000/auth/google/callback",
+        frontendUrl: "http://localhost:3000",
+      }
+    },
   ],
   plugins: [
     // Default meridian routes/workflows/links/subscribers

@@ -12,8 +12,10 @@ const User = model.define("user", {
   last_login_at: model.date().nullable(),
   app_role_id: model.text().nullable(),
   metadata: model.json().nullable(),
+  google_id: model.text().nullable(),
 }, [
   { columns: ["email"], unique: true },
+  { columns: ["google_id"] },
 ])
 
 export default User

@@ -22,6 +22,11 @@ export const GET = async (req: any, res: Response) => {
     return
   }
 
+  if (invitation.expires_at && new Date(invitation.expires_at) < new Date()) {
+    res.status(410).json({ error: { message: "Invitation has expired. Ask for a new one." } })
+    return
+  }
+
   const workspace = await workspaceService.retrieveWorkspace(invitation.workspace_id)
 
   res.json({
@@ -67,6 +72,11 @@ export const POST = async (req: any, res: Response) => {
     return
   }
 
+  if (invitation.expires_at && new Date(invitation.expires_at) < new Date()) {
+    res.status(410).json({ error: { message: "Invitation has expired. Ask for a new one." } })
+    return
+  }
+
   const parsed = acceptSchema.safeParse(req.body)
   if (!parsed.success) {
     res.status(400).json({ error: { message: "Validation error", details: parsed.error.flatten().fieldErrors } })
@@ -80,15 +90,23 @@ export const POST = async (req: any, res: Response) => {
     return
   }
 
-  const authResult = await authService.register({
-    email: parsed.data.email,
-    password: parsed.data.password,
-    first_name: parsed.data.first_name,
-    last_name: parsed.data.last_name,
-    role: invitation.role,
-  })
+  let authResult: { user: { id: string }; token: string }
+  try {
+    authResult = await authService.register({
+      email: parsed.data.email,
+      password: parsed.data.password,
+      first_name: parsed.data.first_name,
+      last_name: parsed.data.last_name,
+      role: invitation.role,
+    })
+  } catch (err: any) {
+    res.status(err.status ?? 500).json({ error: { message: err.message ?? "Registration failed" } })
+    return
+  }
 
-  await workspaceMemberService.ensureMember(invitation.workspace_id, authResult.user.id, invitation.role)
+  // workspace_member.role only supports "admin" | "member" — map super-admin → admin
+  const wsRole = invitation.role === "member" ? "member" : "admin"
+  await workspaceMemberService.ensureMember(invitation.workspace_id, authResult.user.id, wsRole)
 
   if (invitation.app_role_id) {
     try {

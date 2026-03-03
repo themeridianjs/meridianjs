@@ -1,7 +1,7 @@
 {
-  "name": "@meridianjs/auth",
-  "version": "0.1.7",
-  "description": "Meridian auth module — JWT authentication and middleware",
+  "name": "@meridianjs/google-oauth",
+  "version": "0.1.1",
+  "description": "Google OAuth 2.0 sign-in module for Meridian",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
@@ -20,21 +20,15 @@
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --dts --clean",
     "dev": "tsup src/index.ts --format esm,cjs --dts --watch",
-    "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist",
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "@meridianjs/types": "^0.1.0",
-    "@meridianjs/framework-utils": "^0.1.0",
-    "jsonwebtoken": "^9.0.2",
-    "bcrypt": "^5.1.1"
+    "jose": "^5.9.6"
   },
   "devDependencies": {
-    "@types/jsonwebtoken": "^9.0.7",
-    "@types/bcrypt": "^5.0.2",
-    "@types/express": "^5.0.0",
     "tsup": "^8.3.5",
     "typescript": "*"
   },

@@ -27,9 +27,18 @@ export const POST = async (req: any, res: Response) => {
   if (!await assertWorkspaceMembership(req, res)) return
   const { email, role, app_role_id } = req.body
 
-  if (!role || !["admin", "member"].includes(role)) {
-    res.status(400).json({ error: { message: "role must be 'admin' or 'member'" } })
+  if (!role || !["super-admin", "admin", "member"].includes(role)) {
+    res.status(400).json({ error: { message: "role must be 'super-admin', 'admin', or 'member'" } })
     return
+  }
+
+  // Privilege check: only admins/super-admins can invite admins or super-admins
+  if (role !== "member") {
+    const callerRoles: string[] = req.user?.roles ?? []
+    if (!callerRoles.includes("super-admin") && !callerRoles.includes("admin")) {
+      res.status(403).json({ error: { message: "Only admins can invite users with elevated roles" } })
+      return
+    }
   }
 
   if (email?.trim()) {

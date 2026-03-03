@@ -23,6 +23,16 @@ export class UserModuleService extends MeridianService({ User: UserModel, Team: 
     }
   }
 
+  /** Find a user by Google ID. Returns null if not found. */
+  async retrieveUserByGoogleId(googleId: string): Promise<any | null> {
+    const userRepository = this.container.resolve<any>("userRepository")
+    try {
+      return await userRepository.findOneOrFail({ google_id: googleId })
+    } catch {
+      return null
+    }
+  }
+
   /** Update user's last login timestamp. */
   async recordLogin(userId: string): Promise<void> {
     await (this as any).updateUser(userId, { last_login_at: new Date() })

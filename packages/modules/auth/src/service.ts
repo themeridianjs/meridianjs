@@ -43,6 +43,21 @@ export interface JwtPayload {
   exp?: number
 }
 
+export interface GoogleAuthInput {
+  googleId: string
+  email: string
+  firstName: string | null
+  lastName: string | null
+  picture: string | null
+  inviteRecord?: {
+    id: string
+    email: string | null
+    role: string
+    workspace_id: string
+    app_role_id: string | null
+  } | null
+}
+
 export class AuthModuleService extends MeridianService({}) {
   private readonly container: MeridianContainer
 
@@ -130,6 +145,105 @@ export class AuthModuleService extends MeridianService({}) {
         first_name: user.first_name ?? null,
         last_name: user.last_name ?? null,
       },
+      token,
+    }
+  }
+
+  /**
+   * Sign in or register a user via Google OAuth.
+   * 1. Look up by google_id — existing SSO user
+   * 2. Look up by email — link google_id to existing account
+   * 3. Create new user
+   */
+  async loginOrRegisterWithGoogle(input: GoogleAuthInput): Promise<AuthResult> {
+    const userService = this.container.resolve<any>("userModuleService")
+    const config = this.container.resolve<MeridianConfig>("config")
+
+    // Step 1: existing Google user
+    let user = await userService.retrieveUserByGoogleId(input.googleId)
+
+    if (!user) {
+      // Step 2: check for an existing password-based account with this email.
+      // We do NOT auto-link — doing so silently would allow anyone with a Google
+      // account at the same email address to take over existing accounts without
+      // knowing the password. Instead, surface a clear error and direct the user
+      // to link Google from their account settings while logged in.
+      const existingByEmail = await userService.retrieveUserByEmail(input.email.toLowerCase().trim())
+      if (existingByEmail) {
+        throw Object.assign(
+          new Error(
+            "An account with this email already exists. Please sign in with your password. " +
+            "You can link Google sign-in from your account settings afterwards."
+          ),
+          { status: 409 }
+        )
+      }
+    }
+
+    if (user) {
+      if (!user.is_active) {
+        throw Object.assign(new Error("Account deactivated"), { status: 403 })
+      }
+      await userService.recordLogin(user.id).catch(() => {})
+      const permissions = await this.resolvePermissions(user.app_role_id)
+      const { token, jti, expiresAt } = this.signToken(user.id, null, [user.role ?? "member"], permissions, config.projectConfig.jwtSecret)
+      await userService.createSession(jti, user.id, expiresAt).catch(() => {})
+      return {
+        user: { id: user.id, email: user.email, first_name: user.first_name ?? null, last_name: user.last_name ?? null },
+        token,
+      }
+    }
+
+    // Step 3: create new user — only allowed if first user or via invite
+    const invite = input.inviteRecord
+
+    let role: UserRole = "member"
+    if (invite) {
+      role = (invite.role as UserRole) ?? "member"
+    } else {
+      const [, userCount] = await userService.listAndCountUsers({}, { limit: 1 })
+      if (userCount === 0) {
+        role = "super-admin"
+      } else {
+        // Not first user and no invite — blocked
+        throw Object.assign(
+          new Error("You are not authorized to access this application. Contact an admin for an invitation."),
+          { status: 403 }
+        )
+      }
+    }
+
+    // password_hash stays non-nullable — use a random unusable hash (bcrypt cost 1 for speed, user can't know it)
+    const password_hash = await bcrypt.hash(randomUUID(), 1)
+
+    const newUser = await userService.createUser({
+      email: input.email.toLowerCase().trim(),
+      password_hash,
+      first_name: input.firstName ?? null,
+      last_name: input.lastName ?? null,
+      role,
+      is_active: true,
+      google_id: input.googleId,
+      ...(invite?.app_role_id ? { app_role_id: invite.app_role_id } : {}),
+    })
+
+    if (invite) {
+      try {
+        const workspaceMemberService = this.container.resolve<any>("workspaceMemberModuleService")
+        // workspace_member.role only supports "admin" | "member" — map super-admin → admin
+        const wsRole = invite.role === "member" ? "member" : "admin"
+        await workspaceMemberService.ensureMember(invite.workspace_id, newUser.id, wsRole)
+      } catch {
+        // Non-fatal — user created, workspace membership assignment failed
+      }
+    }
+
+    const permissions = await this.resolvePermissions(newUser.app_role_id)
+    const { token, jti, expiresAt } = this.signToken(newUser.id, null, [newUser.role], permissions, config.projectConfig.jwtSecret)
+    await userService.createSession(jti, newUser.id, expiresAt).catch(() => {})
+
+    return {
+      user: { id: newUser.id, email: newUser.email, first_name: newUser.first_name ?? null, last_name: newUser.last_name ?? null },
       token,
     }
   }
