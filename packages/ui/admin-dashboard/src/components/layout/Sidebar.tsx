@@ -10,6 +10,7 @@ import {
   LogOut,
   Shield,
   BarChart2,
+  User as UserIcon,
 } from "lucide-react"
 import { useProjects } from "@/api/hooks/useProjects"
 import { useWorkspaces } from "@/api/hooks/useWorkspaces"
@@ -38,7 +39,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 // ── Workspace Switcher (header) ───────────────────────────────────────────────
 
@@ -124,6 +125,7 @@ function WorkspaceSwitcher() {
 
 function NavUser() {
   const { user, logout } = useAuth()
+  const navigate = useNavigate()
   const initials = user
     ? `${user.first_name?.[0] ?? ""}${user.last_name?.[0] ?? ""}`.toUpperCase() || user.email?.[0]?.toUpperCase() || "?"
     : "?"
@@ -141,6 +143,7 @@ function NavUser() {
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
               <Avatar className="h-8 w-8 rounded-lg shrink-0">
+                {user?.avatar_url && <AvatarImage src={user.avatar_url} alt={fullName ?? ""} className="object-cover" />}
                 <AvatarFallback className="rounded-lg bg-foreground text-background text-xs font-medium">
                   {initials}
                 </AvatarFallback>
@@ -161,6 +164,7 @@ function NavUser() {
             <DropdownMenuLabel className="p-0 font-normal">
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                 <Avatar className="h-8 w-8 rounded-lg">
+                  {user?.avatar_url && <AvatarImage src={user.avatar_url} alt={fullName ?? ""} className="object-cover" />}
                   <AvatarFallback className="rounded-lg bg-foreground text-background text-xs font-medium">
                     {initials}
                   </AvatarFallback>
@@ -171,6 +175,14 @@ function NavUser() {
                 </div>
               </div>
             </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className="cursor-pointer gap-2"
+              onClick={() => navigate("/profile")}
+            >
+              <UserIcon className="size-4" />
+              Profile
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               className="text-destructive focus:text-destructive cursor-pointer"

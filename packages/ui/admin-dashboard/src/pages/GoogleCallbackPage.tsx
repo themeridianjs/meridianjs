@@ -15,6 +15,13 @@ export function GoogleCallbackPage() {
     const params = new URLSearchParams(window.location.search)
     history.replaceState(null, "", window.location.pathname)
 
+    // Link flow: backend redirects here with ?linked=true after attaching Google account
+    const linked = params.get("linked")
+    if (linked === "true") {
+      navigate("/profile?linked=true", { replace: true })
+      return
+    }
+
     const errorMsg = params.get("error")
     if (errorMsg) {
       setError(decodeURIComponent(errorMsg))

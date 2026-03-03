@@ -1,15 +1,18 @@
 import { authenticateJWT, requireWorkspace } from "@meridianjs/auth"
-import { authRateLimit, apiRateLimit } from "@meridianjs/framework"
+import { authRateLimit, oauthRateLimit, apiRateLimit } from "@meridianjs/framework"
 
 /**
  * Route-level middleware configuration.
  *
- * /auth/* — rate-limited to 10 req/min (brute-force protection)
- * /admin/* — rate-limited + JWT required + workspace isolation
+ * /auth/login, /auth/register — strict 10 req/min (brute-force protection)
+ * /auth/google                — loose 30 req/min (a full OAuth flow = 3 requests)
+ * /admin/*                   — rate-limited + JWT required + workspace isolation
  */
 export default {
   routes: [
-    { matcher: "/auth",  middlewares: [authRateLimit] },
-    { matcher: "/admin", middlewares: [apiRateLimit, authenticateJWT, requireWorkspace] },
+    { matcher: "/auth/login",    middlewares: [authRateLimit] },
+    { matcher: "/auth/register", middlewares: [authRateLimit] },
+    { matcher: "/auth/google",   middlewares: [oauthRateLimit] },
+    { matcher: "/admin",         middlewares: [apiRateLimit, authenticateJWT, requireWorkspace] },
   ],
 }

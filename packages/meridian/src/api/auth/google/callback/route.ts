@@ -33,7 +33,7 @@ export const GET = async (req: any, res: Response) => {
   const jwtSecret = config?.projectConfig?.jwtSecret as string
 
   // Verify state JWT
-  let statePayload: { nonce: string; flow: string; invite_token?: string }
+  let statePayload: { nonce: string; flow: string; userId?: string; invite_token?: string }
   try {
     statePayload = jwt.verify(state, jwtSecret, { algorithms: ["HS256"] }) as any
   } catch (err: any) {
@@ -57,6 +57,33 @@ export const GET = async (req: any, res: Response) => {
 
   const flow = statePayload.flow
   const inviteToken = statePayload.invite_token
+
+  // ── Link flow: attach Google account to existing user ────────────────────────
+  if (flow === "link" && statePayload.userId) {
+    let profile: { googleId: string; email: string; firstName: string | null; lastName: string | null; picture: string | null }
+    try {
+      profile = await googleOAuthService.exchangeCode(code)
+    } catch (err: any) {
+      errorRedirect(err.message ?? "Failed to authenticate with Google")
+      return
+    }
+
+    const userService = req.scope.resolve("userModuleService") as any
+    // Check if this Google account is already tied to a different user
+    try {
+      const [existing] = await userService.listUsers({ google_id: profile.googleId }, { limit: 1 })
+      if (existing && existing.id !== statePayload.userId) {
+        errorRedirect("This Google account is already linked to another user.")
+        return
+      }
+    } catch {
+      // listUsers may throw if no results — that's fine, continue
+    }
+
+    await userService.updateUser(statePayload.userId, { google_id: profile.googleId })
+    res.redirect(302, `${frontendUrl}/oauth/google/callback?linked=true`)
+    return
+  }
 
   // Pre-flight invite validation
   let inviteRecord: { id: string; email: string | null; role: string; workspace_id: string; app_role_id: string | null } | null = null

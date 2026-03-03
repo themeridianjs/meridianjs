@@ -5,7 +5,10 @@ interface User {
   email: string
   first_name: string
   last_name: string
-  avatar_url?: string
+  avatar_url?: string | null
+  designation?: string | null
+  phone_number?: string | null
+  google_id?: string | null
   roles: string[]
 }
 
@@ -24,6 +27,7 @@ interface AuthState {
   login: (user: Omit<User, "roles">, token: string) => void
   logout: () => void
   setWorkspace: (w: WorkspaceRef | null) => void
+  updateLocalUser: (updates: Partial<Omit<User, "roles">>) => void
 }
 
 const AuthContext = createContext<AuthState | null>(null)
@@ -125,9 +129,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  const updateLocalUser = (updates: Partial<Omit<User, "roles">>) => {
+    setUser((prev) => {
+      if (!prev) return prev
+      const updated = { ...prev, ...updates }
+      localStorage.setItem(USER_KEY, JSON.stringify(updated))
+      return updated
+    })
+  }
+
   return (
     <AuthContext.Provider
-      value={{ user, token, workspace, isAuthenticated: !!token && !!user, login, logout, setWorkspace }}
+      value={{ user, token, workspace, isAuthenticated: !!token && !!user, login, logout, setWorkspace, updateLocalUser }}
     >
       {children}
     </AuthContext.Provider>

@@ -8,6 +8,7 @@ import { AppShell } from "@/components/layout/AppShell"
 import { ProjectLayout } from "@/components/layout/ProjectLayout"
 import { ReportingLayout } from "@/components/layout/ReportingLayout"
 import { OrgSettingsLayout } from "@/components/layout/OrgSettingsLayout"
+import { ProfileLayout } from "@/components/layout/ProfileLayout"
 import { CommandPalette } from "@/components/CommandPalette"
 import { LoginPage } from "@/pages/LoginPage"
 import { RegisterPage } from "@/pages/RegisterPage"
@@ -29,6 +30,7 @@ import { ProjectActivityPage } from "@/pages/ProjectActivityPage"
 import { OrgSettingsPage } from "@/pages/OrgSettingsPage"
 import { PublicProjectPage } from "@/pages/public/PublicProjectPage"
 import { GoogleCallbackPage } from "@/pages/GoogleCallbackPage"
+import { ProfilePage } from "@/pages/ProfilePage"
 
 const ProjectTimelinePage = lazy(() => import("@/pages/ProjectTimelinePage").then(m => ({ default: m.ProjectTimelinePage })))
 const WorkspaceReportingPage = lazy(() => import("@/pages/WorkspaceReportingPage").then(m => ({ default: m.WorkspaceReportingPage })))
@@ -188,6 +190,18 @@ export function App() {
         }
       >
         <Route index element={<OrgSettingsPage />} />
+      </Route>
+
+      {/* User profile — auth required, workspace-independent */}
+      <Route
+        path="/profile"
+        element={
+          <RequireAuth>
+            <ProfileLayout />
+          </RequireAuth>
+        }
+      >
+        <Route index element={<ProfilePage />} />
       </Route>
 
       {/* Workspace setup — auth required, no workspace needed */}

@@ -7,6 +7,8 @@ const User = model.define("user", {
   first_name: model.text().nullable(),
   last_name: model.text().nullable(),
   avatar_url: model.text().nullable(),
+  designation: model.text().nullable(),
+  phone_number: model.text().nullable(),
   role: model.enum(["super-admin", "admin", "moderator", "member"]).default("member"),
   is_active: model.boolean().default(true),
   last_login_at: model.date().nullable(),
