@@ -42,8 +42,8 @@ export default defineConfig({
       options: {
         bucket: process.env.S3_BUCKET,
         region: process.env.S3_REGION ?? "eu-west-2",
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+        accessKeyId: process.env.AWS_S3_ACCESS_KEY_ID,
+        secretAccessKey: process.env.AWS_S3_SECRET_ACCESS_KEY,
         cloudfrontUrl: process.env.CLOUDFRONT_URL,
         // endpoint: process.env.S3_ENDPOINT,   // for MinIO / localstack
       },
