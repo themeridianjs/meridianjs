@@ -233,7 +233,7 @@ function QuickStart() {
               <span className={styles.tokOp}>,</span>
             </p>
             <p className={styles.configLine}>
-              {'  '}<span className={styles.tokOp}>},</span>
+              {'  '}<span className={styles.tokOp}>{'}'},</span>
             </p>
             <p className={styles.configLine}>
               {'  '}<span className={styles.tokNm}>modules</span>
