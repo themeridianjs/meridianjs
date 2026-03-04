@@ -8,3 +8,7 @@ coverage
 *.log
 uploads/
 uploads/*
+
+# Docusaurus
+.docusaurus/
+apps/docs/build/

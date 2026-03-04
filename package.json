@@ -17,10 +17,10 @@
     "check:routes": "npx tsx scripts/check-plugin-routes.ts"
   },
   "devDependencies": {
+    "@types/node": "^22.10.2",
     "turbo": "^2.3.3",
     "typescript": "^5.7.2",
-    "vitest": "^2.1.8",
-    "@types/node": "^22.10.2"
+    "vitest": "^2.1.8"
   },
   "packageManager": "npm@10.9.2",
   "engines": {

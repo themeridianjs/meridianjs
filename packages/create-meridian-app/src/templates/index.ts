@@ -17,6 +17,7 @@ export interface ProjectTemplateVars {
   dashboardPort: number
   dashboard: boolean
   optionalModules: OptionalModuleId[]
+  seedDemo: boolean
 }
 
 // ─── Project-level files ───────────────────────────────────────────────────
@@ -34,6 +35,7 @@ export function renderPackageJson(vars: ProjectTemplateVars): string {
         start: "node --import tsx/esm src/main.ts",
         "db:migrate": "meridian db:migrate",
         "db:generate": "meridian db:generate",
+        ...(vars.seedDemo ? { "seed:demo": "node --import tsx/esm src/scripts/seed-demo.ts" } : {}),
       },
       dependencies: {
         "@meridianjs/framework": "latest",
@@ -612,5 +614,572 @@ export function renderRoute(methods: string[]): string {
   return `import type { Response } from "express"
 
 ${handlers.join("\n\n")}
+`
+}
+
+// ─── Demo seed script ──────────────────────────────────────────────────────
+
+export function renderSeedScript(): string {
+  return `import "dotenv/config"
+import path from "node:path"
+import { fileURLToPath } from "node:url"
+import { bootstrap } from "@meridianjs/framework"
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const rootDir = path.resolve(__dirname, "../..")
+
+async function main() {
+  console.log()
+  console.log("  Seeding demo data...")
+
+  const app = await bootstrap({ rootDir })
+  const { container } = app
+
+  const workspaceService = container.resolve("workspaceModuleService") as any
+  const projectService   = container.resolve("projectModuleService")   as any
+  const issueService     = container.resolve("issueModuleService")     as any
+  const sprintService    = container.resolve("sprintModuleService")    as any
+  const userService      = container.resolve("userModuleService")      as any
+
+  // Optional author for comments
+  const [users] = await userService.listAndCountUsers({}, { limit: 1 })
+  const authorId: string | null = users[0]?.id ?? null
+  if (!authorId) {
+    console.log("  ℹ  No users found — comments will be skipped.")
+    console.log("     Create a user first, then re-run 'npm run seed:demo' to seed comments.")
+  }
+
+  const now = new Date()
+  const future = (days: number) => new Date(now.getTime() + days * 86_400_000)
+
+  // ── helpers ──────────────────────────────────────────────────────────────
+
+  async function seedStatuses(projectId: string) {
+    const defaults = [
+      { name: "Backlog",     color: "#94a3b8", position: 0 },
+      { name: "Todo",        color: "#64748b", position: 1 },
+      { name: "In Progress", color: "#6366f1", position: 2 },
+      { name: "In Review",   color: "#f59e0b", position: 3 },
+      { name: "Done",        color: "#10b981", position: 4 },
+      { name: "Cancelled",   color: "#ef4444", position: 5 },
+    ]
+    for (const s of defaults) {
+      await projectService.createProjectStatus({ project_id: projectId, ...s })
+    }
+  }
+
+  async function seedComment(issueId: string, body: string) {
+    if (!authorId) return
+    await issueService.createComment({ issue_id: issueId, author_id: authorId, body })
+  }
+
+  // ── Workspace 1: Acme Corp ───────────────────────────────────────────────
+
+  const acme = await workspaceService.createWorkspace({ name: "Acme Corp", slug: "acme-corp" })
+
+  // Project A: Website Redesign
+  const siteProject = await projectService.createProject({
+    workspace_id: acme.id,
+    name: "Website Redesign",
+    identifier: "SITE",
+    color: "#6366f1",
+  })
+  await seedStatuses(siteProject.id)
+  const siteSprint = await sprintService.createSprint({
+    project_id: siteProject.id,
+    name: "Sprint 1",
+    start_date: now,
+    end_date: future(14),
+  })
+  await sprintService.startSprint(siteSprint.id)
+
+  const siteHero = await issueService.createIssueInProject({
+    project_id: siteProject.id,
+    title: "Redesign homepage hero section",
+    type: "feature",
+    priority: "high",
+    status: "In Progress",
+    sprint_id: siteSprint.id,
+  })
+  await issueService.createIssueInProject({
+    project_id: siteProject.id,
+    title: "Design hero animation",
+    type: "task",
+    priority: "medium",
+    status: "Todo",
+    parent_id: siteHero.id,
+  })
+  await issueService.createIssueInProject({
+    project_id: siteProject.id,
+    title: "Write hero copy",
+    type: "task",
+    priority: "low",
+    status: "Todo",
+    parent_id: siteHero.id,
+  })
+  await issueService.createIssueInProject({
+    project_id: siteProject.id,
+    title: "Fix broken navigation links",
+    type: "bug",
+    priority: "urgent",
+    status: "Done",
+  })
+  await issueService.createIssueInProject({
+    project_id: siteProject.id,
+    title: "Implement contact form",
+    type: "feature",
+    priority: "medium",
+    status: "In Progress",
+  })
+  await issueService.createIssueInProject({
+    project_id: siteProject.id,
+    title: "Optimize images for web",
+    type: "task",
+    priority: "low",
+    status: "Todo",
+  })
+  await issueService.createIssueInProject({
+    project_id: siteProject.id,
+    title: "Add SEO meta tags",
+    type: "task",
+    priority: "medium",
+    status: "Backlog",
+  })
+  await issueService.createIssueInProject({
+    project_id: siteProject.id,
+    title: "Set up Google Analytics",
+    type: "task",
+    priority: "high",
+    status: "Todo",
+    sprint_id: siteSprint.id,
+  })
+  await seedComment(siteHero.id, "Started working on the hero section mockups in Figma.")
+  await seedComment(siteHero.id, "Using a full-width video background for the hero. Need sign-off from marketing.")
+
+  // Project B: Mobile App
+  const appProject = await projectService.createProject({
+    workspace_id: acme.id,
+    name: "Mobile App",
+    identifier: "APP",
+    color: "#f59e0b",
+  })
+  await seedStatuses(appProject.id)
+  const appSprint = await sprintService.createSprint({
+    project_id: appProject.id,
+    name: "Sprint 1",
+    start_date: now,
+    end_date: future(14),
+  })
+  await sprintService.startSprint(appSprint.id)
+
+  const appPush = await issueService.createIssueInProject({
+    project_id: appProject.id,
+    title: "Implement push notifications",
+    type: "feature",
+    priority: "high",
+    status: "In Progress",
+    sprint_id: appSprint.id,
+  })
+  await issueService.createIssueInProject({
+    project_id: appProject.id,
+    title: "iOS push setup",
+    type: "task",
+    priority: "medium",
+    status: "Todo",
+    parent_id: appPush.id,
+  })
+  await issueService.createIssueInProject({
+    project_id: appProject.id,
+    title: "Android push setup",
+    type: "task",
+    priority: "medium",
+    status: "Todo",
+    parent_id: appPush.id,
+  })
+  const appCrash = await issueService.createIssueInProject({
+    project_id: appProject.id,
+    title: "Fix crash on login screen",
+    type: "bug",
+    priority: "urgent",
+    status: "In Review",
+  })
+  await issueService.createIssueInProject({
+    project_id: appProject.id,
+    title: "Add dark mode support",
+    type: "feature",
+    priority: "medium",
+    status: "Todo",
+  })
+  await issueService.createIssueInProject({
+    project_id: appProject.id,
+    title: "Improve app launch time",
+    type: "task",
+    priority: "high",
+    status: "In Progress",
+  })
+  await issueService.createIssueInProject({
+    project_id: appProject.id,
+    title: "Write onboarding flow",
+    type: "story",
+    priority: "medium",
+    status: "Backlog",
+  })
+  await issueService.createIssueInProject({
+    project_id: appProject.id,
+    title: "Accessibility audit",
+    type: "task",
+    priority: "low",
+    status: "Todo",
+    sprint_id: appSprint.id,
+  })
+  await seedComment(appCrash.id, "Crash is reproducible on iOS 17.2 with biometric login enabled.")
+  await seedComment(appCrash.id, "Root cause: null pointer on the auth token refresh callback. Fix in progress.")
+
+  // ── Workspace 2: Starlight Labs ──────────────────────────────────────────
+
+  const starlight = await workspaceService.createWorkspace({ name: "Starlight Labs", slug: "starlight-labs" })
+
+  // Project C: Product Roadmap
+  const roadmapProject = await projectService.createProject({
+    workspace_id: starlight.id,
+    name: "Product Roadmap",
+    identifier: "STAR",
+    color: "#10b981",
+  })
+  await seedStatuses(roadmapProject.id)
+  const roadmapSprint = await sprintService.createSprint({
+    project_id: roadmapProject.id,
+    name: "Sprint 1",
+    start_date: now,
+    end_date: future(21),
+  })
+  await sprintService.startSprint(roadmapSprint.id)
+
+  const roadmapOkr = await issueService.createIssueInProject({
+    project_id: roadmapProject.id,
+    title: "Define Q2 OKRs",
+    type: "epic",
+    priority: "high",
+    status: "In Progress",
+    sprint_id: roadmapSprint.id,
+  })
+  await issueService.createIssueInProject({
+    project_id: roadmapProject.id,
+    title: "Engineering OKRs",
+    type: "task",
+    priority: "high",
+    status: "Todo",
+    parent_id: roadmapOkr.id,
+  })
+  await issueService.createIssueInProject({
+    project_id: roadmapProject.id,
+    title: "Product OKRs",
+    type: "task",
+    priority: "high",
+    status: "Todo",
+    parent_id: roadmapOkr.id,
+  })
+  await issueService.createIssueInProject({
+    project_id: roadmapProject.id,
+    title: "User research interviews",
+    type: "task",
+    priority: "medium",
+    status: "Done",
+  })
+  await issueService.createIssueInProject({
+    project_id: roadmapProject.id,
+    title: "Competitive analysis",
+    type: "task",
+    priority: "medium",
+    status: "In Review",
+  })
+  await issueService.createIssueInProject({
+    project_id: roadmapProject.id,
+    title: "Draft product spec v1",
+    type: "feature",
+    priority: "high",
+    status: "In Progress",
+  })
+  await issueService.createIssueInProject({
+    project_id: roadmapProject.id,
+    title: "Roadmap review with stakeholders",
+    type: "task",
+    priority: "medium",
+    status: "Todo",
+  })
+  await issueService.createIssueInProject({
+    project_id: roadmapProject.id,
+    title: "Prioritize feature backlog",
+    type: "task",
+    priority: "low",
+    status: "Backlog",
+    sprint_id: roadmapSprint.id,
+  })
+  await seedComment(roadmapOkr.id, "Synced with leadership — focus areas are retention and activation for Q2.")
+  await seedComment(roadmapOkr.id, "First draft of engineering OKRs shared in Notion. Review by EOW.")
+
+  // Project D: Marketing Site
+  const mktProject = await projectService.createProject({
+    workspace_id: starlight.id,
+    name: "Marketing Site",
+    identifier: "MKT",
+    color: "#ec4899",
+  })
+  await seedStatuses(mktProject.id)
+  const mktSprint = await sprintService.createSprint({
+    project_id: mktProject.id,
+    name: "Sprint 1",
+    start_date: now,
+    end_date: future(7),
+  })
+  await sprintService.startSprint(mktSprint.id)
+
+  const mktPricing = await issueService.createIssueInProject({
+    project_id: mktProject.id,
+    title: "Redesign pricing page",
+    type: "feature",
+    priority: "high",
+    status: "In Progress",
+    sprint_id: mktSprint.id,
+  })
+  await issueService.createIssueInProject({
+    project_id: mktProject.id,
+    title: "Update pricing copy",
+    type: "task",
+    priority: "medium",
+    status: "Todo",
+    parent_id: mktPricing.id,
+  })
+  await issueService.createIssueInProject({
+    project_id: mktProject.id,
+    title: "A/B test variants",
+    type: "task",
+    priority: "low",
+    status: "Backlog",
+    parent_id: mktPricing.id,
+  })
+  await issueService.createIssueInProject({
+    project_id: mktProject.id,
+    title: "Fix mobile layout issues",
+    type: "bug",
+    priority: "urgent",
+    status: "In Review",
+  })
+  await issueService.createIssueInProject({
+    project_id: mktProject.id,
+    title: "Improve page load score",
+    type: "task",
+    priority: "high",
+    status: "Todo",
+  })
+  await issueService.createIssueInProject({
+    project_id: mktProject.id,
+    title: "Add blog section",
+    type: "feature",
+    priority: "medium",
+    status: "Backlog",
+  })
+  await issueService.createIssueInProject({
+    project_id: mktProject.id,
+    title: "Set up Hotjar",
+    type: "task",
+    priority: "low",
+    status: "Todo",
+  })
+  await issueService.createIssueInProject({
+    project_id: mktProject.id,
+    title: "Write 3 launch blog posts",
+    type: "task",
+    priority: "medium",
+    status: "In Progress",
+    sprint_id: mktSprint.id,
+  })
+  await seedComment(mktPricing.id, "New pricing tiers approved by sales. Updating the copy now.")
+  await seedComment(mktPricing.id, "Design review scheduled for Thursday. Figma link shared in Slack.")
+
+  // ── Workspace 3: DevOps Team ─────────────────────────────────────────────
+
+  const devops = await workspaceService.createWorkspace({ name: "DevOps Team", slug: "devops-team" })
+
+  // Project E: Infrastructure
+  const infraProject = await projectService.createProject({
+    workspace_id: devops.id,
+    name: "Infrastructure",
+    identifier: "INFRA",
+    color: "#64748b",
+  })
+  await seedStatuses(infraProject.id)
+  const infraSprint = await sprintService.createSprint({
+    project_id: infraProject.id,
+    name: "Sprint 1",
+    start_date: now,
+    end_date: future(14),
+  })
+  await sprintService.startSprint(infraSprint.id)
+
+  const infraEks = await issueService.createIssueInProject({
+    project_id: infraProject.id,
+    title: "Migrate to EKS",
+    type: "epic",
+    priority: "high",
+    status: "In Progress",
+    sprint_id: infraSprint.id,
+  })
+  await issueService.createIssueInProject({
+    project_id: infraProject.id,
+    title: "Set up EKS cluster",
+    type: "task",
+    priority: "high",
+    status: "In Progress",
+    parent_id: infraEks.id,
+  })
+  await issueService.createIssueInProject({
+    project_id: infraProject.id,
+    title: "Migrate services",
+    type: "task",
+    priority: "high",
+    status: "Todo",
+    parent_id: infraEks.id,
+  })
+  await issueService.createIssueInProject({
+    project_id: infraProject.id,
+    title: "Implement secrets rotation",
+    type: "feature",
+    priority: "urgent",
+    status: "In Review",
+  })
+  await issueService.createIssueInProject({
+    project_id: infraProject.id,
+    title: "Add CloudWatch dashboards",
+    type: "task",
+    priority: "medium",
+    status: "Todo",
+  })
+  await issueService.createIssueInProject({
+    project_id: infraProject.id,
+    title: "Reduce AWS costs by 20%",
+    type: "task",
+    priority: "high",
+    status: "Backlog",
+  })
+  await issueService.createIssueInProject({
+    project_id: infraProject.id,
+    title: "Set up Datadog APM",
+    type: "feature",
+    priority: "medium",
+    status: "Todo",
+    sprint_id: infraSprint.id,
+  })
+  await issueService.createIssueInProject({
+    project_id: infraProject.id,
+    title: "Document runbooks",
+    type: "task",
+    priority: "low",
+    status: "Backlog",
+  })
+  await seedComment(infraEks.id, "EKS cluster provisioned in us-east-1. Starting service migration next week.")
+  await seedComment(infraEks.id, "Need to resolve IAM role issues before migrating the auth service.")
+
+  // Project F: CI/CD Pipeline
+  const cicdProject = await projectService.createProject({
+    workspace_id: devops.id,
+    name: "CI/CD Pipeline",
+    identifier: "CICD",
+    color: "#8b5cf6",
+  })
+  await seedStatuses(cicdProject.id)
+  const cicdSprint = await sprintService.createSprint({
+    project_id: cicdProject.id,
+    name: "Sprint 1",
+    start_date: now,
+    end_date: future(14),
+  })
+  await sprintService.startSprint(cicdSprint.id)
+
+  const cicdMatrix = await issueService.createIssueInProject({
+    project_id: cicdProject.id,
+    title: "Add matrix builds for Node 18/20",
+    type: "feature",
+    priority: "high",
+    status: "In Progress",
+    sprint_id: cicdSprint.id,
+  })
+  await issueService.createIssueInProject({
+    project_id: cicdProject.id,
+    title: "Node 18 build config",
+    type: "task",
+    priority: "medium",
+    status: "Done",
+    parent_id: cicdMatrix.id,
+  })
+  await issueService.createIssueInProject({
+    project_id: cicdProject.id,
+    title: "Node 20 build config",
+    type: "task",
+    priority: "medium",
+    status: "In Progress",
+    parent_id: cicdMatrix.id,
+  })
+  await issueService.createIssueInProject({
+    project_id: cicdProject.id,
+    title: "Flaky test investigation",
+    type: "bug",
+    priority: "high",
+    status: "In Review",
+  })
+  await issueService.createIssueInProject({
+    project_id: cicdProject.id,
+    title: "Add deploy preview environments",
+    type: "feature",
+    priority: "medium",
+    status: "Todo",
+  })
+  await issueService.createIssueInProject({
+    project_id: cicdProject.id,
+    title: "Cache npm dependencies",
+    type: "task",
+    priority: "medium",
+    status: "Done",
+    sprint_id: cicdSprint.id,
+  })
+  await issueService.createIssueInProject({
+    project_id: cicdProject.id,
+    title: "Rollback automation",
+    type: "feature",
+    priority: "high",
+    status: "Backlog",
+  })
+  await issueService.createIssueInProject({
+    project_id: cicdProject.id,
+    title: "Pipeline documentation",
+    type: "task",
+    priority: "low",
+    status: "Todo",
+  })
+  await seedComment(cicdMatrix.id, "Matrix strategy configured. Both Node 18 and 20 now tested on every PR.")
+  await seedComment(cicdMatrix.id, "Node 20 build is failing on the integration test step — investigating.")
+
+  console.log()
+  console.log("  ✓ Demo data seeded successfully!")
+  console.log()
+  console.log("  Seeded:")
+  console.log("    3 workspaces  (Acme Corp, Starlight Labs, DevOps Team)")
+  console.log("    6 projects    (Website Redesign, Mobile App, Product Roadmap, Marketing Site, Infrastructure, CI/CD Pipeline)")
+  console.log("    6 sprints     (1 per project, all active)")
+  console.log("    50+ issues    (with child issues and various statuses)")
+  if (authorId) {
+    console.log("    12 comments   (2 per featured issue)")
+  }
+  console.log()
+
+  process.exit(0)
+}
+
+main().catch((err) => {
+  console.error()
+  console.error("  ✖ Seeding failed:", err.message)
+  console.error()
+  process.exit(1)
+})
 `
 }

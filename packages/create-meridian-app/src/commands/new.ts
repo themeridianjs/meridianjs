@@ -14,6 +14,7 @@ import {
   renderEnvExample,
   renderReadme,
   renderAdminWidgetsIndex,
+  renderSeedScript,
   type OptionalModuleId,
 } from "../templates/index.js"
 import { writeFile, mkdirWithKeep } from "../utils.js"
@@ -105,6 +106,12 @@ export async function runNew(projectName?: string): Promise<void> {
       },
       {
         type: "confirm",
+        name: "seedDemo",
+        message: "Include a demo data seed script?",
+        initial: false,
+      },
+      {
+        type: "confirm",
         name: "installDeps",
         message: "Install dependencies now?",
         initial: true,
@@ -120,6 +127,7 @@ export async function runNew(projectName?: string): Promise<void> {
     dashboard: answers.dashboard as boolean,
     dashboardPort: (answers.dashboardPort as number | undefined) ?? 5174,
     optionalModules: (answers.optionalModules as OptionalModuleId[] | undefined) ?? [],
+    seedDemo: (answers.seedDemo as boolean | undefined) ?? false,
   }
 
   // ── 4. Scaffold files ───────────────────────────────────────────────────
@@ -158,6 +166,14 @@ export async function runNew(projectName?: string): Promise<void> {
       )
     }
 
+    // Demo seed script (optional)
+    if (vars.seedDemo) {
+      await writeFile(
+        path.join(targetDir, "src", "scripts", "seed-demo.ts"),
+        renderSeedScript()
+      )
+    }
+
     spinner.succeed("Scaffolded project files")
   } catch (err) {
     spinner.fail("Failed to scaffold project files")
@@ -185,6 +201,9 @@ export async function runNew(projectName?: string): Promise<void> {
   }
   console.log(`  ${chalk.dim("cp")} .env.example .env ${chalk.dim("# fill in your DATABASE_URL")}`)
   console.log(`  ${chalk.cyan("npm run db:migrate")}`)
+  if (vars.seedDemo) {
+    console.log(`  ${chalk.cyan("npm run seed:demo")}   ${chalk.dim("# optional: load demo data")}`)
+  }
   console.log(`  ${chalk.cyan("npm run dev")}`)
   console.log()
 }
