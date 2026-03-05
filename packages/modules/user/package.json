@@ -1,6 +1,6 @@
 {
   "name": "@meridianjs/user",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "Meridian user module — User and Team domain models",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",

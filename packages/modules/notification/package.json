@@ -1,6 +1,6 @@
 {
   "name": "@meridianjs/notification",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Meridian notification module — in-app notification records",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",

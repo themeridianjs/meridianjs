@@ -1,6 +1,6 @@
 {
   "name": "@meridianjs/email-ses",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "AWS SES email provider module for Meridian",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",

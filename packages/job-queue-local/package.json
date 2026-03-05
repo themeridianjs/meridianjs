@@ -1,6 +1,6 @@
 {
   "name": "@meridianjs/job-queue-local",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Meridian local job queue — in-process scheduler for development",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",

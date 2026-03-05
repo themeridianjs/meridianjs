@@ -1,6 +1,6 @@
 {
   "name": "@meridianjs/job-queue-redis",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Meridian job queue — BullMQ-backed IScheduler for cron and interval jobs",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",

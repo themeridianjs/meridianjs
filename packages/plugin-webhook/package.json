@@ -1,6 +1,6 @@
 {
   "name": "@meridianjs/plugin-webhook",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Meridian plugin: receive and store incoming webhooks from external services",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
