@@ -656,12 +656,12 @@ async function main() {
 
   async function seedStatuses(projectId: string) {
     const defaults = [
-      { name: "Backlog",     color: "#94a3b8", position: 0 },
-      { name: "Todo",        color: "#64748b", position: 1 },
-      { name: "In Progress", color: "#6366f1", position: 2 },
-      { name: "In Review",   color: "#f59e0b", position: 3 },
-      { name: "Done",        color: "#10b981", position: 4 },
-      { name: "Cancelled",   color: "#ef4444", position: 5 },
+      { name: "Backlog",     key: "backlog",     color: "#94a3b8", category: "backlog",   position: 0 },
+      { name: "Todo",        key: "todo",        color: "#64748b", category: "unstarted", position: 1 },
+      { name: "In Progress", key: "in_progress", color: "#6366f1", category: "started",   position: 2 },
+      { name: "In Review",   key: "in_review",   color: "#f59e0b", category: "started",   position: 3 },
+      { name: "Done",        key: "done",        color: "#10b981", category: "completed", position: 4 },
+      { name: "Cancelled",   key: "cancelled",   color: "#9ca3af", category: "cancelled", position: 5 },
     ]
     for (const s of defaults) {
       await projectService.createProjectStatus({ project_id: projectId, ...s })
