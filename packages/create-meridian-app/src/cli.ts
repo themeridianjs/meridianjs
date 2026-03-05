@@ -17,6 +17,7 @@ import { Command } from "commander"
 import chalk from "chalk"
 import { runNew } from "./commands/new.js"
 import { runDev } from "./commands/dev.js"
+import { runStart } from "./commands/start.js"
 import { runBuild } from "./commands/build.js"
 import { runDbMigrate } from "./commands/db-migrate.js"
 import { runDbGenerate } from "./commands/db-generate.js"
@@ -55,6 +56,17 @@ program
   .description("Start the development server")
   .action(() => {
     runDev().catch((err: unknown) => {
+      console.error(err)
+      process.exit(1)
+    })
+  })
+
+// ── start ─────────────────────────────────────────────────────────────────
+program
+  .command("start")
+  .description("Start the server in production mode")
+  .action(() => {
+    runStart().catch((err: unknown) => {
       console.error(err)
       process.exit(1)
     })

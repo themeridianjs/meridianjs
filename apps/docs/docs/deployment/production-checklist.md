@@ -248,20 +248,23 @@ Helmet is applied automatically by `@meridianjs/framework` when `NODE_ENV=produc
 
 ## 10. Google OAuth (if used)
 
-Update the callback URL env var and your Google OAuth app's authorized redirect URIs:
+Update your `.env` with the production URLs and register the callback URL in the Google Cloud Console:
 
 ```bash
-GOOGLE_CALLBACK_URL=https://api.yourdomain.com/auth/google/callback
+GOOGLE_REDIRECT_URI=https://api.yourdomain.com/auth/google/callback
+APP_URL=https://app.yourdomain.com
 ```
 
-Update `frontendUrl` in the plugin options:
+Your `meridian.config.ts` should already reference these via env vars (set during scaffolding):
 
 ```typescript
 {
-  resolve: "@meridianjs-pro/plugin-google-oauth",
+  resolve: "@meridianjs/google-oauth",
   options: {
-    frontendUrl: "https://app.yourdomain.com",
-    // ...
-  }
+    clientId: process.env.GOOGLE_CLIENT_ID ?? "",
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
+    callbackUrl: process.env.GOOGLE_REDIRECT_URI ?? "",
+    frontendUrl: process.env.APP_URL,
+  },
 }
 ```

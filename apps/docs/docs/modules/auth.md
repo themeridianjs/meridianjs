@@ -90,6 +90,16 @@ The framework also supports Google OAuth2 via `GET /auth/google` and `GET /auth/
 projectConfig: {
   googleClientId: process.env.GOOGLE_CLIENT_ID,
   googleClientSecret: process.env.GOOGLE_CLIENT_SECRET,
-  googleCallbackUrl: process.env.GOOGLE_CALLBACK_URL,
+  googleCallbackUrl: process.env.GOOGLE_REDIRECT_URI,
 }
 ```
+
+Add to your `.env`:
+```bash
+GOOGLE_CLIENT_ID=your-client-id
+GOOGLE_CLIENT_SECRET=your-client-secret
+GOOGLE_REDIRECT_URI=http://localhost:9000/auth/google/callback
+APP_URL=http://localhost:5174
+```
+
+`GOOGLE_REDIRECT_URI` must also be registered as an authorised redirect URI in the Google Cloud Console. `APP_URL` is the frontend URL users are sent to after OAuth completes.

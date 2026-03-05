@@ -117,6 +117,16 @@ Configure in `projectConfig`:
 projectConfig: {
   googleClientId: process.env.GOOGLE_CLIENT_ID,
   googleClientSecret: process.env.GOOGLE_CLIENT_SECRET,
-  googleCallbackUrl: 'https://your-app.com/auth/google/callback',
+  googleCallbackUrl: process.env.GOOGLE_REDIRECT_URI,
 }
 ```
+
+Add to your `.env`:
+```bash
+GOOGLE_CLIENT_ID=your-client-id
+GOOGLE_CLIENT_SECRET=your-client-secret
+GOOGLE_REDIRECT_URI=http://localhost:9000/auth/google/callback
+APP_URL=http://localhost:5174
+```
+
+`GOOGLE_REDIRECT_URI` must also be listed as an authorised redirect URI in the Google Cloud Console. In production, change it to your public API URL (e.g. `https://api.yourdomain.com/auth/google/callback`). `APP_URL` is the frontend URL users are redirected to after a successful OAuth flow.

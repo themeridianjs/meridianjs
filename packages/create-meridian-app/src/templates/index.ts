@@ -32,7 +32,7 @@ export function renderPackageJson(vars: ProjectTemplateVars): string {
       scripts: {
         dev: "meridian dev",
         build: "meridian build",
-        start: "meridian dev",
+        start: "meridian start",
         "db:migrate": "meridian db:migrate",
         "db:generate": "meridian db:generate",
         ...(vars.seedDemo ? { "seed:demo": "node --import tsx/esm src/scripts/seed-demo.ts" } : {}),
@@ -110,8 +110,8 @@ function renderOptionalModuleBlock(id: OptionalModuleId, vars: ProjectTemplateVa
       options: {
         clientId: process.env.GOOGLE_CLIENT_ID ?? "",
         clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
-        callbackUrl: "http://localhost:${vars.httpPort}/auth/google/callback",
-        frontendUrl: "http://localhost:${vars.dashboardPort}",
+        callbackUrl: process.env.GOOGLE_REDIRECT_URI ?? "",
+        frontendUrl: process.env.APP_URL,
       },
     },`
     case "email-sendgrid":
@@ -324,7 +324,9 @@ export function renderEnvExample(vars: ProjectTemplateVars): string {
   if (mods.includes("google-oauth")) {
     sections.push(`# Google OAuth
 GOOGLE_CLIENT_ID=
-GOOGLE_CLIENT_SECRET=`)
+GOOGLE_CLIENT_SECRET=
+GOOGLE_REDIRECT_URI=http://localhost:${vars.httpPort}/auth/google/callback
+APP_URL=http://localhost:${vars.dashboardPort}`)
   }
 
   const hasEmail = mods.includes("email-sendgrid") || mods.includes("email-resend") || mods.includes("email-ses")
