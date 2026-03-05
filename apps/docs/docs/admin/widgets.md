@@ -7,104 +7,104 @@ sidebar_position: 2
 
 # Dashboard Widgets
 
-The admin dashboard supports extension via **widget zones** — named slots in the UI where you can inject custom React components. Drop a file in `src/admin/widgets/` and it auto-registers.
+The admin dashboard supports extension via **widget zones** — named slots in the UI where you can inject custom React components. Widgets are compiled from `src/admin/widgets/index.tsx` in your project and loaded at runtime by `meridian serve-dashboard`.
 
-:::note Coming in Phase 12
-Widget zones are planned for Phase 12. The structure below describes the intended API.
-:::
+---
+
+## How It Works
+
+1. Create `src/admin/widgets/index.tsx` in your Meridian project.
+2. Export an array of widget definitions using `defineWidgets`.
+3. Run `meridian serve-dashboard` — it compiles your widgets via esbuild and serves them at `/admin-extensions.js`. The dashboard loads this file at startup and injects your components into the declared zones.
 
 ---
 
 ## Widget File Format
 
-Each widget file exports a default React component and a `config` object that declares which zone(s) it targets:
-
 ```typescript
-// src/admin/widgets/issue-ai-assist.tsx
-import type { WidgetConfig, IssueDetailWidgetProps } from '@meridianjs/admin-dashboard'
+// src/admin/widgets/index.tsx
+import { defineWidgets } from "@meridianjs/admin-dashboard/extensions"
+import { MyWidget } from "./MyWidget"
 
-export const config: WidgetConfig = {
-  zone: 'issue.details.sidebar',
-}
-
-export default function IssueAiAssistWidget({ issue }: IssueDetailWidgetProps) {
-  return (
-    <div className="rounded-lg border p-4">
-      <h3 className="text-sm font-semibold mb-2">AI Assist</h3>
-      <p className="text-xs text-muted-foreground">{issue.description}</p>
-    </div>
-  )
-}
+export default defineWidgets([
+  { zone: "issue.details.after", component: MyWidget },
+])
 ```
+
+Each entry is a `{ zone, component }` object. The component receives typed props for the zone it targets — TypeScript will error if the props don't match.
 
 ---
 
 ## Available Widget Zones
 
-| Zone | Page | Props |
+| Zone | Page / Component | Props |
 |---|---|---|
-| `issue.details.sidebar` | Issue Detail | `IssueDetailWidgetProps` |
-| `issue.details.after_description` | Issue Detail | `IssueDetailWidgetProps` |
-| `project.overview.header` | Project Detail | `ProjectWidgetProps` |
-| `project.kanban.column_header` | Kanban Board | `KanbanColumnWidgetProps` |
-| `dashboard.metrics` | Dashboard | `DashboardWidgetProps` |
-| `settings.workspace.general.after` | Workspace Settings | `WorkspaceWidgetProps` |
+| `issue.details.before` | Issue Detail (inline + full-page) | `{ issue: Issue }` |
+| `issue.details.after` | Issue Detail (inline + full-page) | `{ issue: Issue }` |
+| `issue.details.sidebar` | Issue Detail Page (full-page only) | `{ issue: Issue }` |
+| `project.board.before` | Kanban Board | `{ projectId: string }` |
+| `project.board.after` | Kanban Board | `{ projectId: string }` |
+| `project.issues.before` | Project Issues List | `{ projectId: string }` |
+| `project.issues.after` | Project Issues List | `{ projectId: string }` |
+| `project.timeline.before` | Project Timeline (Gantt) | `{ projectId: string }` |
+| `project.timeline.after` | Project Timeline (Gantt) | `{ projectId: string }` |
+| `project.sprints.before` | Sprints Page | `{ projectId: string }` |
+| `project.sprints.after` | Sprints Page | `{ projectId: string }` |
+| `workspace.settings.before` | Workspace Settings | `{ workspaceId: string }` |
+| `workspace.settings.after` | Workspace Settings | `{ workspaceId: string }` |
 
 ---
 
-## Prop Types
+## Example: Custom Metadata Widget
+
+The built-in `MetadataWidget` (shipped as a reference example in the dashboard source) demonstrates the pattern. It renders in `issue.details.after` and lets users manage key/value metadata on an issue:
 
 ```typescript
-interface IssueDetailWidgetProps {
-  issue: Issue
-  project: Project
-}
+// src/admin/widgets/MetadataWidget.tsx
+import { useState } from "react"
+import type { ZonePropMap } from "@meridianjs/admin-dashboard/extensions"
 
-interface ProjectWidgetProps {
-  project: Project
-}
+type Props = ZonePropMap["issue.details.after"]
 
-interface KanbanColumnWidgetProps {
-  status: ProjectStatus
-  project: Project
-  issues: Issue[]
-}
-
-interface DashboardWidgetProps {
-  workspace: Workspace
-}
-
-interface WorkspaceWidgetProps {
-  workspace: Workspace
-}
-```
-
----
-
-## Example: Custom Metrics Widget
-
-```typescript
-// src/admin/widgets/sprint-velocity.tsx
-import { useQuery } from '@tanstack/react-query'
-import type { WidgetConfig, ProjectWidgetProps } from '@meridianjs/admin-dashboard'
-
-export const config: WidgetConfig = {
-  zone: 'project.overview.header',
-}
-
-export default function SprintVelocityWidget({ project }: ProjectWidgetProps) {
-  const { data } = useQuery({
-    queryKey: ['sprint-velocity', project.id],
-    queryFn: () => fetch(`/admin/projects/${project.id}/velocity`).then(r => r.json()),
-  })
-
-  if (!data) return null
-
+export function MetadataWidget({ issue }: Props) {
+  // render custom UI using the full issue object
   return (
-    <div className="flex items-center gap-2 rounded border px-3 py-2">
-      <span className="text-sm font-medium">Velocity</span>
-      <span className="text-lg font-bold text-indigo-500">{data.avg_points}/sprint</span>
+    <div className="rounded-xl border p-4">
+      <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+        Custom Section
+      </p>
+      <p className="text-sm mt-2">{issue.title}</p>
     </div>
   )
 }
 ```
+
+```typescript
+// src/admin/widgets/index.tsx
+import { defineWidgets } from "@meridianjs/admin-dashboard/extensions"
+import { MetadataWidget } from "./MetadataWidget"
+
+export default defineWidgets([
+  { zone: "issue.details.after", component: MetadataWidget },
+])
+```
+
+---
+
+## React Sharing
+
+Widget bundles are compiled with esbuild and loaded as ESM modules at runtime. The `meridian serve-dashboard` command rewrites `import React from 'react'` inside your widget bundle to use `window.__React` — the same React instance already loaded by the dashboard. This avoids duplicate React instances and hook failures.
+
+---
+
+## Running with Widgets
+
+```bash
+# Compile API + dashboard + widgets in one step
+meridian dev
+
+# Or serve the dashboard independently (compiles widgets automatically)
+meridian serve-dashboard
+```
+
+If `src/admin/widgets/index.tsx` does not exist, the dashboard runs normally with no extensions loaded.

@@ -1,60 +1,240 @@
 ---
 id: production-checklist
-title: Production Checklist
-description: Redis swap, environment variables, security headers, and deployment best practices.
+title: Production Deployment
+description: Step-by-step guide to deploying MeridianJS to a production server with nginx.
 sidebar_position: 1
 ---
 
-# Production Checklist
+# Production Deployment
 
-Before deploying MeridianJS to production, work through this checklist.
-
----
-
-## 1. Swap to Redis Event Bus and Job Queue
-
-Development uses in-process implementations. Production requires Redis:
-
-```typescript
-// meridian.config.ts
-modules: [
-  // Development
-  // { resolve: '@meridianjs/event-bus-local' },
-  // { resolve: '@meridianjs/job-queue-local' },
-
-  // Production
-  { resolve: '@meridianjs/event-bus-redis', options: { redisUrl: process.env.REDIS_URL } },
-  { resolve: '@meridianjs/job-queue-redis', options: { redisUrl: process.env.REDIS_URL } },
-],
-```
+Step-by-step guide to deploying a MeridianJS project on a Linux server with nginx as a reverse proxy.
 
 ---
 
-## 2. Required Environment Variables
+## 1. Server Requirements
 
-| Variable | Description |
-|---|---|
-| `DATABASE_URL` | PostgreSQL connection string |
-| `JWT_SECRET` | Minimum 32 random characters |
-| `REDIS_URL` | Redis connection string (production) |
-| `NODE_ENV` | Set to `production` |
+- **OS**: Ubuntu 22.04+ (or any modern Linux distro)
+- **Node.js**: 20+
+- **PostgreSQL**: 14+
+- **Redis**: 6+ (for production event bus and job queue)
+- **nginx**: for reverse proxying
 
-Example `.env`:
+---
+
+## 2. Environment Variables
+
+Create a `.env` file in your project root:
+
 ```bash
 DATABASE_URL=postgresql://user:pass@localhost:5432/meridian_prod
 JWT_SECRET=your-long-random-secret-minimum-32-chars
 REDIS_URL=redis://localhost:6379
 NODE_ENV=production
+PORT=9000
+DASHBOARD_PORT=5174
+API_URL=https://api.yourdomain.com
 ```
 
-Generate a strong secret:
+Generate a strong JWT secret:
 ```bash
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
 
+| Variable | Description |
+|---|---|
+| `DATABASE_URL` | PostgreSQL connection string |
+| `JWT_SECRET` | Minimum 32 random characters |
+| `REDIS_URL` | Redis connection string |
+| `NODE_ENV` | Must be `production` |
+| `PORT` | API server port (default: `9000`) |
+| `DASHBOARD_PORT` | Dashboard server port (default: `5174`) |
+| `API_URL` | Full public URL of the API — **required in production** (e.g. `https://api.yourdomain.com`) |
+
+`API_URL` tells the dashboard where to send requests. Without it, the dashboard defaults to `http://localhost:9000` and all API calls will fail in production.
+
 ---
 
-## 3. Security Headers (Helmet)
+## 3. Update `meridian.config.ts` for Production
+
+Two changes are required before deploying:
+
+### Swap to Redis event bus and job queue
+
+Development uses in-process implementations. Production requires Redis:
+
+```typescript
+modules: [
+  // swap out local for redis
+  { resolve: "@meridianjs/event-bus-redis", options: { redisUrl: process.env.REDIS_URL } },
+  { resolve: "@meridianjs/job-queue-redis", options: { redisUrl: process.env.REDIS_URL } },
+],
+```
+
+### Set CORS origin
+
+The API and dashboard run on different subdomains, so the browser will block requests unless you explicitly allow the dashboard origin:
+
+```typescript
+projectConfig: {
+  databaseUrl: process.env.DATABASE_URL!,
+  jwtSecret: process.env.JWT_SECRET!,
+  httpPort: Number(process.env.PORT) || 9000,
+  cors: {
+    origin: "https://app.yourdomain.com",
+    credentials: true,
+  },
+},
+```
+
+Replace `app.yourdomain.com` with your actual dashboard domain. Without this, all API calls from the dashboard will fail with a CORS error.
+
+### Disable schema auto-sync
+
+In development the schema is synced on startup. In production, use explicit migrations instead:
+
+```typescript
+projectConfig: {
+  autoSyncSchema: false,
+},
+```
+
+---
+
+## 4. Run Database Migrations
+
+```bash
+npm run db:migrate
+```
+
+---
+
+## 5. Build
+
+```bash
+# Build the API server
+npm run build
+
+# Build the admin dashboard (if included)
+cd node_modules/@meridianjs/admin-dashboard && npm run build
+# or if you have it locally:
+npm run build --workspace=@meridianjs/admin-dashboard
+```
+
+---
+
+## 6. Start the Processes
+
+You need two long-running processes:
+
+```bash
+# Process 1 — API server
+NODE_ENV=production node dist/main.js
+
+# Process 2 — Admin dashboard
+NODE_ENV=production meridian serve-dashboard
+```
+
+Use a process manager like [PM2](https://pm2.keymetrics.io/) to keep them running:
+
+```bash
+npm install -g pm2
+
+pm2 start dist/main.js --name meridian-api
+pm2 start "meridian serve-dashboard" --name meridian-dashboard
+pm2 save
+pm2 startup   # auto-start on server reboot
+```
+
+---
+
+## 7. nginx Configuration
+
+The recommended setup uses two subdomains:
+- `api.yourdomain.com` → API server on port `9000`
+- `app.yourdomain.com` → Admin dashboard on port `5174`
+
+Create `/etc/nginx/sites-available/meridian`:
+
+```nginx
+server {
+    listen 80;
+    server_name api.yourdomain.com;
+
+    # Increase if you use file attachments
+    client_max_body_size 50M;
+
+    location / {
+        proxy_pass         http://127.0.0.1:9000;
+        proxy_http_version 1.1;
+
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # Required for SSE (GET /admin/events) — disables buffering
+        proxy_buffering    off;
+        proxy_cache        off;
+        proxy_read_timeout 3600s;
+    }
+}
+
+server {
+    listen 80;
+    server_name app.yourdomain.com;
+
+    location / {
+        proxy_pass         http://127.0.0.1:5174;
+        proxy_http_version 1.1;
+
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+Enable it and reload nginx:
+
+```bash
+sudo ln -s /etc/nginx/sites-available/meridian /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+### Adding SSL
+
+Once the site is running on HTTP, add SSL with Certbot:
+
+```bash
+sudo apt install certbot python3-certbot-nginx
+sudo certbot --nginx -d api.yourdomain.com -d app.yourdomain.com
+```
+
+Certbot will automatically update your nginx config to redirect HTTP to HTTPS and add the certificate blocks. After adding SSL, update your `cors.origin` in `meridian.config.ts` to use `https://`:
+
+```typescript
+cors: {
+  origin: "https://app.yourdomain.com",
+  credentials: true,
+},
+```
+
+---
+
+## 8. Health Check
+
+Verify the API is running:
+
+```bash
+curl http://api.yourdomain.com/health
+# {"ok":true}
+```
+
+---
+
+## 9. Security Headers
 
 Helmet is applied automatically by `@meridianjs/framework` when `NODE_ENV=production`. No configuration needed. Headers applied:
 
@@ -62,117 +242,26 @@ Helmet is applied automatically by `@meridianjs/framework` when `NODE_ENV=produc
 - `X-Content-Type-Options: nosniff`
 - `X-Frame-Options: DENY`
 - `Strict-Transport-Security` (HSTS)
-- `X-XSS-Protection`
 - `Referrer-Policy`
 
 ---
 
-## 4. Rate Limiting
+## 10. Google OAuth (if used)
 
-Rate limiters are applied automatically via `middlewares.ts`. Default limits:
+Update the callback URL env var and your Google OAuth app's authorized redirect URIs:
 
-- `/auth/*` — 10 requests per 15 minutes per IP (brute-force protection)
-- `/admin/*` — 100 requests per minute per IP
+```bash
+GOOGLE_CALLBACK_URL=https://api.yourdomain.com/auth/google/callback
+```
 
-Adjust in `projectConfig.rateLimits` if your load requires it.
-
----
-
-## 5. Database
-
-### Migrations
-
-In development, `updateSchema({ safe: true })` auto-syncs the schema on startup. In production, **disable auto-sync** and use explicit migrations:
+Update `frontendUrl` in the plugin options:
 
 ```typescript
-// meridian.config.ts
-projectConfig: {
-  autoSyncSchema: false,  // disable in production
-}
-```
-
-Run migrations with:
-```bash
-npm run meridian db:migrate
-```
-
-### Indexes
-
-All core modules define indexes on frequently queried columns (foreign keys, `status`, `email`, `created_at`). These are applied when running `db:migrate`.
-
-### Connection Pooling
-
-MikroORM uses a connection pool per module. With 12 modules, you'll have up to 12 × pool-size connections. Default pool size is 5 per module (60 total). Tune with:
-
-```typescript
-projectConfig: {
-  databasePoolSize: 3,  // per module, default 5
-}
-```
-
----
-
-## 6. Build and Start
-
-```bash
-# Build all packages
-npx turbo run build
-
-# Start production server
-NODE_ENV=production node dist/main.js
-```
-
-Or use the CLI:
-```bash
-meridian build
-NODE_ENV=production meridian start
-```
-
----
-
-## 7. Reverse Proxy (nginx example)
-
-```nginx
-server {
-  listen 443 ssl;
-  server_name your-app.com;
-
-  location /admin {
-    proxy_pass http://localhost:9000;
-    proxy_set_header Host $host;
-    proxy_set_header X-Real-IP $remote_addr;
-  }
-
-  location /auth {
-    proxy_pass http://localhost:9000;
-  }
-
-  # Serve dashboard static files
-  location / {
-    root /var/www/meridian/admin-dashboard/dist;
-    try_files $uri $uri/ /index.html;
+{
+  resolve: "@meridianjs-pro/plugin-google-oauth",
+  options: {
+    frontendUrl: "https://app.yourdomain.com",
+    // ...
   }
 }
 ```
-
----
-
-## 8. Health Check
-
-The framework exposes `GET /health` — use it in your load balancer or container health check:
-
-```bash
-curl https://your-app.com/health
-# {"ok":true,"uptime":3600,"version":"0.1.9"}
-```
-
----
-
-## 9. Google OAuth (if used)
-
-Set the callback URL to your production domain:
-```bash
-GOOGLE_CALLBACK_URL=https://your-app.com/auth/google/callback
-```
-
-And update your Google OAuth app's authorized redirect URIs accordingly.

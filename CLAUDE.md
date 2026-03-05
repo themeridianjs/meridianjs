@@ -305,6 +305,26 @@ MikroORM integration, `@meridianjs/user`, `@meridianjs/workspace`, `@meridianjs/
 
 Custom project statuses: `ProjectStatus` model in `@meridianjs/project`, seeded by `createProjectWorkflow`, full CRUD API at `/admin/projects/:id/statuses`. Issue.status is `text` (not enum) to support arbitrary keys.
 
+**Widget/Extension System** (also complete): `WidgetZone` component + `WidgetRegistryProvider` allow external React components to be injected into named slots in the UI. Widgets are defined in `src/admin/widgets/index.tsx` using `defineWidgets([{ zone, component }])` and compiled at runtime by `meridian serve-dashboard` (esbuild → `/admin-extensions.js`). React is shared via `window.__React` to prevent duplicate instances.
+
+| Zone | Page | Props |
+|---|---|---|
+| `issue.details.before` | Issue Detail (inline + full-page) | `{ issue: Issue }` |
+| `issue.details.after` | Issue Detail (inline + full-page) | `{ issue: Issue }` |
+| `issue.details.sidebar` | Issue Detail Page (full-page only) | `{ issue: Issue }` |
+| `project.board.before` | Kanban Board | `{ projectId: string }` |
+| `project.board.after` | Kanban Board | `{ projectId: string }` |
+| `project.issues.before` | Project Issues List | `{ projectId: string }` |
+| `project.issues.after` | Project Issues List | `{ projectId: string }` |
+| `project.timeline.before` | Project Timeline (Gantt) | `{ projectId: string }` |
+| `project.timeline.after` | Project Timeline (Gantt) | `{ projectId: string }` |
+| `project.sprints.before` | Sprints Page | `{ projectId: string }` |
+| `project.sprints.after` | Sprints Page | `{ projectId: string }` |
+| `workspace.settings.before` | Workspace Settings | `{ workspaceId: string }` |
+| `workspace.settings.after` | Workspace Settings | `{ workspaceId: string }` |
+
+Key files: `packages/ui/admin-dashboard/src/lib/widget-registry.ts`, `src/components/WidgetZone.tsx`, `src/extensions/` (example `MetadataWidget`), `packages/create-meridian-app/src/commands/serve-dashboard.ts`.
+
 ### Phase 8 — CLI ✅ COMPLETE
 `create-meridian-app` (v0.1.9). Commands: `npx create-meridian-app`, `meridian dev`, `meridian build`, `meridian db:migrate`, `meridian db:generate`. Scaffolds full project with minimal config (core modules auto-loaded by plugin).
 
@@ -319,6 +339,8 @@ Planned:
 - `meridian generate module/workflow/subscriber/job/route <name>` CLI sub-commands
 - `@meridianjs/plugin-github` — reference plugin with OAuth, repo listing, issue sync, subscriber, frontend page
 - SSE real-time updates — `SseManager` in framework, `GET /admin/events` stream, `useRealtimeEvents()` hook invalidates TanStack Query cache on domain events
+
+Note: The paid `@meridianjs-pro/plugin-ai` (AI Assist widget) will inject into the already-implemented `issue.details.sidebar` widget zone. Widget zones themselves are complete (Phase 7).
 
 ### Phase 12 — Admin Dashboard as a Meridian Plugin (pending)
 Planned: `@meridianjs/admin-dashboard` ships a `plugin/index.ts` entry that starts an Express static server for the built Vite output, managed by the framework lifecycle. `{ resolve: "@meridianjs/admin-dashboard" }` in `plugins[]` replaces the separate process. `PluginRegistrationContext` gains `onStop` teardown hook.

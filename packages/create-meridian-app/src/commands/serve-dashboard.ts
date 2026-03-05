@@ -6,6 +6,7 @@ import { existsSync } from "node:fs"
 import * as esbuild from "esbuild"
 import type { Plugin } from "esbuild"
 import chalk from "chalk"
+import dotenv from "dotenv"
 import { findProjectRoot, readProjectPorts } from "../utils.js"
 
 const MIME_TYPES: Record<string, string> = {
@@ -110,9 +111,11 @@ export function startDashboardServer(
   port: number,
   apiPort: number,
   apiHost = "localhost",
-  adminExtensionsBuf: Buffer | null = null
+  adminExtensionsBuf: Buffer | null = null,
+  apiUrlOverride?: string
 ): Promise<http.Server> {
-  const configScript = `<script>window.__MERIDIAN_CONFIG__ = { apiUrl: "http://${apiHost}:${apiPort}" };</script>`
+  const resolvedApiUrl = apiUrlOverride ?? `http://${apiHost}:${apiPort}`
+  const configScript = `<script>window.__MERIDIAN_CONFIG__ = { apiUrl: "${resolvedApiUrl}" };</script>`
 
   return new Promise((resolve, reject) => {
     const server = http.createServer((req, res) => {
@@ -183,6 +186,9 @@ export function startDashboardServer(
 /** CLI command: `meridian serve-dashboard [--port <n>]` */
 export async function runServeDashboard(portOverride?: number): Promise<void> {
   const rootDir = findProjectRoot()
+  if (rootDir) {
+    dotenv.config({ path: path.join(rootDir, ".env") })
+  }
   if (!rootDir) {
     console.error(chalk.red("  ✖ Could not find meridian.config.ts. Are you inside a Meridian project?"))
     process.exit(1)
@@ -197,6 +203,11 @@ export async function runServeDashboard(portOverride?: number): Promise<void> {
 
   const { apiPort, dashboardPort } = await readProjectPorts(rootDir)
   const port = portOverride ?? dashboardPort
+
+  // Allow full API URL override via env var (required for production deployments
+  // where the API is on a different domain, e.g. https://api.yourdomain.com).
+  // Falls back to http://localhost:<apiPort> for local dev.
+  const apiUrl = process.env.API_URL ?? `http://localhost:${apiPort}`
 
   // Compile user-defined admin extensions if present
   let adminExtensionsBuf: Buffer | null = null
@@ -214,10 +225,10 @@ export async function runServeDashboard(portOverride?: number): Promise<void> {
     }
   }
 
-  const server = await startDashboardServer(distDir, port, apiPort, "localhost", adminExtensionsBuf)
+  const server = await startDashboardServer(distDir, port, apiPort, "localhost", adminExtensionsBuf, apiUrl)
 
   console.log(chalk.green("  ✔ Admin dashboard: ") + chalk.cyan(`http://localhost:${port}`))
-  console.log(chalk.dim(`     → API: http://localhost:${apiPort}`))
+  console.log(chalk.dim(`     → API: ${apiUrl}`))
   if (adminExtensionsBuf) {
     console.log(chalk.dim(`     → Extensions: /admin-extensions.js (${adminExtensionsBuf.length} bytes)`))
   }

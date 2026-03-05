@@ -32,7 +32,7 @@ export function renderPackageJson(vars: ProjectTemplateVars): string {
       scripts: {
         dev: "meridian dev",
         build: "meridian build",
-        start: "node --import tsx/esm src/main.ts",
+        start: "meridian dev",
         "db:migrate": "meridian db:migrate",
         "db:generate": "meridian db:generate",
         ...(vars.seedDemo ? { "seed:demo": "node --import tsx/esm src/scripts/seed-demo.ts" } : {}),
@@ -358,7 +358,7 @@ AWS_SES_SECRET_ACCESS_KEY=`)
 DATABASE_URL=${vars.databaseUrl}
 PORT=${vars.httpPort}
 JWT_SECRET=changeme-replace-in-production
-${vars.dashboard ? `DASHBOARD_PORT=${vars.dashboardPort}\n` : ""}${optionalEnv}`.trimEnd() + "\n"
+${vars.dashboard ? `DASHBOARD_PORT=${vars.dashboardPort}\n# API_URL=https://api.yourdomain.com  # set this in production\n` : ""}${optionalEnv}`.trimEnd() + "\n"
 }
 
 export function renderReadme(vars: ProjectTemplateVars): string {
@@ -687,6 +687,7 @@ async function main() {
   await seedStatuses(siteProject.id)
   const siteSprint = await sprintService.createSprint({
     project_id: siteProject.id,
+    workspace_id: acme.id,
     name: "Sprint 1",
     start_date: now,
     end_date: future(14),
@@ -695,6 +696,7 @@ async function main() {
 
   const siteHero = await issueService.createIssueInProject({
     project_id: siteProject.id,
+    workspace_id: acme.id,
     title: "Redesign homepage hero section",
     type: "feature",
     priority: "high",
@@ -703,6 +705,7 @@ async function main() {
   })
   await issueService.createIssueInProject({
     project_id: siteProject.id,
+    workspace_id: acme.id,
     title: "Design hero animation",
     type: "task",
     priority: "medium",
@@ -711,6 +714,7 @@ async function main() {
   })
   await issueService.createIssueInProject({
     project_id: siteProject.id,
+    workspace_id: acme.id,
     title: "Write hero copy",
     type: "task",
     priority: "low",
@@ -719,6 +723,7 @@ async function main() {
   })
   await issueService.createIssueInProject({
     project_id: siteProject.id,
+    workspace_id: acme.id,
     title: "Fix broken navigation links",
     type: "bug",
     priority: "urgent",
@@ -726,6 +731,7 @@ async function main() {
   })
   await issueService.createIssueInProject({
     project_id: siteProject.id,
+    workspace_id: acme.id,
     title: "Implement contact form",
     type: "feature",
     priority: "medium",
@@ -733,6 +739,7 @@ async function main() {
   })
   await issueService.createIssueInProject({
     project_id: siteProject.id,
+    workspace_id: acme.id,
     title: "Optimize images for web",
     type: "task",
     priority: "low",
@@ -740,6 +747,7 @@ async function main() {
   })
   await issueService.createIssueInProject({
     project_id: siteProject.id,
+    workspace_id: acme.id,
     title: "Add SEO meta tags",
     type: "task",
     priority: "medium",
@@ -747,6 +755,7 @@ async function main() {
   })
   await issueService.createIssueInProject({
     project_id: siteProject.id,
+    workspace_id: acme.id,
     title: "Set up Google Analytics",
     type: "task",
     priority: "high",
@@ -766,6 +775,7 @@ async function main() {
   await seedStatuses(appProject.id)
   const appSprint = await sprintService.createSprint({
     project_id: appProject.id,
+    workspace_id: acme.id,
     name: "Sprint 1",
     start_date: now,
     end_date: future(14),
@@ -774,6 +784,7 @@ async function main() {
 
   const appPush = await issueService.createIssueInProject({
     project_id: appProject.id,
+    workspace_id: acme.id,
     title: "Implement push notifications",
     type: "feature",
     priority: "high",
@@ -782,6 +793,7 @@ async function main() {
   })
   await issueService.createIssueInProject({
     project_id: appProject.id,
+    workspace_id: acme.id,
     title: "iOS push setup",
     type: "task",
     priority: "medium",
@@ -790,6 +802,7 @@ async function main() {
   })
   await issueService.createIssueInProject({
     project_id: appProject.id,
+    workspace_id: acme.id,
     title: "Android push setup",
     type: "task",
     priority: "medium",
@@ -798,6 +811,7 @@ async function main() {
   })
   const appCrash = await issueService.createIssueInProject({
     project_id: appProject.id,
+    workspace_id: acme.id,
     title: "Fix crash on login screen",
     type: "bug",
     priority: "urgent",
@@ -805,6 +819,7 @@ async function main() {
   })
   await issueService.createIssueInProject({
     project_id: appProject.id,
+    workspace_id: acme.id,
     title: "Add dark mode support",
     type: "feature",
     priority: "medium",
@@ -812,6 +827,7 @@ async function main() {
   })
   await issueService.createIssueInProject({
     project_id: appProject.id,
+    workspace_id: acme.id,
     title: "Improve app launch time",
     type: "task",
     priority: "high",
@@ -819,6 +835,7 @@ async function main() {
   })
   await issueService.createIssueInProject({
     project_id: appProject.id,
+    workspace_id: acme.id,
     title: "Write onboarding flow",
     type: "story",
     priority: "medium",
@@ -826,6 +843,7 @@ async function main() {
   })
   await issueService.createIssueInProject({
     project_id: appProject.id,
+    workspace_id: acme.id,
     title: "Accessibility audit",
     type: "task",
     priority: "low",
@@ -849,6 +867,7 @@ async function main() {
   await seedStatuses(roadmapProject.id)
   const roadmapSprint = await sprintService.createSprint({
     project_id: roadmapProject.id,
+    workspace_id: starlight.id,
     name: "Sprint 1",
     start_date: now,
     end_date: future(21),
@@ -857,6 +876,7 @@ async function main() {
 
   const roadmapOkr = await issueService.createIssueInProject({
     project_id: roadmapProject.id,
+    workspace_id: starlight.id,
     title: "Define Q2 OKRs",
     type: "epic",
     priority: "high",
@@ -865,6 +885,7 @@ async function main() {
   })
   await issueService.createIssueInProject({
     project_id: roadmapProject.id,
+    workspace_id: starlight.id,
     title: "Engineering OKRs",
     type: "task",
     priority: "high",
@@ -873,6 +894,7 @@ async function main() {
   })
   await issueService.createIssueInProject({
     project_id: roadmapProject.id,
+    workspace_id: starlight.id,
     title: "Product OKRs",
     type: "task",
     priority: "high",
@@ -881,6 +903,7 @@ async function main() {
   })
   await issueService.createIssueInProject({
     project_id: roadmapProject.id,
+    workspace_id: starlight.id,
     title: "User research interviews",
     type: "task",
     priority: "medium",
@@ -888,6 +911,7 @@ async function main() {
   })
   await issueService.createIssueInProject({
     project_id: roadmapProject.id,
+    workspace_id: starlight.id,
     title: "Competitive analysis",
     type: "task",
     priority: "medium",
@@ -895,6 +919,7 @@ async function main() {
   })
   await issueService.createIssueInProject({
     project_id: roadmapProject.id,
+    workspace_id: starlight.id,
     title: "Draft product spec v1",
     type: "feature",
     priority: "high",
@@ -902,6 +927,7 @@ async function main() {
   })
   await issueService.createIssueInProject({
     project_id: roadmapProject.id,
+    workspace_id: starlight.id,
     title: "Roadmap review with stakeholders",
     type: "task",
     priority: "medium",
@@ -909,6 +935,7 @@ async function main() {
   })
   await issueService.createIssueInProject({
     project_id: roadmapProject.id,
+    workspace_id: starlight.id,
     title: "Prioritize feature backlog",
     type: "task",
     priority: "low",
@@ -928,6 +955,7 @@ async function main() {
   await seedStatuses(mktProject.id)
   const mktSprint = await sprintService.createSprint({
     project_id: mktProject.id,
+    workspace_id: starlight.id,
     name: "Sprint 1",
     start_date: now,
     end_date: future(7),
@@ -936,6 +964,7 @@ async function main() {
 
   const mktPricing = await issueService.createIssueInProject({
     project_id: mktProject.id,
+    workspace_id: starlight.id,
     title: "Redesign pricing page",
     type: "feature",
     priority: "high",
@@ -944,6 +973,7 @@ async function main() {
   })
   await issueService.createIssueInProject({
     project_id: mktProject.id,
+    workspace_id: starlight.id,
     title: "Update pricing copy",
     type: "task",
     priority: "medium",
@@ -952,6 +982,7 @@ async function main() {
   })
   await issueService.createIssueInProject({
     project_id: mktProject.id,
+    workspace_id: starlight.id,
     title: "A/B test variants",
     type: "task",
     priority: "low",
@@ -960,6 +991,7 @@ async function main() {
   })
   await issueService.createIssueInProject({
     project_id: mktProject.id,
+    workspace_id: starlight.id,
     title: "Fix mobile layout issues",
     type: "bug",
     priority: "urgent",
@@ -967,6 +999,7 @@ async function main() {
   })
   await issueService.createIssueInProject({
     project_id: mktProject.id,
+    workspace_id: starlight.id,
     title: "Improve page load score",
     type: "task",
     priority: "high",
@@ -974,6 +1007,7 @@ async function main() {
   })
   await issueService.createIssueInProject({
     project_id: mktProject.id,
+    workspace_id: starlight.id,
     title: "Add blog section",
     type: "feature",
     priority: "medium",
@@ -981,6 +1015,7 @@ async function main() {
   })
   await issueService.createIssueInProject({
     project_id: mktProject.id,
+    workspace_id: starlight.id,
     title: "Set up Hotjar",
     type: "task",
     priority: "low",
@@ -988,6 +1023,7 @@ async function main() {
   })
   await issueService.createIssueInProject({
     project_id: mktProject.id,
+    workspace_id: starlight.id,
     title: "Write 3 launch blog posts",
     type: "task",
     priority: "medium",
@@ -1011,6 +1047,7 @@ async function main() {
   await seedStatuses(infraProject.id)
   const infraSprint = await sprintService.createSprint({
     project_id: infraProject.id,
+    workspace_id: devops.id,
     name: "Sprint 1",
     start_date: now,
     end_date: future(14),
@@ -1019,6 +1056,7 @@ async function main() {
 
   const infraEks = await issueService.createIssueInProject({
     project_id: infraProject.id,
+    workspace_id: devops.id,
     title: "Migrate to EKS",
     type: "epic",
     priority: "high",
@@ -1027,6 +1065,7 @@ async function main() {
   })
   await issueService.createIssueInProject({
     project_id: infraProject.id,
+    workspace_id: devops.id,
     title: "Set up EKS cluster",
     type: "task",
     priority: "high",
@@ -1035,6 +1074,7 @@ async function main() {
   })
   await issueService.createIssueInProject({
     project_id: infraProject.id,
+    workspace_id: devops.id,
     title: "Migrate services",
     type: "task",
     priority: "high",
@@ -1043,6 +1083,7 @@ async function main() {
   })
   await issueService.createIssueInProject({
     project_id: infraProject.id,
+    workspace_id: devops.id,
     title: "Implement secrets rotation",
     type: "feature",
     priority: "urgent",
@@ -1050,6 +1091,7 @@ async function main() {
   })
   await issueService.createIssueInProject({
     project_id: infraProject.id,
+    workspace_id: devops.id,
     title: "Add CloudWatch dashboards",
     type: "task",
     priority: "medium",
@@ -1057,6 +1099,7 @@ async function main() {
   })
   await issueService.createIssueInProject({
     project_id: infraProject.id,
+    workspace_id: devops.id,
     title: "Reduce AWS costs by 20%",
     type: "task",
     priority: "high",
@@ -1064,6 +1107,7 @@ async function main() {
   })
   await issueService.createIssueInProject({
     project_id: infraProject.id,
+    workspace_id: devops.id,
     title: "Set up Datadog APM",
     type: "feature",
     priority: "medium",
@@ -1072,6 +1116,7 @@ async function main() {
   })
   await issueService.createIssueInProject({
     project_id: infraProject.id,
+    workspace_id: devops.id,
     title: "Document runbooks",
     type: "task",
     priority: "low",
@@ -1090,6 +1135,7 @@ async function main() {
   await seedStatuses(cicdProject.id)
   const cicdSprint = await sprintService.createSprint({
     project_id: cicdProject.id,
+    workspace_id: devops.id,
     name: "Sprint 1",
     start_date: now,
     end_date: future(14),
@@ -1098,6 +1144,7 @@ async function main() {
 
   const cicdMatrix = await issueService.createIssueInProject({
     project_id: cicdProject.id,
+    workspace_id: devops.id,
     title: "Add matrix builds for Node 18/20",
     type: "feature",
     priority: "high",
@@ -1106,6 +1153,7 @@ async function main() {
   })
   await issueService.createIssueInProject({
     project_id: cicdProject.id,
+    workspace_id: devops.id,
     title: "Node 18 build config",
     type: "task",
     priority: "medium",
@@ -1114,6 +1162,7 @@ async function main() {
   })
   await issueService.createIssueInProject({
     project_id: cicdProject.id,
+    workspace_id: devops.id,
     title: "Node 20 build config",
     type: "task",
     priority: "medium",
@@ -1122,6 +1171,7 @@ async function main() {
   })
   await issueService.createIssueInProject({
     project_id: cicdProject.id,
+    workspace_id: devops.id,
     title: "Flaky test investigation",
     type: "bug",
     priority: "high",
@@ -1129,6 +1179,7 @@ async function main() {
   })
   await issueService.createIssueInProject({
     project_id: cicdProject.id,
+    workspace_id: devops.id,
     title: "Add deploy preview environments",
     type: "feature",
     priority: "medium",
@@ -1136,6 +1187,7 @@ async function main() {
   })
   await issueService.createIssueInProject({
     project_id: cicdProject.id,
+    workspace_id: devops.id,
     title: "Cache npm dependencies",
     type: "task",
     priority: "medium",
@@ -1144,6 +1196,7 @@ async function main() {
   })
   await issueService.createIssueInProject({
     project_id: cicdProject.id,
+    workspace_id: devops.id,
     title: "Rollback automation",
     type: "feature",
     priority: "high",
@@ -1151,6 +1204,7 @@ async function main() {
   })
   await issueService.createIssueInProject({
     project_id: cicdProject.id,
+    workspace_id: devops.id,
     title: "Pipeline documentation",
     type: "task",
     priority: "low",
