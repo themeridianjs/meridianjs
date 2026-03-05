@@ -25,12 +25,15 @@ npm install
 # 2) configure environment
 cp .env.example .env
 
-# 3) update DATABASE_URL and other secrets in .env
+# 3) create your PostgreSQL database (if it does not already exist)
+createdb meridian_dev
 
-# 4) synchronize database schema
+# 4) update DATABASE_URL, JWT_SECRET, and other values in .env
+
+# 5) synchronize database schema
 npm run db:migrate
 
-# 5) start development server
+# 6) start development server
 npm run dev
 ```
 
@@ -41,18 +44,22 @@ Run directly as `npx meridian <command>` or through npm scripts where available.
 | Command | Description |
 |---|---|
 | `meridian new [project-name]` | Scaffold a new Meridian project |
-| `meridian dev` | Start API server (and dashboard if installed) |
+| `meridian dev` | Start API server in development mode (and dashboard if installed) |
+| `meridian start` | Start API server in **production** mode (`NODE_ENV=production`) |
 | `meridian build` | Type-check the project (`tsc --noEmit`) |
 | `meridian db:migrate` | Bootstraps app and syncs module schemas |
 | `meridian db:generate <name>` | Create a timestamped migration placeholder in `src/migrations/` |
-| `meridian serve-dashboard --port 5174` | Serve admin dashboard as static app |
+| `meridian serve-dashboard` | Serve admin dashboard as a static app (default port: `5174`) |
+| `meridian serve-dashboard --port 3000` | Serve admin dashboard on a custom port |
 | `meridian user:create --email <email> --role <role>` | Create a user (`super-admin`, `admin`, `moderator`, `member`) |
-| `meridian generate module <name>` | Scaffold a module in `src/modules/` |
+| `meridian generate module <name>` | Scaffold a module in `src/modules/` (alias: `meridian g module`) |
 | `meridian generate subscriber <event>` | Scaffold an event subscriber in `src/subscribers/` |
 | `meridian generate workflow <name>` | Scaffold a workflow in `src/workflows/` |
 | `meridian generate job <name> --schedule "0 * * * *"` | Scaffold a scheduled job in `src/jobs/` |
 | `meridian generate plugin <name>` | Scaffold a local plugin in `src/plugins/` |
 | `meridian generate route <path> --methods GET,POST` | Scaffold a file-based API route in `src/api/` |
+
+`meridian generate` can be shortened to `meridian g` for all sub-commands.
 
 ## Command examples
 

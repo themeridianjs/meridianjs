@@ -24,7 +24,7 @@ Subscriber contract:
 - Default export: async handler function
 - Named export: `config` with `event` (string or string array)
 
-Example:
+Example — single event:
 
 ```ts
 import type { SubscriberArgs, SubscriberConfig } from "@meridianjs/types"
@@ -36,6 +36,28 @@ export default async function handler({ event, container }: SubscriberArgs) {
 
 export const config: SubscriberConfig = {
   event: "issue.created",
+}
+```
+
+Example — multiple events with one handler:
+
+```ts
+import type { SubscriberArgs, SubscriberConfig } from "@meridianjs/types"
+
+export default async function handler({ event, container }: SubscriberArgs) {
+  const logger = container.resolve("logger") as any
+  logger.info(`Received ${event.name}`, event.data)
+
+  // Differentiate by event name if needed
+  if (event.name === "issue.created") {
+    // ...
+  } else if (event.name === "issue.assigned") {
+    // ...
+  }
+}
+
+export const config: SubscriberConfig = {
+  event: ["issue.created", "issue.assigned"],
 }
 ```
 

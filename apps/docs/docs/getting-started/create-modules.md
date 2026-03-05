@@ -42,3 +42,35 @@ Then sync schema:
 ```bash
 npm run db:migrate
 ```
+
+## Service token naming
+
+The module key becomes the DI container token. It is derived from the generated module name using camelCase with a `ModuleService` suffix:
+
+| Module name | Service token |
+|---|---|
+| `time-log` | `timeLogModuleService` |
+| `my-feature` | `myFeatureModuleService` |
+
+## Using the module in a route
+
+Resolve the service from `req.scope` inside any route handler:
+
+```ts
+// src/api/admin/time-logs/route.ts
+import type { Request, Response } from "express"
+
+export const GET = async (req: Request, res: Response) => {
+  const svc = req.scope.resolve("timeLogModuleService") as any
+  const logs = await svc.listTimeLogs()
+  res.json({ time_logs: logs })
+}
+
+export const POST = async (req: Request, res: Response) => {
+  const svc = req.scope.resolve("timeLogModuleService") as any
+  const log = await svc.createTimeLog(req.body)
+  res.status(201).json({ time_log: log })
+}
+```
+
+All CRUD methods are auto-generated: `list<Plural>`, `listAndCount<Plural>`, `retrieve<Singular>`, `create<Singular>`, `update<Singular>`, `delete<Singular>`, `softDelete<Singular>`.
