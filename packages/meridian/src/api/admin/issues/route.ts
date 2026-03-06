@@ -8,9 +8,16 @@ export const GET = async (req: any, res: Response) => {
   const limit = Math.min(Number(req.query.limit) || 50, 200)
   const offset = Number(req.query.offset) || 0
   const filters: Record<string, unknown> = {}
+
+  const parseMulti = (val: string) => {
+    const parts = val.split(",").filter(Boolean)
+    return parts.length === 1 ? parts[0] : { $in: parts }
+  }
+
   if (req.query.project_id) filters.project_id = req.query.project_id
-  if (req.query.status) filters.status = req.query.status
-  if (req.query.type) filters.type = req.query.type
+  if (req.query.status) filters.status = parseMulti(req.query.status as string)
+  if (req.query.type) filters.type = parseMulti(req.query.type as string)
+  if (req.query.priority) filters.priority = parseMulti(req.query.priority as string)
   if (req.query.sprint_id === "none") filters.sprint_id = null
   else if (req.query.sprint_id) filters.sprint_id = req.query.sprint_id as string
   if (req.query.task_list_id === "none") filters.task_list_id = null
@@ -27,7 +34,14 @@ export const GET = async (req: any, res: Response) => {
     }
   }
 
-  const [issues, count] = await issueService.listAndCountIssues(filters, { limit, offset, orderBy: { created_at: "ASC" } })
+  let [issues, count] = await issueService.listAndCountIssues(filters, { limit, offset, orderBy: { created_at: "ASC" } })
+
+  if (req.query.assignee_id) {
+    const id = req.query.assignee_id as string
+    issues = issues.filter((i: any) => (i.assignee_ids ?? []).includes(id))
+    count = issues.length
+  }
+
   res.json({ issues, count, limit, offset })
 }
 

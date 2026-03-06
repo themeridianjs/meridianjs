@@ -137,7 +137,7 @@ export class IssueModuleService extends MeridianService({
   ): Promise<any[]> {
     const repo = this.container.resolve<any>("issueRepository")
     return repo.find(
-      { project_id: projectId, ...filters },
+      { project_id: projectId, deleted_at: null, ...filters },
       { limit: options.limit ?? 50, offset: options.offset ?? 0 }
     )
   }
@@ -145,7 +145,7 @@ export class IssueModuleService extends MeridianService({
   /** List all comments for an issue. */
   async listCommentsByIssue(issueId: string): Promise<any[]> {
     const repo = this.container.resolve<any>("commentRepository")
-    return repo.find({ issue_id: issueId })
+    return repo.find({ issue_id: issueId, deleted_at: null })
   }
 
   /** Add a comment to an issue. */

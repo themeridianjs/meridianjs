@@ -46,7 +46,7 @@ export const DELETE = async (req: any, res: Response, next: NextFunction) => {
   requirePermission("project:delete")(req, res, async () => {
     try {
       const projectService = req.scope.resolve("projectModuleService") as any
-      await projectService.deleteProject(req.params.id)
+      await projectService.softDeleteProject(req.params.id)
       res.status(204).send()
     } catch (err) {
       next(err)
