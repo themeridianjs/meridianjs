@@ -201,8 +201,8 @@ export function useIssueActivities(issueId: string) {
 export function useCreateComment(issueId: string) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (body: string) =>
-      api.post<{ comment: Comment }>(`/admin/issues/${issueId}/comments`, { body }),
+    mutationFn: ({ body, metadata }: { body: string; metadata?: { mentioned_user_ids?: string[] } }) =>
+      api.post<{ comment: Comment }>(`/admin/issues/${issueId}/comments`, { body, metadata }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: issueKeys.comments(issueId) })
     },

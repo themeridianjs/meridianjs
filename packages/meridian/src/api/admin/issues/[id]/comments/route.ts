@@ -39,6 +39,9 @@ export const POST = async (req: any, res: Response) => {
     issue_id: req.params.id, body: body.trim(), author_id: req.user?.id ?? "system",
     metadata: metadata ?? null,
   })
-  eventBus.emit({ name: "comment.created", data: { comment_id: comment.id, issue_id: req.params.id, author_id: comment.author_id } }).catch(() => {})
+  const mentionedUserIds: string[] = Array.isArray(metadata?.mentioned_user_ids)
+    ? metadata.mentioned_user_ids.filter((id: unknown) => typeof id === "string")
+    : []
+  eventBus.emit({ name: "comment.created", data: { comment_id: comment.id, issue_id: req.params.id, author_id: comment.author_id, mentioned_user_ids: mentionedUserIds } }).catch(() => {})
   res.status(201).json({ comment })
 }

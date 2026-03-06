@@ -161,7 +161,11 @@ export function RichTextContent({ html, className }: RichTextContentProps) {
   return (
     <div
       className={cn("meridian-editor", className)}
-      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(html) }}
+      dangerouslySetInnerHTML={{
+        __html: DOMPurify.sanitize(html, {
+          ADD_ATTR: ["data-type", "data-id", "data-label"],
+        }),
+      }}
     />
   )
 }

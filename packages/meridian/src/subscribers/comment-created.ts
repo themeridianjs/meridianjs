@@ -6,6 +6,7 @@ interface CommentCreatedData {
   comment_id: string
   issue_id: string
   author_id: string
+  mentioned_user_ids?: string[]
 }
 
 export default async function handler({ event, container }: SubscriberArgs<CommentCreatedData>): Promise<void> {
@@ -33,6 +34,18 @@ export default async function handler({ event, container }: SubscriberArgs<Comme
     })
   ))
 
+  // Notify mentioned users (skip those already notified above)
+  const mentionedIds = data.mentioned_user_ids ?? []
+  const newMentions = mentionedIds.filter(id => id !== data.author_id && !recipients.has(id))
+
+  await Promise.all(newMentions.map(userId =>
+    notifService.createNotification({
+      user_id: userId, entity_type: "issue", entity_id: data.issue_id,
+      action: "mentioned", message: `You were mentioned in a comment on [${issue.identifier}]: ${issue.title}`,
+      workspace_id: issue.workspace_id,
+    })
+  ))
+
   sseManager.broadcast(issue.workspace_id, "comment.created", {
     comment_id: data.comment_id,
     issue_id: data.issue_id,
@@ -42,7 +55,22 @@ export default async function handler({ event, container }: SubscriberArgs<Comme
   try {
     const emailService = container.resolve("emailService") as any
     const userService  = container.resolve("userModuleService") as any
+    const config = container.resolve("config") as any
+    const appUrl: string = config?.appUrl ?? process.env.APP_URL ?? "http://localhost:9001"
 
+    const commentLink = `${appUrl}/issues/${data.issue_id}#comment-${data.comment_id}`
+
+    // Fetch comment body for inclusion in emails
+    let commentBody = ""
+    let commentBodyText = ""
+    try {
+      const comment = await issueService.retrieveComment(data.comment_id)
+      commentBody = comment?.body ?? ""
+      // Strip HTML tags for plain-text version
+      commentBodyText = commentBody.replace(/<[^>]+>/g, "").trim()
+    } catch { /* comment fetch optional — emails still send */ }
+
+    // Email existing recipients (assignees / reporter)
     await Promise.allSettled([...recipients].map(async (userId) => {
       const user = await userService.retrieveUser(userId)
       if (!user?.email) return
@@ -50,8 +78,29 @@ export default async function handler({ event, container }: SubscriberArgs<Comme
       await emailService.send({
         to: user.email,
         subject: tpl?.subject ?? `New comment on [${issue.identifier}]: ${issue.title}`,
-        text: tpl?.text ?? `A comment was added on issue ${issue.identifier}: "${issue.title}" that you're involved with.`,
-        html: tpl?.html ?? emailHtml(`A comment was added on issue <strong>${issue.identifier}</strong>: "${issue.title}" that you're involved with.`),
+        text: tpl?.text ?? `A comment was added on issue ${issue.identifier}: "${issue.title}" that you're involved with.\n\n${commentBodyText}`,
+        html: tpl?.html ?? emailHtml(
+          `A comment was added on issue <strong>${issue.identifier}</strong>: "${issue.title}" that you're involved with.` +
+          (commentBody ? `<br><br><div style="border-left:3px solid #e2e8f0;padding:8px 12px;color:#374151;font-size:14px;">${commentBody}</div>` : "")
+        ),
+      })
+    }))
+
+    // Email mentioned users
+    await Promise.allSettled(newMentions.map(async (userId) => {
+      const user = await userService.retrieveUser(userId)
+      if (!user?.email) return
+      await emailService.send({
+        to: user.email,
+        subject: `You were mentioned in [${issue.identifier}]: ${issue.title}`,
+        text: `You were mentioned in a comment on issue ${issue.identifier}: "${issue.title}".\n\n${commentBodyText}\n\nView it here: ${commentLink}`,
+        html: emailHtml(
+          `You were mentioned in a comment on <strong>${issue.identifier}</strong>: "${issue.title}".<br><br>` +
+          (commentBody
+            ? `<div style="border-left:3px solid #4f46e5;padding:8px 12px;color:#374151;font-size:14px;margin-bottom:16px;">${commentBody}</div>`
+            : "") +
+          `<a href="${commentLink}" style="color:#4f46e5">View comment →</a>`
+        ),
       })
     }))
   } catch (err) {
