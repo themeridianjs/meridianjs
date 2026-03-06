@@ -1,16 +1,19 @@
-import { useRef, useState, useMemo } from "react"
+import { useRef, useState, useMemo, useCallback } from "react"
 import { useEditor, EditorContent } from "@tiptap/react"
 import StarterKit from "@tiptap/starter-kit"
 import Underline from "@tiptap/extension-underline"
 import Placeholder from "@tiptap/extension-placeholder"
+import Mention from "@tiptap/extension-mention"
 import { Extension } from "@tiptap/core"
 import { useCreateComment } from "@/api/hooks/useIssues"
 import { useUploadAttachment } from "@/api/hooks/useAttachments"
+import { useProjectAccess } from "@/api/hooks/useProjectAccess"
 import { useAuth } from "@/stores/auth"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { FileTypeIcon, formatBytes } from "@/components/issues/AttachmentViewer"
 import { getAvatarColor } from "@/components/issues/IssueActivity"
+import { MentionSuggestion, type MentionItem } from "@/components/issues/MentionSuggestion"
 import {
   Bold, Italic, Strikethrough, Code,
   List, ListOrdered, Code2,
@@ -53,22 +56,61 @@ function Divider() {
 
 interface CommentInputProps {
   issueId: string
+  projectId?: string
   /** Smaller layout for the sheet sticky footer */
   compact?: boolean
   className?: string
   onSuccess?: () => void
 }
 
-export function CommentInput({ issueId, compact, className, onSuccess }: CommentInputProps) {
+interface MentionPopupState {
+  active: boolean
+  items: MentionItem[]
+  selectedIndex: number
+  rect: DOMRect | null
+  command: ((item: MentionItem) => void) | null
+}
+
+const EMPTY_POPUP: MentionPopupState = { active: false, items: [], selectedIndex: 0, rect: null, command: null }
+
+export function CommentInput({ issueId, projectId, compact, className, onSuccess }: CommentInputProps) {
   const [editorEmpty, setEditorEmpty] = useState(true)
   const [pendingFiles, setPendingFiles] = useState<File[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [mentionPopup, setMentionPopup] = useState<MentionPopupState>(EMPTY_POPUP)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const handleSubmitRef = useRef<() => Promise<void>>(async () => {})
+  const editorContainerRef = useRef<HTMLDivElement>(null)
 
   const { user: currentUser } = useAuth()
   const createComment = useCreateComment(issueId)
   const uploadAttachment = useUploadAttachment(issueId)
+  const { data: projectAccess } = useProjectAccess(projectId ?? "")
+
+  // Build project member list for mention autocomplete
+  const projectMembers = useMemo<MentionItem[]>(() => {
+    if (!projectAccess?.members) return []
+    return projectAccess.members
+      .filter((m) => m.user)
+      .map((m) => {
+        const u = m.user!
+        const label = `${u.first_name ?? ""} ${u.last_name ?? ""}`.trim() || u.email
+        return { id: u.id, label, email: u.email }
+      })
+  }, [projectAccess])
+
+  // Stable ref so the tiptap extension (created once) always sees latest members
+  const projectMembersRef = useRef<MentionItem[]>([])
+  projectMembersRef.current = projectMembers
+
+  // Stable ref so tiptap handlers can update React state
+  const setMentionPopupRef = useRef(setMentionPopup)
+  setMentionPopupRef.current = setMentionPopup
+
+  // Refs tracking current selection for keyboard handling inside tiptap
+  const mentionItemsRef = useRef<MentionItem[]>([])
+  const mentionCommandRef = useRef<((item: MentionItem) => void) | null>(null)
+  const mentionSelectedIndexRef = useRef(0)
 
   const firstName = currentUser?.first_name ?? ""
   const lastName  = currentUser?.last_name  ?? ""
@@ -78,9 +120,7 @@ export function CommentInput({ issueId, compact, className, onSuccess }: Comment
     : "?"
   const avatarColor = getAvatarColor(displayName)
 
-  // Keyboard shortcut extension — created once; calls handleSubmitRef so it
-  // always invokes the latest version of handleSubmit without reinitialising
-  // the editor.
+  // Keyboard shortcut for Cmd+Enter submit
   const SubmitShortcut = useMemo(
     () =>
       Extension.create({
@@ -97,12 +137,88 @@ export function CommentInput({ issueId, compact, className, onSuccess }: Comment
     []
   )
 
+  // Mention extension — created once, uses refs for latest data
+  const MentionExt = useMemo(
+    () =>
+      Mention.configure({
+        HTMLAttributes: { class: "mention" },
+        suggestion: {
+          items: ({ query }: { query: string }) => {
+            const members = projectMembersRef.current
+            if (!members.length) return []
+            const q = query.toLowerCase()
+            return members
+              .filter((m) => !q || m.label.toLowerCase().includes(q) || m.email.toLowerCase().includes(q))
+              .slice(0, 8)
+          },
+          render: () => ({
+            onStart: (props: any) => {
+              mentionItemsRef.current = props.items
+              mentionCommandRef.current = props.command
+              mentionSelectedIndexRef.current = 0
+              setMentionPopupRef.current({
+                active: true,
+                items: props.items,
+                selectedIndex: 0,
+                rect: props.clientRect?.() ?? null,
+                command: props.command,
+              })
+            },
+            onUpdate: (props: any) => {
+              mentionItemsRef.current = props.items
+              mentionCommandRef.current = props.command
+              mentionSelectedIndexRef.current = 0
+              setMentionPopupRef.current({
+                active: true,
+                items: props.items,
+                selectedIndex: 0,
+                rect: props.clientRect?.() ?? null,
+                command: props.command,
+              })
+            },
+            onKeyDown: ({ event }: { event: KeyboardEvent }) => {
+              const items = mentionItemsRef.current
+              if (!items.length) return false
+              if (event.key === "Escape") {
+                setMentionPopupRef.current(EMPTY_POPUP)
+                return true
+              }
+              if (event.key === "ArrowDown") {
+                const next = (mentionSelectedIndexRef.current + 1) % items.length
+                mentionSelectedIndexRef.current = next
+                setMentionPopupRef.current((prev) => ({ ...prev, selectedIndex: next }))
+                return true
+              }
+              if (event.key === "ArrowUp") {
+                const prev = (mentionSelectedIndexRef.current - 1 + items.length) % items.length
+                mentionSelectedIndexRef.current = prev
+                setMentionPopupRef.current((prevState) => ({ ...prevState, selectedIndex: prev }))
+                return true
+              }
+              if (event.key === "Enter") {
+                const item = items[mentionSelectedIndexRef.current]
+                if (item) mentionCommandRef.current?.(item)
+                return true
+              }
+              return false
+            },
+            onExit: () => {
+              setMentionPopupRef.current(EMPTY_POPUP)
+              mentionCommandRef.current = null
+            },
+          }),
+        },
+      }),
+    []
+  )
+
   const editor = useEditor({
     extensions: [
       StarterKit,
       Underline,
-      Placeholder.configure({ placeholder: "Leave a comment…" }),
+      Placeholder.configure({ placeholder: "Leave a comment… (type @ to mention)" }),
       SubmitShortcut,
+      MentionExt,
     ],
     editorProps: {
       attributes: { class: "meridian-editor" },
@@ -132,13 +248,31 @@ export function CommentInput({ issueId, compact, className, onSuccess }: Comment
     setPendingFiles((prev) => prev.filter((_, i) => i !== index))
   }
 
+  const handleMentionSelect = useCallback((item: MentionItem) => {
+    mentionCommandRef.current?.(item)
+    setMentionPopup(EMPTY_POPUP)
+  }, [])
+
   const handleSubmit = async () => {
     if (!canSubmit || isSubmitting) return
     setIsSubmitting(true)
 
     try {
       const html = editor?.isEmpty ? "" : (editor?.getHTML() ?? "")
-      const result = await createComment.mutateAsync(html || " ")
+
+      // Extract mentioned user IDs from the HTML
+      const mentionedUserIds: string[] = []
+      if (html) {
+        const parser = new DOMParser()
+        const doc = parser.parseFromString(html, "text/html")
+        doc.querySelectorAll("[data-type='mention']").forEach((el) => {
+          const id = el.getAttribute("data-id")
+          if (id && !mentionedUserIds.includes(id)) mentionedUserIds.push(id)
+        })
+      }
+
+      const metadata = mentionedUserIds.length > 0 ? { mentioned_user_ids: mentionedUserIds } : undefined
+      const result = await createComment.mutateAsync({ body: html || " ", metadata })
       const commentId = result.comment.id
 
       for (const file of pendingFiles) {
@@ -162,6 +296,18 @@ export function CommentInput({ issueId, compact, className, onSuccess }: Comment
 
   const sz = "h-3 w-3"
 
+  // Position popup relative to the editor container so it stays inside the
+  // Drawer's DOM tree (avoids vaul's outside-click detection blocking clicks).
+  const popupAbsoluteStyle = useMemo<React.CSSProperties>(() => {
+    if (!mentionPopup.rect || !editorContainerRef.current) {
+      return { bottom: "105%", left: 0 }
+    }
+    const containerRect = editorContainerRef.current.getBoundingClientRect()
+    const left = Math.max(0, mentionPopup.rect.left - containerRect.left)
+    const top = mentionPopup.rect.bottom - containerRect.top + 4
+    return { top, left }
+  }, [mentionPopup.rect])
+
   return (
     <div className={cn("flex gap-3 items-start", className)}>
       <Avatar className="h-7 w-7 shrink-0 mt-1">
@@ -170,7 +316,7 @@ export function CommentInput({ issueId, compact, className, onSuccess }: Comment
         </AvatarFallback>
       </Avatar>
 
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 relative" ref={editorContainerRef}>
         <div
           className={cn(
             "rounded-md border border-input overflow-hidden transition-shadow",
@@ -306,6 +452,17 @@ export function CommentInput({ issueId, compact, className, onSuccess }: Comment
             e.target.value = ""
           }}
         />
+
+        {/* Mention suggestion popup — inline inside the drawer DOM tree */}
+        {mentionPopup.active && mentionPopup.items.length > 0 && (
+          <div className="absolute z-[9999]" style={popupAbsoluteStyle}>
+            <MentionSuggestion
+              items={mentionPopup.items}
+              selectedIndex={mentionPopup.selectedIndex}
+              onSelect={handleMentionSelect}
+            />
+          </div>
+        )}
       </div>
     </div>
   )

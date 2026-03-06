@@ -140,6 +140,7 @@ export type ActivityTab = "comments" | "activity" | "attachments" | "time"
 
 interface IssueActivityProps {
   issueId: string
+  projectId?: string
   className?: string
   compact?: boolean
   onViewMore?: () => void
@@ -149,6 +150,7 @@ interface IssueActivityProps {
 
 export function IssueActivity({
   issueId,
+  projectId,
   className,
   compact,
   onViewMore,
@@ -282,7 +284,7 @@ export function IssueActivity({
           )}
 
           {!hideCommentInput && (
-            <CommentInput issueId={issueId} />
+            <CommentInput issueId={issueId} projectId={projectId} />
           )}
         </div>
       )}

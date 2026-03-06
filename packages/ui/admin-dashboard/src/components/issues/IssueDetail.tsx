@@ -815,6 +815,7 @@ export function IssueDetail({ issue: issueProp, projectId, open, onClose }: Issu
 
             <IssueActivity
               issueId={issue.id}
+              projectId={projectId}
               className="border-t border-border"
               compact
               hideCommentInput
@@ -829,7 +830,7 @@ export function IssueDetail({ issue: issueProp, projectId, open, onClose }: Issu
           {/* ── Sticky comment input ── */}
           {activeActivityTab === "comments" && (
             <div className="border-t border-border px-6 py-3 shrink-0">
-              <CommentInput issueId={issue.id} compact />
+              <CommentInput issueId={issue.id} projectId={projectId} compact />
             </div>
           )}
         </DrawerContent>
