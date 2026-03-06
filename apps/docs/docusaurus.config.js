@@ -68,11 +68,6 @@ const config = {
             label: 'Docs',
           },
           {
-            to: '/api',
-            position: 'left',
-            label: 'API Reference',
-          },
-          {
             href: 'https://github.com/themeridianjs/meridianjs',
             label: 'GitHub',
             position: 'right',
