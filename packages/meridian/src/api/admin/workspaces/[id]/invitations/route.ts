@@ -42,10 +42,23 @@ export const POST = async (req: any, res: Response) => {
   }
 
   if (email?.trim()) {
+    const normalizedEmail = email.trim().toLowerCase()
     const userService = req.scope.resolve("userModuleService") as any
-    const [existing] = await userService.listAndCountUsers({ email: email.trim().toLowerCase() }, { limit: 1 })
+    const invitationService = req.scope.resolve("invitationModuleService") as any
+
+    const [existing] = await userService.listAndCountUsers({ email: normalizedEmail }, { limit: 1 })
     if (existing.length > 0) {
-      res.status(409).json({ error: { message: `A user with email ${email.trim()} already exists. They can be added directly as a workspace member.` } })
+      res.status(409).json({ error: { message: `A user with email ${normalizedEmail} already exists. They can be added directly as a workspace member.` } })
+      return
+    }
+
+    // Check for any pending invitation for this email (any scope)
+    const [pendingInvites] = await invitationService.listAndCountInvitations(
+      { email: normalizedEmail, status: "pending" },
+      { limit: 1 }
+    )
+    if (pendingInvites.length > 0) {
+      res.status(409).json({ error: { message: `A pending invitation for ${normalizedEmail} already exists.` } })
       return
     }
   }

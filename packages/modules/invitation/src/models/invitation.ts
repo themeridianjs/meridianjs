@@ -2,7 +2,7 @@ import { model } from "@meridianjs/framework-utils"
 
 const Invitation = model.define("invitation", {
   id: model.id().primaryKey(),
-  workspace_id: model.text(),
+  workspace_id: model.text().nullable(),
   email: model.text().nullable(),
   role: model.enum(["super-admin", "admin", "member"]).default("member"),
   app_role_id: model.text().nullable(),

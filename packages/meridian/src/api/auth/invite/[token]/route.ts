@@ -27,7 +27,9 @@ export const GET = async (req: any, res: Response) => {
     return
   }
 
-  const workspace = await workspaceService.retrieveWorkspace(invitation.workspace_id)
+  const workspace = invitation.workspace_id
+    ? await workspaceService.retrieveWorkspace(invitation.workspace_id)
+    : null
 
   res.json({
     invitation: {
@@ -36,7 +38,7 @@ export const GET = async (req: any, res: Response) => {
       email: invitation.email,
       status: invitation.status,
     },
-    workspace: { id: workspace.id, name: workspace.name, slug: workspace.slug },
+    workspace: workspace ? { id: workspace.id, name: workspace.name, slug: workspace.slug } : null,
   })
 }
 
@@ -92,21 +94,38 @@ export const POST = async (req: any, res: Response) => {
 
   let authResult: { user: { id: string }; token: string }
   try {
-    authResult = await authService.register({
-      email: parsed.data.email,
-      password: parsed.data.password,
-      first_name: parsed.data.first_name,
-      last_name: parsed.data.last_name,
-      role: invitation.role,
-    })
+    // Check for a previously soft-deleted account with this email.
+    // retrieveUserByEmail finds deleted records too (no deleted_at filter).
+    const userService = req.scope.resolve("userModuleService") as any
+    const existingUser = await userService.retrieveUserByEmail(parsed.data.email)
+
+    if (existingUser?.deleted_at) {
+      // Restore the old account — preserves their user ID, issue history, comments, etc.
+      authResult = await authService.restoreFromInvite(existingUser.id, {
+        password: parsed.data.password,
+        first_name: parsed.data.first_name,
+        last_name: parsed.data.last_name,
+        role: invitation.role,
+      })
+    } else {
+      authResult = await authService.register({
+        email: parsed.data.email,
+        password: parsed.data.password,
+        first_name: parsed.data.first_name,
+        last_name: parsed.data.last_name,
+        role: invitation.role,
+      })
+    }
   } catch (err: any) {
     res.status(err.status ?? 500).json({ error: { message: err.message ?? "Registration failed" } })
     return
   }
 
-  // workspace_member.role only supports "admin" | "member" — map super-admin → admin
-  const wsRole = invitation.role === "member" ? "member" : "admin"
-  await workspaceMemberService.ensureMember(invitation.workspace_id, authResult.user.id, wsRole)
+  if (invitation.workspace_id) {
+    // workspace_member.role only supports "admin" | "member" — map super-admin → admin
+    const wsRole = invitation.role === "member" ? "member" : "admin"
+    await workspaceMemberService.ensureMember(invitation.workspace_id, authResult.user.id, wsRole)
+  }
 
   if (invitation.app_role_id) {
     try {

@@ -43,6 +43,18 @@ export class UserModuleService extends MeridianService({ User: UserModel, Team: 
     return (this as any).updateUser(userId, { is_active: false })
   }
 
+  /**
+   * Restore a soft-deleted user account.
+   * Bypasses UPDATE_RESERVED to clear deleted_at directly via the repository.
+   */
+  async restoreUser(userId: string, data: Record<string, unknown> = {}): Promise<any> {
+    const repo = this.container.resolve<any>("userRepository")
+    const user = await repo.findOneOrFail({ id: userId })
+    Object.assign(user, { ...data, deleted_at: null, is_active: true })
+    await repo.flush()
+    return user
+  }
+
   /** Return the total number of registered users. */
   async countUsers(): Promise<number> {
     const userRepository = this.container.resolve<any>("userRepository")

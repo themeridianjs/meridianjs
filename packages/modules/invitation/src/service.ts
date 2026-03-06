@@ -12,7 +12,7 @@ export class InvitationModuleService extends MeridianService({ Invitation: Invit
   }
 
   async createInvitationWithToken(data: {
-    workspace_id: string
+    workspace_id?: string | null
     email?: string | null
     role: "super-admin" | "admin" | "member"
     app_role_id?: string | null
@@ -21,7 +21,7 @@ export class InvitationModuleService extends MeridianService({ Invitation: Invit
   }) {
     const expiresInDays = data.expires_in_days ?? 7
     return this.createInvitation({
-      workspace_id: data.workspace_id,
+      workspace_id: data.workspace_id ?? null,
       email: data.email ?? null,
       role: data.role,
       app_role_id: data.app_role_id ?? null,

@@ -13,6 +13,7 @@ export const PATCH = async (req: any, res: Response, next: NextFunction) => {
       }
 
       const user = await userService.updateUser(req.params.id, updates)
+      await userService.revokeAllUserSessions(req.params.id).catch(() => {})
       res.json({
         user: {
           id: user.id,

@@ -121,6 +121,10 @@ export class AuthModuleService extends MeridianService({}) {
       throw Object.assign(new Error("Invalid credentials"), { status: 401 })
     }
 
+    if (user.deleted_at) {
+      throw Object.assign(new Error("Invalid credentials"), { status: 401 })
+    }
+
     if (!user.is_active) {
       throw Object.assign(new Error("Account deactivated"), { status: 403 })
     }
@@ -181,6 +185,10 @@ export class AuthModuleService extends MeridianService({}) {
     }
 
     if (user) {
+      if (user.deleted_at) {
+        throw Object.assign(new Error("Invalid credentials"), { status: 401 })
+      }
+
       if (!user.is_active) {
         throw Object.assign(new Error("Account deactivated"), { status: 403 })
       }
@@ -244,6 +252,41 @@ export class AuthModuleService extends MeridianService({}) {
 
     return {
       user: { id: newUser.id, email: newUser.email, first_name: newUser.first_name ?? null, last_name: newUser.last_name ?? null },
+      token,
+    }
+  }
+
+  /**
+   * Restore a soft-deleted user via an invite link.
+   * Updates their name, password, and role, then issues a fresh session token.
+   * The user's ID — and all history tied to it — is preserved.
+   */
+  async restoreFromInvite(
+    userId: string,
+    input: { password: string; first_name?: string; last_name?: string; role?: UserRole }
+  ): Promise<AuthResult> {
+    const userService = this.container.resolve<any>("userModuleService")
+    const config = this.container.resolve<MeridianConfig>("config")
+
+    const password_hash = await bcrypt.hash(input.password, BCRYPT_ROUNDS)
+    const user = await userService.restoreUser(userId, {
+      password_hash,
+      first_name: input.first_name ?? null,
+      last_name: input.last_name ?? null,
+      role: input.role ?? "member",
+    })
+
+    const permissions = await this.resolvePermissions(user.app_role_id)
+    const { token, jti, expiresAt } = this.signToken(user.id, null, [user.role], permissions, config.projectConfig.jwtSecret)
+    await userService.createSession(jti, user.id, expiresAt).catch(() => {})
+
+    return {
+      user: {
+        id: user.id,
+        email: user.email,
+        first_name: user.first_name ?? null,
+        last_name: user.last_name ?? null,
+      },
       token,
     }
   }

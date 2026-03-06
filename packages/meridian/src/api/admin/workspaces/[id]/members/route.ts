@@ -38,7 +38,8 @@ export const GET = async (req: any, res: Response) => {
     })
   )
 
-  res.json({ members: enriched, count: enriched.length })
+  const active = enriched.filter((m: any) => m.user !== null)
+  res.json({ members: active, count: active.length })
 }
 
 export const POST = async (req: any, res: Response, next: NextFunction) => {
