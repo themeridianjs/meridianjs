@@ -14,13 +14,15 @@ import {
 } from "@dnd-kit/core"
 import { SortableContext, arrayMove, horizontalListSortingStrategy } from "@dnd-kit/sortable"
 import { useQueryClient } from "@tanstack/react-query"
-import type { Issue } from "@/api/hooks/useIssues"
+import type { Issue, BoardFilters } from "@/api/hooks/useIssues"
 import { issueKeys } from "@/api/hooks/useIssues"
 import type { IssuesResponse } from "@/api/hooks/useIssues"
 import type { ProjectStatus } from "@/api/hooks/useProjectStatuses"
+import { useDeleteProjectStatus, useUpdateProjectStatus } from "@/api/hooks/useProjectStatuses"
 import { KanbanColumn } from "./KanbanColumn"
 import { IssueCard } from "./IssueCard"
 import { AddStatusColumn } from "./AddStatusColumn"
+import { DeleteStatusDialog } from "./DeleteStatusDialog"
 import { api } from "@/api/client"
 import { toast } from "sonner"
 
@@ -31,6 +33,7 @@ interface KanbanBoardProps {
   onIssueClick?: (issue: Issue) => void
   onColumnsReorder?: (orderedIds: string[]) => void
   readOnly?: boolean
+  filters?: BoardFilters
 }
 
 type ColumnMap = Record<string, Issue[]>
@@ -55,12 +58,6 @@ function groupByStatus(issues: Issue[], statuses: ProjectStatus[]): ColumnMap {
 /**
  * Merge fresh server issues into the existing column map, preserving the
  * within-column order the user established via drag-and-drop.
- *
- * - Issues already placed in a column keep their current position (just data
- *   fields like title/assignee get refreshed from the server response).
- * - Issues whose status changed externally (e.g., another user moved them)
- *   are removed from their old column and appended to the correct new one.
- * - Brand-new issues (not present in prev) are appended to their column.
  */
 function mergeColumnsWithServer(
   prev: ColumnMap,
@@ -79,9 +76,8 @@ function mergeColumnsWithServer(
       const latest = serverById.get(issue.id)
       if (latest && latest.status === s.key) {
         newMap[s.key].push(latest)
-        serverById.delete(issue.id) // mark as placed
+        serverById.delete(issue.id)
       }
-      // if latest is missing or has a different status, skip — handled below
     }
   }
 
@@ -99,21 +95,29 @@ function mergeColumnsWithServer(
   return newMap
 }
 
-export function KanbanBoard({ issues, projectId, statuses, onIssueClick, onColumnsReorder, readOnly = false }: KanbanBoardProps) {
+export function KanbanBoard({
+  issues, projectId, statuses, onIssueClick, onColumnsReorder, readOnly = false, filters,
+}: KanbanBoardProps) {
   const [columnOrder, setColumnOrder] = useState<string[]>(() => statuses.map((s) => s.id))
   const [columns, setColumns] = useState<ColumnMap>(() => groupByStatus(issues, statuses))
   const [activeIssue, setActiveIssue] = useState<Issue | null>(null)
   const [draggingColumnId, setDraggingColumnId] = useState<string | null>(null)
 
-  /**
-   * Track the column a card was in when the drag started, before handleDragOver
-   * moves it. By drag-end time, findColumn(activeId) already points to the
-   * target column, so we need the original to detect cross-column moves.
-   */
+  // Delete status state
+  const [deletingStatus, setDeletingStatus] = useState<ProjectStatus | null>(null)
+
+  // Rename status state
+  const [renamingStatusId, setRenamingStatusId] = useState<string | null>(null)
+  const [renameValue, setRenameValue] = useState("")
+
   const dragSourceColRef = useRef<string | null>(null)
-  /** Prevents the server-sync useEffect from overwriting columns mid-drag. */
   const isDraggingRef = useRef(false)
   const qc = useQueryClient()
+
+  const cacheKey = issueKeys.byProject(projectId, filters)
+
+  const deleteStatus = useDeleteProjectStatus(projectId)
+  const updateStatus = useUpdateProjectStatus(projectId, renamingStatusId ?? "")
 
   const childCounts = useMemo(() => {
     const map = new Map<string, number>()
@@ -123,8 +127,6 @@ export function KanbanBoard({ issues, projectId, statuses, onIssueClick, onColum
     return map
   }, [issues])
 
-  // Keep columnOrder in sync with statuses: append new IDs, prune deleted ones.
-  // Must run before the issues sync so new columns are registered in SortableContext.
   useEffect(() => {
     setColumnOrder((prev) => {
       const statusIds = new Set(statuses.map((s) => s.id))
@@ -135,17 +137,11 @@ export function KanbanBoard({ issues, projectId, statuses, onIssueClick, onColum
     })
   }, [statuses])
 
-  // When the server issues list changes (refetch, new issue, etc.) and no drag
-  // is in progress, sync the local column map from the canonical server data.
-  // We use mergeColumnsWithServer instead of a full rebuild so that
-  // within-column order set by the user is preserved even after the optimistic
-  // qc.setQueryData triggers this effect right after a drop.
   useEffect(() => {
     if (isDraggingRef.current) return
     setColumns((prev) => mergeColumnsWithServer(prev, issues, statuses))
   }, [issues, statuses])
 
-  // Keep column order in sync when statuses change from server
   const orderedStatuses = [...statuses].sort((a, b) => {
     const ai = columnOrder.indexOf(a.id)
     const bi = columnOrder.indexOf(b.id)
@@ -162,10 +158,6 @@ export function KanbanBoard({ issues, projectId, statuses, onIssueClick, onColum
     )
   )
 
-  // When dragging a column, only consider other columns as drop targets.
-  // closestCorners would otherwise resolve to the nearest *issue card* inside
-  // a column, making over.id an issue ID and causing the reorder to silently
-  // bail out (columnOrder.indexOf(issueId) === -1).
   const collisionDetection: CollisionDetection = useCallback(
     (args) => {
       if (draggingColumnId) {
@@ -207,7 +199,6 @@ export function KanbanBoard({ issues, projectId, statuses, onIssueClick, onColum
       const found = colIssues.find((i) => i.id === id)
       if (found) {
         setActiveIssue(found)
-        // Capture the source column before handleDragOver can change it
         dragSourceColRef.current = colKey
         return
       }
@@ -233,16 +224,14 @@ export function KanbanBoard({ issues, projectId, statuses, onIssueClick, onColum
       const activeItems = [...(prev[activeCol] ?? [])]
       const overItems = [...(prev[overColKey] ?? [])]
       const activeIndex = activeItems.findIndex((i) => i.id === activeId)
-      if (activeIndex === -1) return prev // stale closure guard
+      if (activeIndex === -1) return prev
 
       const [moved] = activeItems.splice(activeIndex, 1)
       const movedWithStatus = { ...moved, status: overColKey }
 
       if (overStatus) {
-        // Hovering over the column drop zone → append to end
         overItems.push(movedWithStatus)
       } else {
-        // Hovering over a specific card → insert above or below it
         const overCardIndex = overItems.findIndex((i) => i.id === overId)
         if (overCardIndex === -1) {
           overItems.push(movedWithStatus)
@@ -268,7 +257,6 @@ export function KanbanBoard({ issues, projectId, statuses, onIssueClick, onColum
     setActiveIssue(null)
     isDraggingRef.current = false
 
-    // ── Column reorder ────────────────────────────────────────────────────────
     if (draggingColumnId) {
       setDraggingColumnId(null)
       if (!over || active.id === over.id) return
@@ -283,12 +271,10 @@ export function KanbanBoard({ issues, projectId, statuses, onIssueClick, onColum
       return
     }
 
-    // ── Issue drag cancelled (Escape / dropped outside) ───────────────────────
     if (!over) {
       const originalCol = dragSourceColRef.current
       dragSourceColRef.current = null
       if (originalCol) {
-        // handleDragOver may have moved the card visually — revert
         setColumns(groupByStatus(issues, statuses))
       }
       return
@@ -305,9 +291,6 @@ export function KanbanBoard({ issues, projectId, statuses, onIssueClick, onColum
     if (!originalCol || !overColKey) return
 
     if (originalCol === overColKey) {
-      // ── Same-column reorder ──────────────────────────────────────────────
-      // handleDragOver never fires for same-column, so columns still has the
-      // original order — apply the reorder now.
       setColumns((prev) => {
         const items = prev[originalCol] ?? []
         const oldIndex = items.findIndex((i) => i.id === activeId)
@@ -316,18 +299,9 @@ export function KanbanBoard({ issues, projectId, statuses, onIssueClick, onColum
         return { ...prev, [originalCol]: arrayMove(items, oldIndex, newIndex) }
       })
     } else {
-      // ── Cross-column ─────────────────────────────────────────────────────
-      // handleDragOver already placed the card at the right position within
-      // overColKey; the blocks below correct any residual drift if the user
-      // moved within the target column after the initial cross-column entry.
-      // Determine final position based on what the user dropped onto.
       const droppedOnCard = !statuses.find((s) => s.key === overId || s.id === overId)
 
       if (droppedOnCard) {
-        // Dropped onto a specific card.
-        // handleDragOver already inserted the card at the right position;
-        // this corrects for any drift when the user moves within the column
-        // after the initial cross-column insertion.
         setColumns((prev) => {
           const items = [...(prev[overColKey] ?? [])]
           const fromIdx = items.findIndex((i) => i.id === activeId)
@@ -338,11 +312,10 @@ export function KanbanBoard({ issues, projectId, statuses, onIssueClick, onColum
             event.active.rect.current.translated.top >
               event.over!.rect.top + event.over!.rect.height / 2
 
-          // Remove active card first so target index is stable
           const [removed] = items.splice(fromIdx, 1)
           const overIdx = items.findIndex((i) => i.id === overId)
           if (overIdx === -1) {
-            items.splice(fromIdx, 0, removed) // target disappeared — restore
+            items.splice(fromIdx, 0, removed)
             return prev
           }
           const insertAt = isBelowTarget ? overIdx + 1 : overIdx
@@ -350,13 +323,10 @@ export function KanbanBoard({ issues, projectId, statuses, onIssueClick, onColum
           return { ...prev, [overColKey]: items }
         })
       } else {
-        // Dropped onto the column droppable zone (padding area above/below cards).
-        // Use the ghost rect vs. column midpoint to decide top vs. bottom.
         const ghostTop = event.active.rect.current.translated?.top ?? Infinity
         const colMidY = event.over!.rect.top + event.over!.rect.height / 2
 
         if (ghostTop < colMidY) {
-          // Cursor is in the upper half → move card to the top of the column.
           setColumns((prev) => {
             const items = prev[overColKey] ?? []
             const fromIdx = items.findIndex((i) => i.id === activeId)
@@ -364,14 +334,11 @@ export function KanbanBoard({ issues, projectId, statuses, onIssueClick, onColum
             return { ...prev, [overColKey]: arrayMove(items, fromIdx, 0) }
           })
         }
-        // Lower half → card is already at the end from handleDragOver, nothing to do.
       }
 
-      const prevData = qc.getQueryData<{ issues: Issue[]; count: number }>(
-        issueKeys.byProject(projectId)
-      )
+      const prevData = qc.getQueryData<{ issues: Issue[]; count: number }>(cacheKey)
 
-      qc.setQueryData<IssuesResponse>(issueKeys.byProject(projectId), (old) => {
+      qc.setQueryData<IssuesResponse>(cacheKey, (old) => {
         if (!old) return old
         return {
           ...old,
@@ -384,15 +351,70 @@ export function KanbanBoard({ issues, projectId, statuses, onIssueClick, onColum
       api
         .put(`/admin/issues/${activeId}`, { status: overColKey })
         .then(() => {
-          qc.invalidateQueries({ queryKey: issueKeys.byProject(projectId) })
+          qc.invalidateQueries({ queryKey: cacheKey })
         })
         .catch(() => {
-          if (prevData) qc.setQueryData(issueKeys.byProject(projectId), prevData)
+          if (prevData) qc.setQueryData(cacheKey, prevData)
           setColumns(groupByStatus(prevData?.issues ?? issues, statuses))
           toast.error("Failed to update issue status")
         })
     }
   }
+
+  // ── Delete status ───────────────────────────────────────────────────────────
+
+  const handleDeleteStatus = (status: ProjectStatus) => {
+    setDeletingStatus(status)
+  }
+
+  const handleConfirmDelete = async (targetStatusId: string | null) => {
+    if (!deletingStatus) return
+
+    const issuesToMove = columns[deletingStatus.key] ?? []
+    if (issuesToMove.length > 0) {
+      const targetStatus = statuses.find((s) => s.id === targetStatusId)
+      if (!targetStatus) return
+      try {
+        await Promise.all(
+          issuesToMove.map((issue) =>
+            api.put(`/admin/issues/${issue.id}`, { status: targetStatus.key })
+          )
+        )
+        qc.invalidateQueries({ queryKey: issueKeys.byProject(projectId) })
+      } catch {
+        toast.error("Failed to move issues")
+        return
+      }
+    }
+
+    deleteStatus.mutate(deletingStatus.id, {
+      onSuccess: () => {
+        toast.success(`Status "${deletingStatus.name}" deleted`)
+        setDeletingStatus(null)
+      },
+      onError: () => toast.error("Failed to delete status"),
+    })
+  }
+
+  // ── Rename status ───────────────────────────────────────────────────────────
+
+  const handleRenameSubmit = () => {
+    const trimmed = renameValue.trim()
+    if (!trimmed || !renamingStatusId) return
+    updateStatus.mutate({ name: trimmed }, {
+      onSuccess: () => {
+        toast.success("Status renamed")
+        setRenamingStatusId(null)
+      },
+      onError: () => toast.error("Failed to rename status"),
+    })
+  }
+
+  const handleRenameCancel = () => {
+    setRenamingStatusId(null)
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────
 
   const draggingStatus = draggingColumnId
     ? statuses.find((s) => s.id === draggingColumnId)
@@ -419,6 +441,16 @@ export function KanbanBoard({ issues, projectId, statuses, onIssueClick, onColum
               childCounts={childCounts}
               sortable
               onIssueClick={onIssueClick}
+              onRename={readOnly ? undefined : () => {
+                setRenamingStatusId(status.id)
+                setRenameValue(status.name)
+              }}
+              onDelete={readOnly ? undefined : () => handleDeleteStatus(status)}
+              isRenaming={renamingStatusId === status.id}
+              renameValue={renamingStatusId === status.id ? renameValue : ""}
+              onRenameChange={setRenameValue}
+              onRenameSubmit={handleRenameSubmit}
+              onRenameCancel={handleRenameCancel}
             />
           ))}
         </SortableContext>
@@ -437,6 +469,18 @@ export function KanbanBoard({ issues, projectId, statuses, onIssueClick, onColum
           </div>
         )}
       </DragOverlay>
+
+      {deletingStatus && (
+        <DeleteStatusDialog
+          open={!!deletingStatus}
+          statusName={deletingStatus.name}
+          issueCount={columns[deletingStatus.key]?.length ?? 0}
+          otherStatuses={statuses.filter((s) => s.id !== deletingStatus.id)}
+          onConfirm={handleConfirmDelete}
+          onCancel={() => setDeletingStatus(null)}
+          isLoading={deleteStatus.isPending}
+        />
+      )}
     </DndContext>
   )
 }

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react"
+import { useSearchParams } from "react-router-dom"
 import { format } from "date-fns"
 import {
   ChevronLeft,
@@ -9,7 +10,21 @@ import {
   RefreshCw,
   CalendarDays,
   MoreHorizontal,
+  Users,
+  Link2,
+  X,
+  Copy,
+  Check,
 } from "lucide-react"
+import { useUsers, useDeleteUser, useUpdateUserGlobalRole, useInviteOrgMember, useOrgInvitations, useRevokeOrgInvitation, type OrgInvitation } from "@/api/hooks/useUsers"
+import { useRoles, useAssignUserRole } from "@/api/hooks/useRoles"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import {
   useOrgCalendar,
   useUpdateOrgCalendar,
@@ -417,16 +432,406 @@ function HolidaysTab() {
   )
 }
 
+// ── Members tab ────────────────────────────────────────────────────────────────
+
+const GLOBAL_ROLES = ["super-admin", "admin", "member"] as const
+
+const ROLE_BADGE: Record<string, string> = {
+  "super-admin": "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300",
+  "admin":       "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300",
+  "member":      "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300",
+}
+
+const STATUS_BADGE: Record<string, string> = {
+  pending:  "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
+  accepted: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
+  revoked:  "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400",
+}
+
+function CopyButton({ value }: { value: string }) {
+  const [copied, setCopied] = useState(false)
+  const copy = () => {
+    navigator.clipboard.writeText(value)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
+  }
+  return (
+    <button
+      onClick={copy}
+      className="text-muted-foreground hover:text-foreground transition-colors shrink-0"
+      title="Copy"
+    >
+      {copied
+        ? <Check className="h-3.5 w-3.5 text-emerald-500" />
+        : <Copy className="h-3.5 w-3.5" />}
+    </button>
+  )
+}
+
+function MembersTab() {
+  const { data: users = [], isLoading: usersLoading } = useUsers()
+  const { data: invitations = [], isLoading: invitationsLoading } = useOrgInvitations()
+  const { data: roles = [] } = useRoles()
+  const assignRole = useAssignUserRole()
+  const updateGlobalRole = useUpdateUserGlobalRole()
+  const deleteUser = useDeleteUser()
+  const revokeInvitation = useRevokeOrgInvitation()
+  const inviteMember = useInviteOrgMember()
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
+  const [revokeTarget, setRevokeTarget] = useState<OrgInvitation | null>(null)
+  const [inviteOpen, setInviteOpen] = useState(false)
+  const [inviteEmail, setInviteEmail] = useState("")
+  const [inviteRole, setInviteRole] = useState("member")
+
+  const handleInvite = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!inviteEmail.trim()) return
+    inviteMember.mutate(
+      { email: inviteEmail.trim().toLowerCase(), role: inviteRole },
+      {
+        onSuccess: () => {
+          toast.success(`Invitation sent to ${inviteEmail.trim()}`)
+          setInviteOpen(false)
+          setInviteEmail("")
+          setInviteRole("member")
+        },
+        onError: (err: any) => toast.error(err?.message ?? "Failed to send invitation"),
+      }
+    )
+  }
+
+  const handleDelete = () => {
+    if (!deleteTarget) return
+    deleteUser.mutate(deleteTarget, {
+      onSuccess: () => { toast.success("User deleted"); setDeleteTarget(null) },
+      onError:   () => toast.error("Failed to delete user"),
+    })
+  }
+
+  return (
+    <>
+      {/* Section header */}
+      <div className="flex items-center justify-between px-6 py-2 border-b border-border bg-muted/20">
+        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+          All users
+        </span>
+        <Button size="sm" className="h-7 text-xs gap-1.5" onClick={() => setInviteOpen(true)}>
+          <Plus className="h-3.5 w-3.5" />
+          Invite member
+        </Button>
+      </div>
+
+      <div className="px-6 py-2 border-b border-border bg-muted/10">
+        <p className="text-xs text-muted-foreground">
+          View and manage all platform users. Change a user's custom role or remove them from the system.
+        </p>
+      </div>
+
+      {/* Invite dialog */}
+      <Dialog open={inviteOpen} onOpenChange={(v) => { if (!v) { setInviteOpen(false); setInviteEmail(""); setInviteRole("member") } }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Invite member</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleInvite} className="space-y-4 pt-1">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Email</label>
+              <Input
+                type="email"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                placeholder="name@example.com"
+                className="h-9"
+                autoFocus
+                required
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Role</label>
+              <Select value={inviteRole} onValueChange={setInviteRole}>
+                <SelectTrigger className="h-9 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {GLOBAL_ROLES.map((r) => (
+                    <SelectItem key={r} value={r} className="text-sm capitalize">{r}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              The user will receive an invite link to create their account. They won't be added to any workspace automatically — you can add them from workspace settings after they join.
+            </p>
+            <div className="flex justify-end gap-2 pt-1">
+              <Button type="button" variant="outline" size="sm" onClick={() => setInviteOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" size="sm" disabled={inviteMember.isPending}>
+                {inviteMember.isPending ? "Sending…" : "Send invite"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Column headers */}
+      <div className="grid grid-cols-[1fr_160px_200px_40px] gap-4 px-6 py-2 border-b border-border bg-muted/20">
+        <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">User</span>
+        <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">Global role</span>
+        <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">Custom role</span>
+        <span />
+      </div>
+
+      {usersLoading ? (
+        <div className="px-6 py-4 space-y-3">
+          {[1, 2, 3].map((i) => <Skeleton key={i} className="h-10 w-full" />)}
+        </div>
+      ) : users.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <Users className="h-8 w-8 text-muted-foreground/40 mb-3" />
+          <p className="text-sm font-medium">No users found</p>
+        </div>
+      ) : (
+        users.map((user) => {
+          const first = user.first_name ?? ""
+          const last  = user.last_name  ?? ""
+          const name  = `${first} ${last}`.trim() || user.email
+          const initials = (first[0] ?? last[0] ?? user.email?.[0] ?? "U").toUpperCase()
+          return (
+            <div
+              key={user.id}
+              className="grid grid-cols-[1fr_160px_200px_40px] gap-4 items-center px-6 py-3 border-b border-border hover:bg-muted/20 transition-colors group"
+            >
+              {/* Avatar + name/email */}
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="h-7 w-7 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center text-xs font-semibold text-zinc-600 dark:text-zinc-300 shrink-0">
+                  {initials}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-medium truncate">{name}</p>
+                  <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                </div>
+              </div>
+
+              {/* Global role select */}
+              <Select
+                value={user.role ?? "member"}
+                onValueChange={(val) =>
+                  updateGlobalRole.mutate(
+                    { userId: user.id, role: val },
+                    {
+                      onSuccess: () => toast.success("Global role updated"),
+                      onError:   () => toast.error("Failed to update global role"),
+                    }
+                  )
+                }
+              >
+                <SelectTrigger className="h-7 text-xs w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {GLOBAL_ROLES.map((r) => (
+                    <SelectItem key={r} value={r} className="text-xs">
+                      <span className={cn("inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium", ROLE_BADGE[r])}>
+                        {r}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* AppRole select */}
+              <Select
+                value={user.app_role_id ?? "none"}
+                onValueChange={(val) =>
+                  assignRole.mutate(
+                    { userId: user.id, appRoleId: val === "none" ? null : val },
+                    {
+                      onSuccess: () => toast.success("Custom role updated"),
+                      onError:   () => toast.error("Failed to update custom role"),
+                    }
+                  )
+                }
+              >
+                <SelectTrigger className="h-7 text-xs w-full">
+                  <SelectValue placeholder="No role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none" className="text-xs">No role</SelectItem>
+                  {roles.map((r) => (
+                    <SelectItem key={r.id} value={r.id} className="text-xs">{r.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* Actions */}
+              <div className="flex justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="h-6 w-6 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-accent transition-colors">
+                      <MoreHorizontal className="h-3.5 w-3.5" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-36">
+                    <DropdownMenuItem
+                      className="gap-2 cursor-pointer text-destructive focus:text-destructive"
+                      onClick={() => setDeleteTarget(user.id)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      Delete user
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
+          )
+        })
+      )}
+
+      {/* ── Invitations section ────────────────────────────────────────────── */}
+      <div className="px-6 py-2 border-b border-border bg-muted/20 mt-2">
+        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+          Invitations
+        </span>
+      </div>
+
+      {invitationsLoading ? (
+        <div className="px-6 py-4 space-y-3">
+          {[1, 2, 3].map((i) => <Skeleton key={i} className="h-8 w-full" />)}
+        </div>
+      ) : invitations.length === 0 ? (
+        <div className="px-6 py-6 text-center">
+          <p className="text-xs text-muted-foreground">No invitations yet.</p>
+        </div>
+      ) : (
+        invitations.map((inv) => {
+          const inviteUrl = `${window.location.origin}/invite/${inv.token}`
+          return (
+            <div
+              key={inv.id}
+              className="flex items-center gap-3 px-6 py-3.5 border-b border-border hover:bg-muted/20 transition-colors group"
+            >
+              <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center shrink-0">
+                <Link2 className="h-3.5 w-3.5 text-muted-foreground" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-medium truncate">
+                    {inv.email ?? "Shareable link"}
+                  </p>
+                  <span className={cn(
+                    "inline-flex items-center text-[11px] px-1.5 py-0.5 rounded font-medium",
+                    inv.role === "super-admin"
+                      ? "bg-purple-50 text-purple-700 dark:bg-purple-950/30 dark:text-purple-300"
+                      : inv.role === "admin"
+                      ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300"
+                      : "bg-muted text-muted-foreground"
+                  )}>
+                    {inv.role === "super-admin" ? "Super Admin" : inv.role === "admin" ? "Admin" : "Member"}
+                  </span>
+                  {inv.workspace_name && (
+                    <span className="text-[11px] text-muted-foreground truncate">
+                      · {inv.workspace_name}
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className="text-xs font-mono text-muted-foreground truncate max-w-[320px]">
+                    {inviteUrl}
+                  </span>
+                  <CopyButton value={inviteUrl} />
+                </div>
+              </div>
+              <div className="flex items-center gap-3 shrink-0">
+                <span className={cn("inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium", STATUS_BADGE[inv.status] ?? STATUS_BADGE.revoked)}>
+                  {inv.status}
+                </span>
+                <span className="text-xs text-muted-foreground hidden sm:block">
+                  {format(new Date(inv.created_at), "MMM d")}
+                </span>
+                {inv.status === "pending" && (
+                  <button
+                    onClick={() => setRevokeTarget(inv)}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
+                    title="Revoke invitation"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
+            </div>
+          )
+        })
+      )}
+
+      {/* Delete user dialog */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(v) => !v && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this user?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action is permanent and cannot be undone. The user will lose access immediately.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Revoke invitation dialog */}
+      <AlertDialog open={!!revokeTarget} onOpenChange={(v) => !v && setRevokeTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Revoke this invitation?</AlertDialogTitle>
+            <AlertDialogDescription>
+              The invite link sent to <span className="font-medium">{revokeTarget?.email}</span> will no longer work.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (!revokeTarget) return
+                revokeInvitation.mutate(revokeTarget.id, {
+                  onSuccess: () => { toast.success("Invitation revoked"); setRevokeTarget(null) },
+                  onError:   () => toast.error("Failed to revoke invitation"),
+                })
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Revoke
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  )
+}
+
 // ── Page ───────────────────────────────────────────────────────────────────────
 
-type Tab = "working-days" | "holidays"
+type Tab = "working-days" | "holidays" | "members"
+
+const VALID_TABS: Tab[] = ["working-days", "holidays", "members"]
 
 export function OrgSettingsPage() {
-  const [tab, setTab] = useState<Tab>("working-days")
+  const [searchParams, setSearchParams] = useSearchParams()
+  const rawTab = searchParams.get("tab") as Tab | null
+  const tab: Tab = rawTab && VALID_TABS.includes(rawTab) ? rawTab : "working-days"
+
+  const setTab = (id: Tab) => setSearchParams({ tab: id }, { replace: true })
 
   const tabs: { id: Tab; label: string }[] = [
     { id: "working-days", label: "Working Days" },
     { id: "holidays",     label: "Holidays" },
+    { id: "members",      label: "Members" },
   ]
 
   return (
@@ -468,6 +873,7 @@ export function OrgSettingsPage() {
         <div className="flex-1 overflow-y-auto">
           {tab === "working-days" && <WorkingDaysTab />}
           {tab === "holidays"     && <HolidaysTab />}
+          {tab === "members"      && <MembersTab />}
         </div>
 
       </div>

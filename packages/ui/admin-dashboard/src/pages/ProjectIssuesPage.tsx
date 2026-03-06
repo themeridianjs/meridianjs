@@ -1,10 +1,11 @@
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { useProjectByKey } from "@/api/hooks/useProjects"
 import { useIssues, useUpdateIssue, type Issue } from "@/api/hooks/useIssues"
 import { useProjectStatuses, type ProjectStatus } from "@/api/hooks/useProjectStatuses"
 import { useSprints, type Sprint } from "@/api/hooks/useSprints"
 import { useTaskLists, useCreateTaskList, useUpdateTaskList, useDeleteTaskList, type TaskList } from "@/api/hooks/useTaskLists"
+import { useProjectAccess } from "@/api/hooks/useProjectAccess"
 import { IssueDetail } from "@/components/issues/IssueDetail"
 import { CreateIssueDialog } from "@/components/issues/CreateIssueDialog"
 import { AssigneeSelector } from "@/components/issues/AssigneeSelector"
@@ -63,11 +64,11 @@ import { WidgetZone } from "@/components/WidgetZone"
 const PriorityIcon = ({ priority, className }: { priority: string; className?: string }) => {
   const cls = cn("h-3.5 w-3.5 shrink-0", ISSUE_PRIORITY_COLORS[priority], className)
   switch (priority) {
-    case "urgent":  return <Zap className={cls} />
-    case "high":    return <ArrowUp className={cls} />
-    case "medium":  return <Minus className={cls} />
-    case "low":     return <ArrowDown className={cls} />
-    default:        return <Circle className={cn("h-3.5 w-3.5 shrink-0 text-zinc-300", className)} />
+    case "urgent": return <Zap className={cls} />
+    case "high": return <ArrowUp className={cls} />
+    case "medium": return <Minus className={cls} />
+    case "low": return <ArrowDown className={cls} />
+    default: return <Circle className={cn("h-3.5 w-3.5 shrink-0 text-zinc-300", className)} />
   }
 }
 
@@ -110,6 +111,11 @@ function IssueRow({
   const [openPopover, setOpenPopover] = useState<"status" | "priority" | "due" | "sprint" | null>(null)
   const [expanded, setExpanded] = useState(false)
   const update = useUpdateIssue(issue.id, projectId)
+  const { data: access } = useProjectAccess(projectId)
+  const projectUsers = useMemo(
+    () => access ? access.members.filter(m => m.user).map(m => m.user!) : undefined,
+    [access]
+  )
 
   function save(data: { status?: string; priority?: string; due_date?: string | null; sprint_id?: string | null; assignee_ids?: string[] }) {
     update.mutate(data as any)
@@ -136,7 +142,7 @@ function IssueRow({
           "text-xs font-mono text-muted-foreground truncate",
           "sticky left-0 z-10 pl-6 transition-colors",
           "bg-white dark:bg-card group-hover:bg-[#f9fafb] dark:group-hover:bg-muted/30",
-          isChild && "text-muted-foreground/60",
+          isChild && "text-muted-foreground",
         )}>
           {issue.identifier}
         </span>
@@ -146,7 +152,7 @@ function IssueRow({
           "flex items-center gap-1 min-w-0 pr-3",
           "sticky left-[70px] z-10 transition-colors",
           "bg-white dark:bg-card group-hover:bg-[#f9fafb] dark:group-hover:bg-muted/30",
-          isChild && "bg-[#f8f9fa] dark:bg-muted/20",
+          isChild && "bg-white dark:bg-muted/20",
         )}>
           {hasChildren ? (
             <Tooltip>
@@ -163,11 +169,11 @@ function IssueRow({
               <TooltipContent side="top">{expanded ? "Collapse" : "Expand"}</TooltipContent>
             </Tooltip>
           ) : isChild ? (
-            <ListTree className="h-3 w-3 text-muted-foreground/40 shrink-0" />
+            <ListTree className="h-3 w-3 text-muted-foreground shrink-0" />
           ) : (
             <span className="w-4 shrink-0" />
           )}
-          <span className={cn("text-sm text-foreground truncate", isChild && "text-muted-foreground")}>
+          <span className={cn("text-sm text-foreground truncate", isChild && "text-primary")}>
             {issue.title}
           </span>
           {hasChildren && (
@@ -187,7 +193,7 @@ function IssueRow({
                 className="flex items-center gap-1.5 max-w-full px-1.5 py-1 rounded hover:bg-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               >
                 <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: statusColor }} />
-                <span className="text-xs text-muted-foreground truncate">
+                <span className="text-xs text-primary truncate">
                   {statusLabels[issue.status] ?? issue.status}
                 </span>
               </button>
@@ -224,7 +230,7 @@ function IssueRow({
                 className="flex items-center gap-1.5 px-1.5 py-1 rounded hover:bg-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               >
                 <PriorityIcon priority={issue.priority} />
-                <span className="text-xs text-muted-foreground">
+                <span className="text-xs text-primary">
                   {ISSUE_PRIORITY_LABELS[issue.priority] ?? issue.priority}
                 </span>
               </button>
@@ -348,6 +354,7 @@ function IssueRow({
           <AssigneeSelector
             value={issue.assignee_ids ?? []}
             onChange={(ids) => update.mutate({ assignee_ids: ids } as any)}
+            users={projectUsers}
           />
         </div>
 
@@ -601,11 +608,11 @@ export function ProjectIssuesPage() {
     projectStatuses && projectStatuses.length > 0
       ? projectStatuses
       : Object.entries(ISSUE_STATUS_LABELS).map(([key, name], i) => ({
-          id: key, project_id: projectId, key, name,
-          color: { backlog: "#94a3b8", todo: "#64748b", in_progress: "#6366f1", in_review: "#f59e0b", done: "#10b981", cancelled: "#9ca3af" }[key] ?? "#94a3b8",
-          category: { backlog: "backlog", todo: "unstarted", in_progress: "started", in_review: "started", done: "completed", cancelled: "cancelled" }[key] as any ?? "backlog",
-          position: i,
-        }))
+        id: key, project_id: projectId, key, name,
+        color: { backlog: "#94a3b8", todo: "#64748b", in_progress: "#6366f1", in_review: "#f59e0b", done: "#10b981", cancelled: "#9ca3af" }[key] ?? "#94a3b8",
+        category: { backlog: "backlog", todo: "unstarted", in_progress: "started", in_review: "started", done: "completed", cancelled: "cancelled" }[key] as any ?? "backlog",
+        position: i,
+      }))
 
   const statusLabels = Object.fromEntries(statuses.map((s) => [s.key, s.name]))
   const statusColorMap = Object.fromEntries(statuses.map((s) => [s.key, s.color]))
@@ -784,97 +791,97 @@ export function ProjectIssuesPage() {
 
         {/* Table header + scrollable content */}
         <div className="overflow-x-auto">
-        <div className="min-w-[1025px]">
-        {/* Table header */}
-        <div className={cn("grid items-center py-2.5 border-b border-border", GRID)}>
-          <span className="text-xs font-medium text-[#6b7280] sticky left-0 z-10 bg-white dark:bg-card pl-6">ID</span>
-          <span className="text-xs font-medium text-[#6b7280] sticky left-[70px] z-10 bg-white dark:bg-card">Title</span>
-          <span className="text-xs font-medium text-[#6b7280]">Status</span>
-          <span className="text-xs font-medium text-[#6b7280]">Priority</span>
-          <span className="text-xs font-medium text-[#6b7280]">Sprint</span>
-          <span className="text-xs font-medium text-[#6b7280]">Due Date</span>
-          <span className="text-xs font-medium text-[#6b7280]">Assignees</span>
-          <span className="pr-6" />
-        </div>
-
-        {/* Content */}
-        {isLoading ? (
-          <div className="divide-y divide-border">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className={cn("grid items-center px-6 py-3 gap-4", GRID)}>
-                <Skeleton className="h-4 w-14" />
-                <Skeleton className="h-4 w-56" />
-                <Skeleton className="h-5 w-20" />
-                <Skeleton className="h-4 w-16" />
-                <Skeleton className="h-4 w-20" />
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="h-6 w-16" />
-                <span />
-              </div>
-            ))}
-          </div>
-        ) : totalCount === 0 && (issues ?? []).length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <p className="text-sm font-medium mb-1">No issues yet</p>
-            <p className="text-sm text-muted-foreground mb-4">
-              Create your first issue to start tracking work.
-            </p>
-            <Button size="sm" onClick={() => setCreateDialog({ open: true })}>
-              <Plus className="h-4 w-4" />
-              Create issue
-            </Button>
-          </div>
-        ) : topLevel.length === 0 && (issues ?? []).length > 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 text-center">
-            <p className="text-sm text-muted-foreground">No issues match your filters.</p>
-          </div>
-        ) : (
-          <TooltipProvider delayDuration={200}>
-            <div className="divide-y divide-border">
-              {/* Task list groups */}
-              {(taskLists ?? []).map((tl) => (
-                <TaskListGroup
-                  key={tl.id}
-                  taskList={tl}
-                  issues={groupedByList[tl.id] ?? []}
-                  childrenMap={childrenMap}
-                  projectId={projectId}
-                  statuses={statuses}
-                  statusLabels={statusLabels}
-                  statusColorMap={statusColorMap}
-                  sprints={allSprints}
-                  workspace={workspace}
-                  projectKey={projectKey}
-                  onOpen={setSelectedIssue}
-                  onAddIssue={(id) => setCreateDialog({ open: true, defaultTaskListId: id })}
-                  onAddChild={(parentId) => setCreateDialog({ open: true, defaultParentId: parentId })}
-                  onRenameList={handleRenameList}
-                  onDeleteList={handleDeleteList}
-                />
-              ))}
-
-              {/* "No List" group — always show if there are ungrouped issues or no task lists */}
-              {(groupedByList["__none__"]?.length > 0 || (taskLists ?? []).length === 0) && (
-                <TaskListGroup
-                  taskList={null}
-                  issues={groupedByList["__none__"] ?? []}
-                  childrenMap={childrenMap}
-                  projectId={projectId}
-                  statuses={statuses}
-                  statusLabels={statusLabels}
-                  statusColorMap={statusColorMap}
-                  sprints={allSprints}
-                  workspace={workspace}
-                  projectKey={projectKey}
-                  onOpen={setSelectedIssue}
-                  onAddIssue={(id) => setCreateDialog({ open: true, defaultTaskListId: id })}
-                  onAddChild={(parentId) => setCreateDialog({ open: true, defaultParentId: parentId })}
-                />
-              )}
+          <div className="min-w-[1025px]">
+            {/* Table header */}
+            <div className={cn("grid items-center py-2.5 border-b border-border", GRID)}>
+              <span className="text-xs font-medium text-[#6b7280] sticky left-0 z-10 bg-white dark:bg-card pl-6">ID</span>
+              <span className="text-xs font-medium text-[#6b7280] sticky left-[70px] z-10 bg-white dark:bg-card">Title</span>
+              <span className="text-xs font-medium text-[#6b7280]">Status</span>
+              <span className="text-xs font-medium text-[#6b7280]">Priority</span>
+              <span className="text-xs font-medium text-[#6b7280]">Sprint</span>
+              <span className="text-xs font-medium text-[#6b7280]">Due Date</span>
+              <span className="text-xs font-medium text-[#6b7280]">Assignees</span>
+              <span className="pr-6" />
             </div>
-          </TooltipProvider>
-        )}
-        </div>{/* /min-w */}
+
+            {/* Content */}
+            {isLoading ? (
+              <div className="divide-y divide-border">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className={cn("grid items-center px-6 py-3 gap-4", GRID)}>
+                    <Skeleton className="h-4 w-14" />
+                    <Skeleton className="h-4 w-56" />
+                    <Skeleton className="h-5 w-20" />
+                    <Skeleton className="h-4 w-16" />
+                    <Skeleton className="h-4 w-20" />
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-6 w-16" />
+                    <span />
+                  </div>
+                ))}
+              </div>
+            ) : totalCount === 0 && (issues ?? []).length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <p className="text-sm font-medium mb-1">No issues yet</p>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Create your first issue to start tracking work.
+                </p>
+                <Button size="sm" onClick={() => setCreateDialog({ open: true })}>
+                  <Plus className="h-4 w-4" />
+                  Create issue
+                </Button>
+              </div>
+            ) : topLevel.length === 0 && (issues ?? []).length > 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <p className="text-sm text-muted-foreground">No issues match your filters.</p>
+              </div>
+            ) : (
+              <TooltipProvider delayDuration={200}>
+                <div className="divide-y divide-border">
+                  {/* Task list groups */}
+                  {(taskLists ?? []).map((tl) => (
+                    <TaskListGroup
+                      key={tl.id}
+                      taskList={tl}
+                      issues={groupedByList[tl.id] ?? []}
+                      childrenMap={childrenMap}
+                      projectId={projectId}
+                      statuses={statuses}
+                      statusLabels={statusLabels}
+                      statusColorMap={statusColorMap}
+                      sprints={allSprints}
+                      workspace={workspace}
+                      projectKey={projectKey}
+                      onOpen={setSelectedIssue}
+                      onAddIssue={(id) => setCreateDialog({ open: true, defaultTaskListId: id })}
+                      onAddChild={(parentId) => setCreateDialog({ open: true, defaultParentId: parentId })}
+                      onRenameList={handleRenameList}
+                      onDeleteList={handleDeleteList}
+                    />
+                  ))}
+
+                  {/* "No List" group — always show if there are ungrouped issues or no task lists */}
+                  {(groupedByList["__none__"]?.length > 0 || (taskLists ?? []).length === 0) && (
+                    <TaskListGroup
+                      taskList={null}
+                      issues={groupedByList["__none__"] ?? []}
+                      childrenMap={childrenMap}
+                      projectId={projectId}
+                      statuses={statuses}
+                      statusLabels={statusLabels}
+                      statusColorMap={statusColorMap}
+                      sprints={allSprints}
+                      workspace={workspace}
+                      projectKey={projectKey}
+                      onOpen={setSelectedIssue}
+                      onAddIssue={(id) => setCreateDialog({ open: true, defaultTaskListId: id })}
+                      onAddChild={(parentId) => setCreateDialog({ open: true, defaultParentId: parentId })}
+                    />
+                  )}
+                </div>
+              </TooltipProvider>
+            )}
+          </div>{/* /min-w */}
         </div>{/* /overflow-x-auto */}
 
         {/* Footer */}

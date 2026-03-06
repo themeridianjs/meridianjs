@@ -216,6 +216,9 @@ export function AppSidebar({ ...props }: SidebarProps) {
   const isGlobalReportingActive = location.pathname.startsWith("/reporting")
   const isOrgSettingsActive = location.pathname.startsWith("/org/settings")
   const isSuperAdmin = user?.roles?.includes("super-admin") ?? false
+  const isGlobalAdmin = isSuperAdmin || (user?.roles?.includes("admin") ?? false)
+  const hasWorkspaceAdmin = user?.permissions?.includes("workspace:admin") ?? false
+  const isPrivileged = isGlobalAdmin || hasWorkspaceAdmin
 
   return (
     <SidebarRoot collapsible="offcanvas" {...props}>
@@ -314,31 +317,35 @@ export function AppSidebar({ ...props }: SidebarProps) {
           </>
         )}
 
-        {/* Global section */}
-        <SidebarSeparator />
-        <SidebarGroup>
-          <SidebarGroupLabel>Global</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isGlobalReportingActive} tooltip="Global Reports">
-                  <NavLink to="/reporting">
-                    <BarChart2 />
-                    <span>Global Reports</span>
-                  </NavLink>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isOrgSettingsActive} tooltip="Org Settings">
-                  <NavLink to="/org/settings">
-                    <Settings2 />
-                    <span>Org Settings</span>
-                  </NavLink>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {/* Global section — admin/super-admin only */}
+        {isPrivileged && (
+          <>
+            <SidebarSeparator />
+            <SidebarGroup>
+              <SidebarGroupLabel>Global</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={isGlobalReportingActive} tooltip="Global Reports">
+                      <NavLink to="/reporting">
+                        <BarChart2 />
+                        <span>Global Reports</span>
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={isOrgSettingsActive} tooltip="Org Settings">
+                      <NavLink to="/org/settings">
+                        <Settings2 />
+                        <span>Org Settings</span>
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </>
+        )}
 
         {/* Settings / Roles — pushed to bottom */}
         <SidebarGroup className="mt-auto">
@@ -349,7 +356,7 @@ export function AppSidebar({ ...props }: SidebarProps) {
                   <SidebarMenuButton asChild isActive={isRolesActive} tooltip="Roles & Permissions">
                     <NavLink to={`/${ws}/roles`}>
                       <Shield />
-                      <span>Roles</span>
+                      <span>Custom Roles</span>
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

@@ -88,24 +88,36 @@ export interface Activity {
   created_at: string
 }
 
+export interface BoardFilters {
+  priority?: string[]
+  assignee_id?: string
+  type?: string[]
+  status?: string[]
+}
+
 export const issueKeys = {
   all: ["issues"] as const,
-  byProject: (projectId: string) => [...issueKeys.all, "project", projectId] as const,
+  byProject: (projectId: string, filters?: BoardFilters) =>
+    [...issueKeys.all, "project", projectId, ...(filters ? [filters] : [])] as const,
   detail: (id: string) => [...issueKeys.all, id] as const,
   comments: (issueId: string) => [...issueKeys.all, issueId, "comments"] as const,
   activities: (issueId: string) => [...issueKeys.all, issueId, "activities"] as const,
 }
 
-export function useIssues(projectId?: string) {
+export function useIssues(projectId?: string, filters?: BoardFilters) {
   return useQuery({
-    queryKey: projectId ? issueKeys.byProject(projectId) : issueKeys.all,
+    queryKey: projectId ? issueKeys.byProject(projectId, filters) : issueKeys.all,
     queryFn: () => {
-      const url = projectId
-        ? `/admin/issues?project_id=${projectId}`
-        : "/admin/issues"
-      return api.get<IssuesResponse>(url)
+      const params = new URLSearchParams()
+      if (projectId) params.set("project_id", projectId)
+      if (filters?.priority?.length) params.set("priority", filters.priority.join(","))
+      if (filters?.assignee_id) params.set("assignee_id", filters.assignee_id)
+      if (filters?.type?.length) params.set("type", filters.type.join(","))
+      if (filters?.status?.length) params.set("status", filters.status.join(","))
+      return api.get<IssuesResponse>(`/admin/issues?${params}`)
     },
     select: (data) => data.issues,
+    enabled: projectId !== undefined ? !!projectId : true,
   })
 }
 

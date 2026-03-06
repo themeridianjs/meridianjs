@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { useLogin, useSetupStatus } from "@/api/hooks/useAuth"
+import { WidgetZone } from "@/components/WidgetZone"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { GoogleSignInButton } from "@/components/ui/GoogleSignInButton"
@@ -29,6 +30,7 @@ export function LoginPage() {
   return (
     <div className="min-h-screen bg-[hsl(60_5%_96%)] dark:bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-[360px]">
+        <WidgetZone zone="login.before" props={{}} />
         {/* Logo */}
         <div className="flex flex-col items-center gap-4 mb-8">
           <div className="relative h-16 w-16 rounded-2xl bg-white dark:bg-card border border-border shadow-sm flex items-center justify-center">
@@ -103,6 +105,7 @@ export function LoginPage() {
             Create one
           </Link>
         </p>
+        <WidgetZone zone="login.after" props={{}} />
       </div>
     </div>
   )

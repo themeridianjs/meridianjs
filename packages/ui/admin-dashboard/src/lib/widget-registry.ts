@@ -15,6 +15,8 @@ export type ZonePropMap = {
   "project.sprints.after":     { projectId: string }
   "workspace.settings.before": { workspaceId: string }
   "workspace.settings.after":  { workspaceId: string }
+  "login.before":              Record<string, never>
+  "login.after":               Record<string, never>
 }
 
 export type Zone = keyof ZonePropMap

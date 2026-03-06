@@ -2,7 +2,7 @@ import { useParams } from "react-router-dom"
 import { format } from "date-fns"
 import {
   Globe, Link2Off, Pencil, Plus, Activity,
-  UserPlus, UserMinus, Users, UserX,
+  UserPlus, UserMinus, Users, UserX, Tag, Trash2,
 } from "lucide-react"
 import { useProjectByKey, useProjectActivities } from "@/api/hooks/useProjects"
 import { useUserMap } from "@/api/hooks/useUsers"
@@ -72,6 +72,26 @@ const ACTION_CONFIG: Record<string, {
       const teamId = (changes as any)?.team_id?.from as string | undefined
       const name = teamId ? (teamMap.get(teamId) ?? teamId) : "a team"
       return `Removed team ${name}`
+    },
+  },
+  status_updated: {
+    icon: Tag,
+    color: "text-violet-500",
+    bg: "bg-violet-50 dark:bg-violet-950/40",
+    label: (changes) => {
+      const from = (changes as any)?.name?.from as string | undefined
+      const to = (changes as any)?.name?.to as string | undefined
+      if (from && to) return `Renamed status "${from}" to "${to}"`
+      return "Updated status"
+    },
+  },
+  status_deleted: {
+    icon: Trash2,
+    color: "text-red-500",
+    bg: "bg-red-50 dark:bg-red-950/40",
+    label: (changes) => {
+      const name = (changes as any)?.name?.from as string | undefined
+      return name ? `Deleted status "${name}"` : "Deleted status"
     },
   },
   updated: {

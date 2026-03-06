@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { useUsers } from "@/api/hooks/useUsers"
+import { useUsers, type User } from "@/api/hooks/useUsers"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
@@ -10,6 +10,7 @@ interface AssigneeSelectorProps {
   value: string[]
   onChange: (ids: string[]) => void
   disabled?: boolean
+  users?: User[]
 }
 
 function getInitials(firstName: string, lastName: string, email: string) {
@@ -22,10 +23,11 @@ function getUserName(firstName: string, lastName: string, email: string) {
   return `${firstName ?? ""} ${lastName ?? ""}`.trim() || email
 }
 
-export function AssigneeSelector({ value, onChange, disabled }: AssigneeSelectorProps) {
+export function AssigneeSelector({ value, onChange, disabled, users: usersProp }: AssigneeSelectorProps) {
   const [open, setOpen] = useState(false)
   const [localValue, setLocalValue] = useState<string[]>(value)
-  const { data: users } = useUsers()
+  const { data: fetchedUsers } = useUsers()
+  const users = usersProp ?? fetchedUsers ?? []
 
   // Sync local state when the prop changes from outside (e.g. after API refetch or
   // when a different issue is opened). Compare sorted join to avoid reacting to
@@ -44,7 +46,7 @@ export function AssigneeSelector({ value, onChange, disabled }: AssigneeSelector
     onChange(next)        // trigger parent (API call or local state update)
   }
 
-  const assignedUsers = (users ?? []).filter((u) => localValue.includes(u.id))
+  const assignedUsers = users.filter((u) => localValue.includes(u.id))
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -98,7 +100,7 @@ export function AssigneeSelector({ value, onChange, disabled }: AssigneeSelector
           <CommandList>
             <CommandEmpty className="text-xs py-4">No users found.</CommandEmpty>
             <CommandGroup>
-              {(users ?? []).map((user) => {
+              {users.map((user) => {
                 const selected = localValue.includes(user.id)
                 const name = getUserName(user.first_name, user.last_name, user.email)
                 const initials = getInitials(user.first_name, user.last_name, user.email)

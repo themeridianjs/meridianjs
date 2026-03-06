@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { format } from "date-fns"
 import { useIssue, useUpdateIssue, useIssues } from "@/api/hooks/useIssues"
 import { useProjectByKey } from "@/api/hooks/useProjects"
+import { useProjectAccess } from "@/api/hooks/useProjectAccess"
 import { useProjectStatuses } from "@/api/hooks/useProjectStatuses"
 import { useSprints, type Sprint } from "@/api/hooks/useSprints"
 import { useTaskLists } from "@/api/hooks/useTaskLists"
@@ -132,6 +133,11 @@ export function IssueDetailPage() {
   const projectId = project?.id ?? ""
   const { data: issue, isLoading } = useIssue(issueId ?? "")
   const updateIssue = useUpdateIssue(issueId ?? "", projectId)
+  const { data: access } = useProjectAccess(projectId)
+  const projectUsers = useMemo(
+    () => access ? access.members.filter(m => m.user).map(m => m.user!) : undefined,
+    [access]
+  )
   const { data: projectStatuses } = useProjectStatuses(projectId || undefined)
   const { data: sprints } = useSprints(projectId || undefined)
   const { data: taskLists } = useTaskLists(projectId || undefined)
@@ -422,6 +428,7 @@ export function IssueDetailPage() {
                     value={issue.assignee_ids ?? []}
                     onChange={(assignee_ids) => handlePropUpdate({ assignee_ids }, "Assignees")}
                     disabled={updateIssue.isPending}
+                    users={projectUsers}
                   />
                 </PropertyRow>
 

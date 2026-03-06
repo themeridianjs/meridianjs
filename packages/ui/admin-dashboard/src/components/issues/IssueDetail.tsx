@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useMemo } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import { format } from "date-fns"
 import type { Issue } from "@/api/hooks/useIssues"
@@ -7,6 +7,7 @@ import { useAppConfig } from "@/api/hooks/useAppConfig"
 import { countBusinessDays } from "@/lib/businessDays"
 import { useUpdateIssue, useIssues, useIssue } from "@/api/hooks/useIssues"
 import { useProjectStatuses } from "@/api/hooks/useProjectStatuses"
+import { useProjectAccess } from "@/api/hooks/useProjectAccess"
 import { useSprints, type Sprint } from "@/api/hooks/useSprints"
 import { useTaskLists } from "@/api/hooks/useTaskLists"
 import { CreateIssueDialog } from "@/components/issues/CreateIssueDialog"
@@ -102,6 +103,11 @@ export function IssueDetail({ issue: issueProp, projectId, open, onClose }: Issu
   const [expandedChildren, setExpandedChildren] = useState<Set<string>>(new Set())
 
   const updateIssue = useUpdateIssue(issue?.id ?? "", projectId)
+  const { data: access } = useProjectAccess(projectId)
+  const projectUsers = useMemo(
+    () => access ? access.members.filter(m => m.user).map(m => m.user!) : undefined,
+    [access]
+  )
   const { data: projectStatuses } = useProjectStatuses(projectId)
   const { data: sprints } = useSprints(projectId || undefined)
   const { data: taskLists } = useTaskLists(projectId || undefined)
@@ -447,6 +453,7 @@ export function IssueDetail({ issue: issueProp, projectId, open, onClose }: Issu
                   value={issue.assignee_ids ?? []}
                   onChange={handleAssigneesChange}
                   disabled={updateIssue.isPending}
+                  users={projectUsers}
                 />
               </div>
 

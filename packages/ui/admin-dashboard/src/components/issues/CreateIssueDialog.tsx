@@ -1,8 +1,9 @@
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import { format } from "date-fns"
 import { useCreateIssue } from "@/api/hooks/useIssues"
 import { useProjectStatuses } from "@/api/hooks/useProjectStatuses"
+import { useProjectAccess } from "@/api/hooks/useProjectAccess"
 import { useSprints, type Sprint } from "@/api/hooks/useSprints"
 import { useTaskLists } from "@/api/hooks/useTaskLists"
 import { useAuth } from "@/stores/auth"
@@ -61,6 +62,11 @@ export function CreateIssueDialog({ open, onClose, projectId, defaultStatus = "b
   const [recurrenceFrequency, setRecurrenceFrequency] = useState<"weekly" | "monthly">("weekly")
   const [recurrenceEndDate, setRecurrenceEndDate] = useState<Date | undefined>(undefined)
   const createIssue = useCreateIssue()
+  const { data: access } = useProjectAccess(projectId)
+  const projectUsers = useMemo(
+    () => access ? access.members.filter(m => m.user).map(m => m.user!) : undefined,
+    [access]
+  )
   const { data: projectStatuses } = useProjectStatuses(projectId)
   const { data: sprints } = useSprints(projectId || undefined)
   const { data: taskLists } = useTaskLists(projectId || undefined)
@@ -230,7 +236,7 @@ export function CreateIssueDialog({ open, onClose, projectId, defaultStatus = "b
           )}
           <div className="space-y-1.5">
             <Label>Assignees <span className="text-xs text-muted-foreground font-normal">Optional</span></Label>
-            <AssigneeSelector value={assigneeIds} onChange={setAssigneeIds} />
+            <AssigneeSelector value={assigneeIds} onChange={setAssigneeIds} users={projectUsers} />
           </div>
           <div className="space-y-1.5">
             <Label>Start Date <span className="text-xs text-muted-foreground font-normal">Optional</span></Label>

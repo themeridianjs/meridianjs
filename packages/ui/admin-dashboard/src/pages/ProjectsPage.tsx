@@ -22,6 +22,7 @@ export function ProjectsPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [accessProject, setAccessProject] = useState<{ id: string; name: string } | null>(null)
   const [search, setSearch] = useState("")
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "paused" | "archived">("all")
   const { workspace } = useParams<{ workspace: string }>()
   const { data: projects, isLoading } = useProjects()
   const deleteProject = useDeleteProject()
@@ -29,9 +30,10 @@ export function ProjectsPage() {
 
   const filtered = (projects ?? []).filter(
     (p) =>
-      !search ||
-      p.name.toLowerCase().includes(search.toLowerCase()) ||
-      p.identifier.toLowerCase().includes(search.toLowerCase())
+      (statusFilter === "all" || p.status === statusFilter) &&
+      (!search ||
+        p.name.toLowerCase().includes(search.toLowerCase()) ||
+        p.identifier.toLowerCase().includes(search.toLowerCase()))
   )
 
   return (
@@ -48,10 +50,21 @@ export function ProjectsPage() {
         </div>
         {/* Card toolbar */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" className="text-xs h-8">
-              Add filter
-            </Button>
+          <div className="flex items-center gap-1">
+            {(["all", "active", "paused", "archived"] as const).map((s) => (
+              <button
+                key={s}
+                onClick={() => setStatusFilter(s)}
+                className={cn(
+                  "px-3 h-7 rounded-md text-xs font-medium transition-colors",
+                  statusFilter === s
+                    ? "bg-foreground text-background"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                )}
+              >
+                {s === "all" ? "All" : s.charAt(0).toUpperCase() + s.slice(1)}
+              </button>
+            ))}
           </div>
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
@@ -92,12 +105,12 @@ export function ProjectsPage() {
               <Layers className="h-5 w-5 text-muted-foreground" />
             </div>
             <p className="text-sm font-medium mb-1">
-              {search ? "No projects match" : "No projects yet"}
+              {search || statusFilter !== "all" ? "No projects match" : "No projects yet"}
             </p>
             <p className="text-sm text-muted-foreground mb-4">
-              {search ? "Try a different search term." : "Create your first project to get started."}
+              {search || statusFilter !== "all" ? "Try adjusting your filters." : "Create your first project to get started."}
             </p>
-            {!search && (
+            {!search && statusFilter === "all" && (
               <Button size="sm" onClick={() => setDialogOpen(true)}>
                 <Plus className="h-4 w-4" />
                 Create project

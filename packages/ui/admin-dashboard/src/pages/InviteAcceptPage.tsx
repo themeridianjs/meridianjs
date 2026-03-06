@@ -12,7 +12,7 @@ import { toast } from "sonner"
 
 interface InviteDetails {
   invitation: { id: string; role: "admin" | "member"; email: string | null; status: string }
-  workspace: { id: string; name: string; slug: string }
+  workspace: { id: string; name: string; slug: string } | null
 }
 
 function useInviteDetails(token: string) {
@@ -39,9 +39,9 @@ export function InviteAcceptPage() {
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
 
-  // If already authenticated, go straight to the invited workspace
+  // If already authenticated, go straight to the invited workspace (or home for org invites)
   if (isAuthenticated && data) {
-    navigate(`/${data.workspace.slug}/projects`, { replace: true })
+    navigate(data.workspace ? `/${data.workspace.slug}/projects` : "/", { replace: true })
     return null
   }
 
@@ -59,7 +59,7 @@ export function InviteAcceptPage() {
       {
         onSuccess: () => {
           // auth context is now populated via useRegisterViaInvite's onSuccess
-          navigate(`/${data!.workspace.slug}/projects`, { replace: true })
+          navigate(data!.workspace ? `/${data!.workspace.slug}/projects` : "/", { replace: true })
         },
         onError: (err) => toast.error((err as any).message ?? "Registration failed"),
       }
@@ -106,7 +106,9 @@ export function InviteAcceptPage() {
                   <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
                   <span className="text-xs text-muted-foreground">You've been invited to</span>
                 </div>
-                <p className="text-base font-semibold">{data.workspace.name}</p>
+                <p className="text-base font-semibold">
+                  {data.workspace ? data.workspace.name : "Meridian"}
+                </p>
               </div>
               <div className="px-5 py-3 flex items-center gap-2.5">
                 {data.invitation.role === "admin"

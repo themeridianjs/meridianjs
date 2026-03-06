@@ -1,10 +1,13 @@
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { useParams } from "react-router-dom"
 import { useProjectByKey } from "@/api/hooks/useProjects"
-import { useIssues } from "@/api/hooks/useIssues"
+import { useIssues, type BoardFilters } from "@/api/hooks/useIssues"
 import type { Issue } from "@/api/hooks/useIssues"
 import { useProjectStatuses, useReorderProjectStatuses } from "@/api/hooks/useProjectStatuses"
+import { useProjectAccess } from "@/api/hooks/useProjectAccess"
+import { useUserMap } from "@/api/hooks/useUsers"
 import { KanbanBoard } from "@/components/board/KanbanBoard"
+import { BoardFilterBar } from "@/components/board/BoardFilterBar"
 import { IssueDetail } from "@/components/issues/IssueDetail"
 import { CreateIssueDialog } from "@/components/issues/CreateIssueDialog"
 import { Button } from "@/components/ui/button"
@@ -16,11 +19,14 @@ export function ProjectBoardPage() {
   const { projectKey } = useParams<{ projectKey: string }>()
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null)
   const [createOpen, setCreateOpen] = useState(false)
+  const [filters, setFilters] = useState<BoardFilters>({})
 
   const { data: project } = useProjectByKey(projectKey ?? "")
   const projectId = project?.id ?? ""
-  const { data: issues, isLoading: issuesLoading } = useIssues(projectId || undefined)
+  const { data: issues, isLoading: issuesLoading } = useIssues(projectId || undefined, filters)
   const { data: statuses, isLoading: statusesLoading } = useProjectStatuses(projectId || undefined)
+  const { data: access } = useProjectAccess(projectId)
+  const { data: userMap } = useUserMap()
   const reorderStatuses = useReorderProjectStatuses(projectId)
 
   if (!projectKey) return null
@@ -31,11 +37,28 @@ export function ProjectBoardPage() {
     reorderStatuses.mutate(orderedIds)
   }
 
+  const members = useMemo(() => {
+    if (!access?.members || !userMap) return []
+    return access.members
+      .map((m) => {
+        const info = userMap.get(m.user_id)
+        if (!info) return null
+        return { userId: m.user_id, name: info.name, initials: info.initials }
+      })
+      .filter((m): m is NonNullable<typeof m> => m !== null)
+  }, [access, userMap])
+
   return (
     <div className="flex flex-col h-full gap-0">
       <div className="flex flex-col flex-1 min-h-0 bg-white dark:bg-card">
         {/* Actions bar */}
-        <div className="flex items-center justify-end px-6 py-3 border-b border-border shrink-0">
+        <div className="flex items-center justify-between px-6 py-3 border-b border-border shrink-0">
+          <BoardFilterBar
+            statuses={statuses ?? []}
+            members={members}
+            filters={filters}
+            onChange={setFilters}
+          />
           <Button size="sm" onClick={() => setCreateOpen(true)}>
             <Plus className="h-4 w-4" />
             Create
@@ -65,6 +88,7 @@ export function ProjectBoardPage() {
               statuses={statuses ?? []}
               onIssueClick={setSelectedIssue}
               onColumnsReorder={handleColumnsReorder}
+              filters={filters}
             />
           )}
         </div>
@@ -86,4 +110,3 @@ export function ProjectBoardPage() {
     </div>
   )
 }
-

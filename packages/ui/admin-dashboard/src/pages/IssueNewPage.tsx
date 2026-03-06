@@ -1,7 +1,8 @@
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { useCreateIssue } from "@/api/hooks/useIssues"
 import { useProjectByKey } from "@/api/hooks/useProjects"
+import { useProjectAccess } from "@/api/hooks/useProjectAccess"
 import { useAuth } from "@/stores/auth"
 import { useProjectStatuses } from "@/api/hooks/useProjectStatuses"
 import { useSprints, type Sprint } from "@/api/hooks/useSprints"
@@ -134,6 +135,11 @@ export function IssueNewPage() {
   const { data: project } = useProjectByKey(projectKey ?? "")
   const projectId = project?.id ?? ""
   const createIssue = useCreateIssue()
+  const { data: access } = useProjectAccess(projectId)
+  const projectUsers = useMemo(
+    () => access ? access.members.filter(m => m.user).map(m => m.user!) : undefined,
+    [access]
+  )
   const { data: projectStatuses } = useProjectStatuses(projectId || undefined)
   const { data: sprints } = useSprints(projectId || undefined)
   const { data: taskLists } = useTaskLists(projectId || undefined)
@@ -298,7 +304,7 @@ export function IssueNewPage() {
               </PropertyRow>
 
               <PropertyRow label="Assignees">
-                <AssigneeSelector value={assigneeIds} onChange={setAssigneeIds} />
+                <AssigneeSelector value={assigneeIds} onChange={setAssigneeIds} users={projectUsers} />
               </PropertyRow>
 
               {activeSprints.length > 0 && (

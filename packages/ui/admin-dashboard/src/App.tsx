@@ -47,6 +47,14 @@ function RequireSuperAdmin({ children }: { children: ReactNode }) {
   return <>{children}</>
 }
 
+function RequireAdmin({ children }: { children: ReactNode }) {
+  const { user } = useAuth()
+  const isGlobalAdmin = user?.roles?.includes("super-admin") || user?.roles?.includes("admin")
+  const hasWorkspaceAdmin = user?.permissions?.includes("workspace:admin")
+  if (isGlobalAdmin || hasWorkspaceAdmin) return <>{children}</>
+  return <Navigate to="/" replace />
+}
+
 function RedirectIfAuth({ children }: { children: ReactNode }) {
   const { isAuthenticated } = useAuth()
   const { data: setupStatus } = useSetupStatus()
@@ -168,24 +176,28 @@ export function App() {
       {/* Public project share — no auth required */}
       <Route path="/share/:token" element={<PublicProjectPage />} />
 
-      {/* Global reporting — auth required, no workspace in URL */}
+      {/* Global reporting — admin/super-admin only */}
       <Route
         path="/reporting"
         element={
           <RequireAuth>
-            <ReportingLayout />
+            <RequireAdmin>
+              <ReportingLayout />
+            </RequireAdmin>
           </RequireAuth>
         }
       >
         <Route index element={<ReportingPage />} />
       </Route>
 
-      {/* Org settings — auth required, no workspace in URL */}
+      {/* Org settings — admin/super-admin only */}
       <Route
         path="/org/settings"
         element={
           <RequireAuth>
-            <OrgSettingsLayout />
+            <RequireAdmin>
+              <OrgSettingsLayout />
+            </RequireAdmin>
           </RequireAuth>
         }
       >

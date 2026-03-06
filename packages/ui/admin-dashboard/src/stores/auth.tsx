@@ -10,6 +10,7 @@ interface User {
   phone_number?: string | null
   google_id?: string | null
   roles: string[]
+  permissions: string[]
 }
 
 export interface WorkspaceRef {
@@ -24,10 +25,10 @@ interface AuthState {
   token: string | null
   workspace: WorkspaceRef | null
   isAuthenticated: boolean
-  login: (user: Omit<User, "roles">, token: string) => void
+  login: (user: Omit<User, "roles" | "permissions">, token: string) => void
   logout: () => void
   setWorkspace: (w: WorkspaceRef | null) => void
-  updateLocalUser: (updates: Partial<Omit<User, "roles">>) => void
+  updateLocalUser: (updates: Partial<Omit<User, "roles" | "permissions">>) => void
 }
 
 const AuthContext = createContext<AuthState | null>(null)
@@ -36,7 +37,7 @@ const TOKEN_KEY = "meridian_token"
 const USER_KEY = "meridian_user"
 const WORKSPACE_KEY = "meridian_workspace"
 
-function decodeTokenRoles(token: string): string[] {
+function decodeTokenPayload(token: string): { roles: string[]; permissions: string[] } {
   try {
     // JWT uses base64url — replace url-safe chars and add padding before atob
     const base64url = token.split(".")[1]
@@ -45,9 +46,12 @@ function decodeTokenRoles(token: string): string[] {
       "="
     )
     const payload = JSON.parse(atob(base64))
-    return Array.isArray(payload.roles) ? payload.roles : []
+    return {
+      roles: Array.isArray(payload.roles) ? payload.roles : [],
+      permissions: Array.isArray(payload.permissions) ? payload.permissions : [],
+    }
   } catch {
-    return []
+    return { roles: [], permissions: [] }
   }
 }
 
@@ -58,8 +62,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const token = localStorage.getItem(TOKEN_KEY)
       if (!stored) return null
       const parsed = JSON.parse(stored) as User
-      // Always re-derive from JWT — localStorage user.roles is untrusted
-      parsed.roles = token ? decodeTokenRoles(token) : []
+      // Always re-derive from JWT — localStorage user.roles/permissions are untrusted
+      const { roles, permissions } = token ? decodeTokenPayload(token) : { roles: [], permissions: [] }
+      parsed.roles = roles
+      parsed.permissions = permissions
       return parsed
     } catch {
       return null
@@ -85,9 +91,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   })
 
-  const login = (rawUser: Omit<User, "roles">, newToken: string) => {
-    const roles = decodeTokenRoles(newToken)
-    const userWithRoles: User = { ...rawUser, roles }
+  const login = (rawUser: Omit<User, "roles" | "permissions">, newToken: string) => {
+    const { roles, permissions } = decodeTokenPayload(newToken)
+    const userWithRoles: User = { ...rawUser, roles, permissions }
     setUser(userWithRoles)
     setToken(newToken)
     localStorage.setItem(TOKEN_KEY, newToken)
@@ -129,7 +135,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const updateLocalUser = (updates: Partial<Omit<User, "roles">>) => {
+  const updateLocalUser = (updates: Partial<Omit<User, "roles" | "permissions">>) => {
     setUser((prev) => {
       if (!prev) return prev
       const updated = { ...prev, ...updates }

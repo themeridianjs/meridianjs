@@ -69,14 +69,21 @@ export function useAssignUserRole() {
     mutationFn: ({ userId, appRoleId }: { userId: string; appRoleId: string | null }) =>
       api.patch(`/admin/users/${userId}/role`, { app_role_id: appRoleId }),
     onSuccess: () => {
-      // Invalidate all workspace member queries so the role dropdowns refresh
+      // Invalidate workspace member queries and user list so role dropdowns refresh
       qc.invalidateQueries({ queryKey: ["workspaces"] })
+      qc.invalidateQueries({ queryKey: ["users"] })
     },
   })
 }
 
 // Canonical list of all supported permissions, grouped by category
 export const ALL_PERMISSIONS: { group: string; permissions: { key: string; label: string }[] }[] = [
+  {
+    group: "Workspace Admin",
+    permissions: [
+      { key: "workspace:admin", label: "Workspace admin (full access to workspace settings, reports, and member management)" },
+    ],
+  },
   {
     group: "Members & Invitations",
     permissions: [

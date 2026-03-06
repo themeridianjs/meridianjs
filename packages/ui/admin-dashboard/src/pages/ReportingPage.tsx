@@ -62,9 +62,13 @@ export function ReportingPage({ workspaceId }: { workspaceId?: string }) {
 
   const allLogs = data?.time_logs ?? []
 
-  // Client-side filtering by employee and project
+  // Client-side filtering — also scopes to accessible projects via projectMap
   const timeLogs = useMemo(() => {
     let logs = allLogs
+    // Hide logs from projects the user can't access (projectMap only contains accessible projects)
+    if (!projectsLoading) {
+      logs = logs.filter((l) => !l.project_id || projectMap.has(l.project_id))
+    }
     if (selectedUserIds.length > 0) {
       logs = logs.filter((l) => selectedUserIds.includes(l.user_id))
     }
@@ -72,7 +76,7 @@ export function ReportingPage({ workspaceId }: { workspaceId?: string }) {
       logs = logs.filter((l) => l.project_id && selectedProjectIds.includes(l.project_id))
     }
     return logs
-  }, [allLogs, selectedUserIds, selectedProjectIds])
+  }, [allLogs, selectedUserIds, selectedProjectIds, projectMap, projectsLoading])
 
   const totalMinutes = timeLogs.reduce((s, l) => s + (l.duration_minutes ?? 0), 0)
 

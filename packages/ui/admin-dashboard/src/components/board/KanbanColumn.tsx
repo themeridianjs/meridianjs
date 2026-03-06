@@ -1,10 +1,18 @@
+import { useEffect, useRef } from "react"
 import { useDroppable } from "@dnd-kit/core"
 import { SortableContext, verticalListSortingStrategy, useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import type { Issue } from "@/api/hooks/useIssues"
 import { IssueCard } from "./IssueCard"
 import { cn } from "@/lib/utils"
-import { Circle, CheckCircle2, Clock, GripVertical } from "lucide-react"
+import { Circle, CheckCircle2, Clock, GripVertical, MoreHorizontal } from "lucide-react"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 type Category = "backlog" | "unstarted" | "started" | "completed" | "cancelled"
 
@@ -37,9 +45,20 @@ interface KanbanColumnProps {
   /** When true, this column is part of a sortable column context */
   sortable?: boolean
   onIssueClick?: (issue: Issue) => void
+  onRename?: () => void
+  onDelete?: () => void
+  isRenaming?: boolean
+  renameValue?: string
+  onRenameChange?: (v: string) => void
+  onRenameSubmit?: () => void
+  onRenameCancel?: () => void
 }
 
-export function KanbanColumn({ id, label, color, category, issues, childCounts, sortable, onIssueClick }: KanbanColumnProps) {
+export function KanbanColumn({
+  id, label, color, category, issues, childCounts, sortable, onIssueClick,
+  onRename, onDelete,
+  isRenaming, renameValue, onRenameChange, onRenameSubmit, onRenameCancel,
+}: KanbanColumnProps) {
   const { setNodeRef: setDropRef, isOver } = useDroppable({ id })
 
   const {
@@ -51,6 +70,16 @@ export function KanbanColumn({ id, label, color, category, issues, childCounts, 
     isDragging,
   } = useSortable({ id, disabled: !sortable })
 
+  const inputRef = useRef<HTMLInputElement>(null)
+  const cancelledRef = useRef(false)
+
+  useEffect(() => {
+    if (isRenaming) {
+      cancelledRef.current = false
+      setTimeout(() => inputRef.current?.focus(), 0)
+    }
+  }, [isRenaming])
+
   const style = sortable
     ? { transform: CSS.Transform.toString(transform), transition }
     : undefined
@@ -59,11 +88,13 @@ export function KanbanColumn({ id, label, color, category, issues, childCounts, 
   const bgOverColor = hexToRgba(color, 0.16)
   const ringColor = hexToRgba(color, 0.35)
 
+  const showMenu = !!(onRename || onDelete)
+
   return (
     <div
       ref={setSortRef}
       style={style}
-      className={cn("flex flex-col min-w-[260px] max-w-[280px] w-full", isDragging && "opacity-50")}
+      className={cn("flex flex-col min-w-[260px] max-w-[280px] w-full group/col", isDragging && "opacity-50")}
     >
       {/* Column header */}
       <div className={cn("flex items-center gap-2 mb-2 px-1", sortable && "cursor-grab")}>
@@ -73,13 +104,60 @@ export function KanbanColumn({ id, label, color, category, issues, childCounts, 
           </span>
         )}
         <CategoryIcon category={category} color={color} />
-        <span className="text-xs font-medium text-foreground">{label}</span>
+
+        {isRenaming ? (
+          <input
+            ref={inputRef}
+            value={renameValue ?? ""}
+            onChange={(e) => onRenameChange?.(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") { e.preventDefault(); onRenameSubmit?.() }
+              if (e.key === "Escape") { e.preventDefault(); cancelledRef.current = true; onRenameCancel?.() }
+            }}
+            onBlur={() => {
+              if (!cancelledRef.current) onRenameSubmit?.()
+            }}
+            className="flex-1 text-xs font-medium bg-transparent border-b border-foreground/30 outline-none py-0.5 min-w-0"
+          />
+        ) : (
+          <span className="text-xs font-medium text-foreground">{label}</span>
+        )}
+
         <span
           className="ml-1 text-[11px] font-medium rounded-full px-1.5 py-0.5 tabular-nums min-w-[18px] text-center"
           style={{ backgroundColor: hexToRgba(color, 0.12), color }}
         >
           {issues.length}
         </span>
+
+        {showMenu && !isRenaming && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className="ml-auto h-5 w-5 flex items-center justify-center rounded opacity-0 group-hover/col:opacity-100 hover:bg-muted transition-opacity text-muted-foreground hover:text-foreground"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <MoreHorizontal className="h-3.5 w-3.5" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-40">
+              {onRename && (
+                <DropdownMenuItem onClick={onRename}>
+                  Rename
+                </DropdownMenuItem>
+              )}
+              {onRename && onDelete && <DropdownMenuSeparator />}
+              {onDelete && (
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onClick={onDelete}
+                >
+                  Delete status
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
 
       {/* Drop zone */}

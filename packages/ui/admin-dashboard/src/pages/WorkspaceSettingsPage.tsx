@@ -10,7 +10,6 @@ import {
   useRevokeInvitation,
   useWorkspaceMembers,
   useAddWorkspaceMember,
-  useUpdateWorkspaceMemberRole,
   useRemoveWorkspaceMember,
   useTeams,
   useCreateTeam,
@@ -67,29 +66,6 @@ import {
   UserPlus,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
-
-type SystemRole = "super-admin" | "admin" | "member"
-
-function systemRoleLabel(role: SystemRole): string {
-  if (role === "super-admin") return "Super Admin"
-  if (role === "admin") return "Admin"
-  return "Member"
-}
-
-function SystemRoleSelect({ value, onChange }: { value: SystemRole; onChange: (v: SystemRole) => void }) {
-  return (
-    <Select value={value} onValueChange={(v) => onChange(v as SystemRole)}>
-      <SelectTrigger className="h-9">
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="super-admin">Super Admin</SelectItem>
-        <SelectItem value="admin">Admin</SelectItem>
-        <SelectItem value="member">Member</SelectItem>
-      </SelectContent>
-    </Select>
-  )
-}
 
 // ── Copy button ───────────────────────────────────────────────────────────────
 
@@ -163,11 +139,9 @@ function InviteMemberDialog({ open, onClose, workspaceId }: InviteMemberDialogPr
   // Existing-user mode state
   const [search, setSearch] = useState("")
   const [selectedUserId, setSelectedUserId] = useState("")
-  const [addSystemRole, setAddSystemRole] = useState<SystemRole>("member")
   const [addAppRoleId, setAddAppRoleId] = useState<string>("")
   // Invite mode state
   const [email, setEmail] = useState("")
-  const [inviteSystemRole, setInviteSystemRole] = useState<SystemRole>("member")
   const [inviteAppRoleId, setInviteAppRoleId] = useState<string>("")
   const [createdInvitation, setCreatedInvitation] = useState<Invitation | null>(null)
 
@@ -196,10 +170,8 @@ function InviteMemberDialog({ open, onClose, workspaceId }: InviteMemberDialogPr
     if (open) {
       setSearch("")
       setSelectedUserId("")
-      setAddSystemRole("member")
       setAddAppRoleId("")
       setEmail("")
-      setInviteSystemRole("member")
       setInviteAppRoleId("")
       setCreatedInvitation(null)
       setMode("existing")
@@ -208,10 +180,8 @@ function InviteMemberDialog({ open, onClose, workspaceId }: InviteMemberDialogPr
 
   const handleAddExisting = () => {
     if (!selectedUserId) return
-    // workspace_member.role only supports "admin" | "member"
-    const wsRole: "admin" | "member" = addSystemRole === "member" ? "member" : "admin"
     addMember.mutate(
-      { user_id: selectedUserId, role: wsRole, app_role_id: addAppRoleId || null },
+      { user_id: selectedUserId, role: "member", app_role_id: addAppRoleId || null },
       {
         onSuccess: () => {
           toast.success("Member added")
@@ -227,7 +197,7 @@ function InviteMemberDialog({ open, onClose, workspaceId }: InviteMemberDialogPr
     createInvitation.mutate(
       {
         email: email.trim() || undefined,
-        role: inviteSystemRole,
+        role: "member",
         app_role_id: inviteAppRoleId || null,
       },
       {
@@ -340,14 +310,10 @@ function InviteMemberDialog({ open, onClose, workspaceId }: InviteMemberDialogPr
 
             {nonMembers.length > 0 && (
               <>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">Role</label>
-                  <SystemRoleSelect value={addSystemRole} onChange={setAddSystemRole} />
-                </div>
                 {appRoles && appRoles.length > 0 && (
                   <div className="space-y-1.5">
                     <label className="text-xs font-medium text-muted-foreground">
-                      Custom role <span className="font-normal">(optional)</span>
+                      Role <span className="font-normal">(optional)</span>
                     </label>
                     <AppRoleSelect value={addAppRoleId} onChange={setAddAppRoleId} appRoles={appRoles} />
                   </div>
@@ -389,14 +355,10 @@ function InviteMemberDialog({ open, onClose, workspaceId }: InviteMemberDialogPr
                 Leave blank to generate a shareable link.
               </p>
             </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">Role</label>
-              <SystemRoleSelect value={inviteSystemRole} onChange={setInviteSystemRole} />
-            </div>
             {appRoles && appRoles.length > 0 && (
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground">
-                  Custom role <span className="font-normal">(optional)</span>
+                  Role <span className="font-normal">(optional)</span>
                 </label>
                 <AppRoleSelect value={inviteAppRoleId} onChange={setInviteAppRoleId} appRoles={appRoles} />
               </div>
@@ -422,8 +384,7 @@ function InviteMemberDialog({ open, onClose, workspaceId }: InviteMemberDialogPr
               ) : (
                 "anyone you want to invite"
               )}
-              . They will join as{" "}
-              <span className="font-medium text-foreground">{systemRoleLabel(inviteSystemRole)}</span>.
+              .
             </p>
             <div className="flex items-start gap-2 p-3 bg-muted/50 rounded-lg border border-border">
               <Link2 className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5" />
@@ -691,15 +652,12 @@ function GeneralTab({ workspaceId }: { workspaceId: string }) {
 function MembersTab({ workspaceId, onInvite }: { workspaceId: string; onInvite: () => void }) {
   const { data: members, isLoading: membersLoading } = useWorkspaceMembers(workspaceId)
   const { data: invitations, isLoading: invitationsLoading } = useInvitations(workspaceId)
-  const updateRole = useUpdateWorkspaceMemberRole(workspaceId)
   const removeMember = useRemoveWorkspaceMember(workspaceId)
   const assignUserRole = useAssignUserRole()
   const { data: appRoles } = useRoles()
   const { user } = useAuth()
 
-  // Confirmation dialog state
   const [confirmRemove, setConfirmRemove] = useState<WorkspaceMember | null>(null)
-  const [confirmRoleChange, setConfirmRoleChange] = useState<{ member: WorkspaceMember; newRole: "admin" | "member" } | null>(null)
 
   const pending = invitations?.filter((i) => i.status === "pending") ?? []
 
@@ -771,17 +729,7 @@ function MembersTab({ workspaceId, onInvite }: { workspaceId: string; onInvite: 
                   )}
                 </div>
 
-                {/* Role badge */}
-                <span className={cn(
-                  "inline-flex items-center text-[11px] px-1.5 py-0.5 rounded font-medium shrink-0",
-                  m.role === "admin"
-                    ? "bg-indigo/10 text-indigo"
-                    : "bg-muted text-muted-foreground"
-                )}>
-                  {m.role === "admin" ? "Admin" : "Member"}
-                </span>
-
-                {/* Custom app role */}
+                {/* Role select */}
                 {appRoles && appRoles.length > 0 && (
                   <Select
                     value={m.app_role_id ?? "none"}
@@ -820,16 +768,6 @@ function MembersTab({ workspaceId, onInvite }: { workspaceId: string; onInvite: 
                       </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-44">
-                      <DropdownMenuItem
-                        onClick={() =>
-                          setConfirmRoleChange({
-                            member: m,
-                            newRole: m.role === "admin" ? "member" : "admin",
-                          })
-                        }
-                      >
-                        {m.role === "admin" ? "Make member" : "Make admin"}
-                      </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() => {
                           fetch(`/admin/users/${m.user_id}/sessions`, {
@@ -934,30 +872,6 @@ function MembersTab({ workspaceId, onInvite }: { workspaceId: string; onInvite: 
         loading={removeMember.isPending}
       />
 
-      <ConfirmDialog
-        open={!!confirmRoleChange}
-        onClose={() => setConfirmRoleChange(null)}
-        onConfirm={() => {
-          if (!confirmRoleChange) return
-          updateRole.mutate(
-            { userId: confirmRoleChange.member.user_id, role: confirmRoleChange.newRole },
-            {
-              onSuccess: () => {
-                toast.success("Role updated")
-                setConfirmRoleChange(null)
-              },
-              onError: () => {
-                toast.error("Failed to update role")
-                setConfirmRoleChange(null)
-              },
-            }
-          )
-        }}
-        title="Change role"
-        description={`Make ${confirmRoleChange?.member.user?.email ?? "this member"} a workspace ${confirmRoleChange?.newRole === "admin" ? "admin" : "member"}?`}
-        confirmLabel="Change role"
-        loading={updateRole.isPending}
-      />
     </>
   )
 }
