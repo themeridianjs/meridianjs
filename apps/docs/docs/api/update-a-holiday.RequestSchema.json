@@ -1,1 +1,0 @@
-{"title":"Body","body":{"content":{"application/json":{"schema":{"type":"object","properties":{"name":{"type":"string"},"date":{"type":"string","format":"date"},"recurring":{"type":"boolean"}}}}}}}

@@ -27,7 +27,6 @@ const config = {
         docs: {
           sidebarPath: require.resolve('./sidebars.js'),
           editUrl: 'https://github.com/themeridianjs/meridianjs/tree/main/',
-          docItemComponent: '@theme/ApiItem',
         },
         blog: false,
         theme: {
@@ -39,25 +38,18 @@ const config = {
 
   plugins: [
     [
-      'docusaurus-plugin-openapi-docs',
+      '@scalar/docusaurus',
       {
-        id: 'api',
-        docsPluginId: 'classic',
-        config: {
-          meridian: {
-            specPath: 'openapi.yaml',
-            outputDir: 'docs/api',
-            sidebarOptions: {
-              groupPathsBy: 'tag',
-              categoryLinkSource: 'tag',
-            },
-          },
+        label: 'API Reference',
+        route: '/api',
+        configuration: {
+          spec: { url: '/openapi.yaml' },
+          theme: 'purple',
+          hideDownloadButton: false,
         },
       },
     ],
   ],
-
-  themes: ['docusaurus-theme-openapi-docs'],
 
   themeConfig:
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
@@ -76,8 +68,7 @@ const config = {
             label: 'Docs',
           },
           {
-            type: 'docSidebar',
-            sidebarId: 'apiSidebar',
+            to: '/api',
             position: 'left',
             label: 'API Reference',
           },

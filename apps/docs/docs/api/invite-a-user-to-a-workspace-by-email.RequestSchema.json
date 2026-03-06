@@ -1,1 +1,0 @@
-{"title":"Body","body":{"required":true,"content":{"application/json":{"schema":{"type":"object","required":["email","workspace_id"],"properties":{"email":{"type":"string","format":"email"},"workspace_id":{"type":"string"},"role":{"type":"string","default":"member"}}},"example":{"email":"bob@example.com","workspace_id":"ws_123","role":"member"}}}}}

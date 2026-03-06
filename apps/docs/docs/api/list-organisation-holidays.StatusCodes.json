@@ -1,1 +1,0 @@
-{"responses":{"200":{"description":"Holidays list","content":{"application/json":{"schema":{"type":"object","properties":{"holidays":{"type":"array","items":{"type":"object","properties":{"id":{"type":"string"},"name":{"type":"string"},"date":{"type":"string","format":"date"},"recurring":{"type":"boolean"}},"title":"OrgHoliday"}}}}}}}}}

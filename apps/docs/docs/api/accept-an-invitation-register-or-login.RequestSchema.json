@@ -1,1 +1,0 @@
-{"title":"Body","body":{"required":true,"content":{"application/json":{"schema":{"type":"object","required":["password"],"properties":{"password":{"type":"string","minLength":8},"first_name":{"type":"string"},"last_name":{"type":"string"}}}}}}}

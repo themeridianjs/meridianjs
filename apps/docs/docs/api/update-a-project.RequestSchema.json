@@ -1,1 +1,0 @@
-{"title":"Body","body":{"content":{"application/json":{"schema":{"type":"object","properties":{"name":{"type":"string"},"description":{"type":"string"},"status":{"type":"string","enum":["active","archived"]},"visibility":{"type":"string","enum":["private","public"]},"color":{"type":"string"},"icon":{"type":"string"}}}}}}}

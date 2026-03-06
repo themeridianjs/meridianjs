@@ -1,1 +1,0 @@
-{"parameters":[{"in":"query","name":"unread","schema":{"type":"boolean"},"description":"Pass `true` to return only unread notifications"},{"in":"query","name":"limit","schema":{"type":"integer","default":20}},{"in":"query","name":"offset","schema":{"type":"integer","default":0}}]}
