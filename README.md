@@ -164,7 +164,7 @@ export default defineWidgets([
 ])
 ```
 
-Available zones: `issue.details.before/after/sidebar`, `project.board.before/after`, `project.issues.before/after`, `project.timeline.before/after`, `project.sprints.before/after`, `workspace.settings.before/after`.
+Available zones: `login.before/after`, `issue.details.before/after/sidebar`, `project.board.before/after`, `project.issues.before/after`, `project.timeline.before/after`, `project.sprints.before/after`, `workspace.settings.before/after`.
 
 ## Development
 

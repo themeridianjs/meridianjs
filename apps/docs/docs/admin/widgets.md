@@ -52,6 +52,8 @@ Each entry is a `{ zone, component }` object. The component receives typed props
 | `project.sprints.after` | Sprints Page | `{ projectId: string }` |
 | `workspace.settings.before` | Workspace Settings | `{ workspaceId: string }` |
 | `workspace.settings.after` | Workspace Settings | `{ workspaceId: string }` |
+| `login.before` | Login Page | `{}` |
+| `login.after` | Login Page | `{}` |
 
 ---
 

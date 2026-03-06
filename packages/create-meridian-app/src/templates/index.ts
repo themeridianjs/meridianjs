@@ -67,6 +67,7 @@ export function renderPackageJson(vars: ProjectTemplateVars): string {
         tsx: "^4.0.0",
         "@types/node": "^22.0.0",
         "@types/express": "^5.0.0",
+        ...(vars.dashboard ? { "@types/react": "^18.0.0" } : {}),
       },
     },
     null,
@@ -432,10 +433,11 @@ See the [Meridian documentation](https://github.com/meridian/meridian) for guide
 // ─── Admin UI extension template ───────────────────────────────────────────
 
 export function renderAdminWidgetsIndex(): string {
-  return `import React from "react"
-
-// Admin UI widget extensions — injected into the Meridian dashboard at runtime.
+  return `// Admin UI widget extensions — injected into the Meridian dashboard at runtime.
 // Run \`meridian dev\` or \`meridian serve-dashboard\` to compile and load these.
+//
+// No imports needed for React — JSX is handled automatically by the build step.
+// Do NOT import from "@meridianjs/admin-dashboard"; it is a built SPA, not a library.
 //
 // Available zones and their props:
 //   "issue.details.before"      — { issue: Issue }
@@ -451,11 +453,13 @@ export function renderAdminWidgetsIndex(): string {
 //   "project.sprints.after"     — { projectId: string }
 //   "workspace.settings.before" — { workspaceId: string }
 //   "workspace.settings.after"  — { workspaceId: string }
+//   "login.before"              — {}
+//   "login.after"               — {}
 //
 // Example:
 //   function MyBanner({ projectId }: { projectId: string }) {
 //     return (
-//       <div className="mx-6 my-2 p-3 rounded border border-border text-sm">
+//       <div style={{ padding: "8px 24px", fontSize: 13, color: "#666" }}>
 //         Custom panel for project: {projectId}
 //       </div>
 //     )

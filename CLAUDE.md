@@ -322,6 +322,8 @@ Custom project statuses: `ProjectStatus` model in `@meridianjs/project`, seeded 
 | `project.sprints.after` | Sprints Page | `{ projectId: string }` |
 | `workspace.settings.before` | Workspace Settings | `{ workspaceId: string }` |
 | `workspace.settings.after` | Workspace Settings | `{ workspaceId: string }` |
+| `login.before` | Login Page | `{}` |
+| `login.after` | Login Page | `{}` |
 
 Key files: `packages/ui/admin-dashboard/src/lib/widget-registry.ts`, `src/components/WidgetZone.tsx`, `src/extensions/` (example `MetadataWidget`), `packages/create-meridian-app/src/commands/serve-dashboard.ts`.
 

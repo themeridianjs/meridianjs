@@ -73,7 +73,7 @@ function makeReactWindowPlugin(): Plugin {
  * Returns the compiled source, or null if the entry point does not exist or
  * compilation fails.
  */
-async function buildAdminExtensions(
+export async function buildAdminExtensions(
   rootDir: string
 ): Promise<Buffer | null> {
   const entryPoint = path.join(rootDir, "src", "admin", "widgets", "index.tsx")

@@ -90,6 +90,8 @@ Widgets are compiled at startup by `meridian dev` / `meridian serve-dashboard` v
 | `project.sprints.after` | Sprints page | `{ projectId }` |
 | `workspace.settings.before` | Workspace settings | `{ workspaceId }` |
 | `workspace.settings.after` | Workspace settings | `{ workspaceId }` |
+| `login.before` | Login page | `{}` |
+| `login.after` | Login page | `{}` |
 
 ## Environment Variables
 

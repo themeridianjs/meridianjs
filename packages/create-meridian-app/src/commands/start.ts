@@ -4,7 +4,7 @@ import chalk from "chalk"
 import { execa } from "execa"
 import dotenv from "dotenv"
 import { findProjectRoot, readProjectPorts } from "../utils.js"
-import { startDashboardServer } from "./serve-dashboard.js"
+import { startDashboardServer, buildAdminExtensions } from "./serve-dashboard.js"
 
 export async function runStart(): Promise<void> {
   const rootDir = findProjectRoot()
@@ -30,7 +30,18 @@ export async function runStart(): Promise<void> {
 
   let dashServer: import("node:http").Server | null = null
   if (hasDashboard) {
-    dashServer = await startDashboardServer(dashboardDist, dashboardPort, apiPort, "localhost", null, apiUrl)
+    let adminExtensionsBuf: Buffer | null = null
+    const extensionsEntry = path.join(rootDir, "src", "admin", "widgets", "index.tsx")
+    if (existsSync(extensionsEntry)) {
+      try {
+        adminExtensionsBuf = await buildAdminExtensions(rootDir)
+        console.log(chalk.green("  ✔ Admin extensions compiled"))
+      } catch (err) {
+        console.warn(chalk.yellow("  ⚠ Admin extensions failed to compile:"), err)
+      }
+    }
+
+    dashServer = await startDashboardServer(dashboardDist, dashboardPort, apiPort, "localhost", adminExtensionsBuf, apiUrl)
     console.log(
       chalk.dim("  → API: ") + chalk.cyan(`http://localhost:${apiPort}`) +
       chalk.dim("  dashboard: ") + chalk.cyan(`http://localhost:${dashboardPort}`)
