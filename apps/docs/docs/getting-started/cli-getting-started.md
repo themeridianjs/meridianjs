@@ -39,37 +39,45 @@ npm run dev
 
 ## Basic CLI commands
 
-Run directly as `npx meridian <command>` or through npm scripts where available.
+The `meridian` binary is installed locally in your project's `node_modules/.bin/`. Always run it via `npx` or through the npm scripts in `package.json`.
 
 | Command | Description |
 |---|---|
-| `meridian new [project-name]` | Scaffold a new Meridian project |
-| `meridian dev` | Start API server in development mode (and dashboard if installed) |
-| `meridian start` | Start API server in **production** mode (`NODE_ENV=production`) |
-| `meridian build` | Type-check the project (`tsc --noEmit`) |
-| `meridian db:migrate` | Bootstraps app and syncs module schemas |
-| `meridian db:generate <name>` | Create a timestamped migration placeholder in `src/migrations/` |
-| `meridian serve-dashboard` | Serve admin dashboard as a static app (default port: `5174`) |
-| `meridian serve-dashboard --port 3000` | Serve admin dashboard on a custom port |
-| `meridian user:create --email <email> --role <role>` | Create a user (`super-admin`, `admin`, `moderator`, `member`) |
-| `meridian generate module <name>` | Scaffold a module in `src/modules/` (alias: `meridian g module`) |
-| `meridian generate subscriber <event>` | Scaffold an event subscriber in `src/subscribers/` |
-| `meridian generate workflow <name>` | Scaffold a workflow in `src/workflows/` |
-| `meridian generate job <name> --schedule "0 * * * *"` | Scaffold a scheduled job in `src/jobs/` |
-| `meridian generate plugin <name>` | Scaffold a local plugin in `src/plugins/` |
-| `meridian generate route <path> --methods GET,POST` | Scaffold a file-based API route in `src/api/` |
+| `npx meridian new [project-name]` | Scaffold a new Meridian project |
+| `npm run dev` | Start API server in development mode (and dashboard if installed) |
+| `npm run start` | Start API server in **production** mode (`NODE_ENV=production`) |
+| `npm run build` | Type-check the project (`tsc --noEmit`) |
+| `npm run db:migrate` | Bootstraps app and syncs module schemas |
+| `npm run db:generate <name>` | Create a timestamped migration placeholder in `src/migrations/` |
+| `npx meridian serve-dashboard` | Serve admin dashboard as a static app (default port: `5174`) |
+| `npx meridian serve-dashboard --port 3000` | Serve admin dashboard on a custom port |
+| `npx meridian user:create --email <email> --role <role>` | Create a user (`super-admin`, `admin`, `moderator`, `member`) |
+| `npm run generate -- module <name>` | Scaffold a module in `src/modules/` |
+| `npm run generate -- subscriber <event>` | Scaffold an event subscriber in `src/subscribers/` |
+| `npm run generate -- workflow <name>` | Scaffold a workflow in `src/workflows/` |
+| `npm run generate -- job <name> --schedule "0 * * * *"` | Scaffold a scheduled job in `src/jobs/` |
+| `npm run generate -- plugin <name>` | Scaffold a local plugin in `src/plugins/` |
+| `npm run generate -- route <path> --methods GET,POST` | Scaffold a file-based API route in `src/api/` |
 
-`meridian generate` can be shortened to `meridian g` for all sub-commands.
+:::tip
+`npm run generate -- <args>` is equivalent to `npx meridian generate <args>`. Both work — use whichever you prefer. All `generate` sub-commands can also be shortened to `g` (e.g. `npx meridian g module client`).
+:::
 
 ## Command examples
 
 ```bash
 # Start local development
-meridian dev
+npm run dev
 
 # Generate a new migration placeholder
-meridian db:generate add_issue_due_date_index
+npm run db:generate add_issue_due_date_index
+
+# Scaffold a module
+npm run generate -- module time-log
 
 # Scaffold a REST route
-meridian generate route admin/reports/velocity --methods GET
+npm run generate -- route admin/reports/velocity --methods GET
+
+# Serve the admin dashboard standalone
+npx meridian serve-dashboard
 ```

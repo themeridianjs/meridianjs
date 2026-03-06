@@ -10,7 +10,8 @@ sidebar_position: 4
 Create a module:
 
 ```bash
-meridian generate module time-log
+npm run generate -- module time-log
+# or: npx meridian generate module time-log
 ```
 
 Generated files:

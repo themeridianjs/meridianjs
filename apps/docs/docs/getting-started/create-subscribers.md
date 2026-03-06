@@ -10,7 +10,8 @@ sidebar_position: 5
 Create a subscriber for an event:
 
 ```bash
-meridian generate subscriber issue.created
+npm run generate -- subscriber issue.created
+# or: npx meridian generate subscriber issue.created
 ```
 
 This generates:

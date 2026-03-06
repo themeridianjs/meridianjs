@@ -103,10 +103,10 @@ Widget bundles are compiled with esbuild and loaded as ESM modules at runtime. T
 
 ```bash
 # Compile API + dashboard + widgets in one step
-meridian dev
+npm run dev
 
 # Or serve the dashboard independently (compiles widgets automatically)
-meridian serve-dashboard
+npx meridian serve-dashboard
 ```
 
 If `src/admin/widgets/index.tsx` does not exist, the dashboard runs normally with no extensions loaded.

@@ -131,7 +131,7 @@ You need two long-running processes:
 NODE_ENV=production node dist/main.js
 
 # Process 2 — Admin dashboard
-NODE_ENV=production meridian serve-dashboard
+NODE_ENV=production npx meridian serve-dashboard
 ```
 
 Use a process manager like [PM2](https://pm2.keymetrics.io/) to keep them running:
@@ -140,7 +140,7 @@ Use a process manager like [PM2](https://pm2.keymetrics.io/) to keep them runnin
 npm install -g pm2
 
 pm2 start dist/main.js --name meridian-api
-pm2 start "meridian serve-dashboard" --name meridian-dashboard
+pm2 start "npx meridian serve-dashboard" --name meridian-dashboard
 pm2 save
 pm2 startup   # auto-start on server reboot
 ```

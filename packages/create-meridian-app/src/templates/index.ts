@@ -33,28 +33,18 @@ export function renderPackageJson(vars: ProjectTemplateVars): string {
         dev: "meridian dev",
         build: "meridian build",
         start: "meridian start",
+        generate: "meridian generate",
         "db:migrate": "meridian db:migrate",
         "db:generate": "meridian db:generate",
         ...(vars.seedDemo ? { "seed:demo": "node --import tsx/esm src/scripts/seed-demo.ts" } : {}),
       },
       dependencies: {
+        "@meridianjs/meridian": "latest",
         "@meridianjs/framework": "latest",
         "@meridianjs/framework-utils": "latest",
         "@meridianjs/types": "latest",
-        "@meridianjs/event-bus-local": "latest",
-        "@meridianjs/user": "latest",
-        "@meridianjs/workspace": "latest",
         "@meridianjs/auth": "latest",
-        "@meridianjs/project": "latest",
-        "@meridianjs/issue": "latest",
-        "@meridianjs/sprint": "latest",
-        "@meridianjs/activity": "latest",
-        "@meridianjs/notification": "latest",
-        "@meridianjs/invitation": "latest",
-        "@meridianjs/workspace-member": "latest",
-        "@meridianjs/team-member": "latest",
-        "@meridianjs/project-member": "latest",
-        "@meridianjs/meridian": "latest",
+        "@meridianjs/event-bus-local": "latest",
         "dotenv": "^16.0.0",
         ...(vars.dashboard ? { "@meridianjs/admin-dashboard": "latest" } : {}),
         ...Object.fromEntries(
@@ -392,6 +382,11 @@ npm run dev
 |---|---|
 | \`npm run dev\` | Start API server${vars.dashboard ? " + admin dashboard" : ""} |
 | \`npm run build\` | Type-check the project |
+| \`npm run generate -- module <name>\` | Scaffold a new module |
+| \`npm run generate -- workflow <name>\` | Scaffold a new workflow |
+| \`npm run generate -- subscriber <event>\` | Scaffold a new subscriber |
+| \`npm run generate -- job <name>\` | Scaffold a new cron job |
+| \`npm run generate -- route <path>\` | Scaffold a new API route |
 | \`npm run db:migrate\` | Synchronize the database schema |
 | \`npm run db:generate <name>\` | Generate a new migration file |${vars.dashboard ? "\n| `meridian serve-dashboard` | Serve the admin dashboard standalone |" : ""}
 
