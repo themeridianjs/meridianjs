@@ -40,6 +40,10 @@ export function useRealtimeEvents(): void {
       invalidate([["issues"], ["notifications"]])
     })
 
+    es.addEventListener("project.member_added", () => {
+      invalidate([["notifications"]])
+    })
+
     es.onerror = () => {
       // EventSource auto-reconnects on error; nothing to do here
     }

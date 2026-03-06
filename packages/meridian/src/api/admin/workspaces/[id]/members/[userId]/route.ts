@@ -30,12 +30,25 @@ export const DELETE = async (req: any, res: Response, next: NextFunction) => {
   requirePermission("member:remove")(req, res, async () => {
     try {
       const workspaceMemberService = req.scope.resolve("workspaceMemberModuleService") as any
+      const projectService = req.scope.resolve("projectModuleService") as any
+      const projectMemberService = req.scope.resolve("projectMemberModuleService") as any
 
       const membership = await workspaceMemberService.getMembership(req.params.id, req.params.userId)
       if (!membership) {
         res.status(404).json({ error: { message: "Member not found" } })
         return
       }
+
+      // Remove from all projects in this workspace
+      const [projects] = await projectService.listAndCountProjects(
+        { workspace_id: req.params.id },
+        { limit: 1000 }
+      )
+      await Promise.all(
+        projects.map((p: any) =>
+          projectMemberService.removeProjectMember(p.id, req.params.userId).catch(() => {})
+        )
+      )
 
       await workspaceMemberService.deleteWorkspaceMember(membership.id)
       res.status(204).send()
