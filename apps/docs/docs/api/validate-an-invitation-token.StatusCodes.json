@@ -1,0 +1,1 @@
+{"responses":{"200":{"description":"Invite details","content":{"application/json":{"schema":{"type":"object","properties":{"invite":{"type":"object","properties":{"email":{"type":"string"},"workspace_id":{"type":"string"},"role":{"type":"string"}}}}}}}},"404":{"description":"Token not found or expired"}}}

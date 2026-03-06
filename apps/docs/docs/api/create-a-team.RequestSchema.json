@@ -1,0 +1,1 @@
+{"title":"Body","body":{"required":true,"content":{"application/json":{"schema":{"type":"object","required":["name"],"properties":{"name":{"type":"string"},"description":{"type":"string"},"icon":{"type":"string"}}},"example":{"name":"Frontend Team","description":"Handles all UI work"}}}}}

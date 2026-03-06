@@ -1,0 +1,1 @@
+{"responses":{"200":{"description":"Setup status","content":{"application/json":{"schema":{"type":"object","properties":{"needs_setup":{"type":"boolean"}}}}}}}}

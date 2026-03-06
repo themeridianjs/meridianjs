@@ -1,5 +1,6 @@
 /** @type {import('@docusaurus/plugin-content-docs').SidebarsConfig} */
 const sidebars = {
+  apiSidebar: require('./docs/api/sidebar.ts'),
   tutorialSidebar: [
     {
       type: 'category',

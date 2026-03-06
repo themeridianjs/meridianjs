@@ -1,0 +1,1 @@
+{"title":"Body","body":{"required":true,"content":{"application/json":{"schema":{"type":"object","required":["ordered_ids"],"properties":{"ordered_ids":{"type":"array","items":{"type":"string"},"description":"Full list of status IDs in the desired order"}}}}}}}

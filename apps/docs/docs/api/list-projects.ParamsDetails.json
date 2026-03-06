@@ -1,0 +1,1 @@
+{"parameters":[{"in":"query","name":"workspace_id","schema":{"type":"string"},"description":"Filter by workspace"},{"in":"query","name":"status","schema":{"type":"string","enum":["active","archived"]}},{"in":"query","name":"limit","schema":{"type":"integer","default":20}},{"in":"query","name":"offset","schema":{"type":"integer","default":0}}]}

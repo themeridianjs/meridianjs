@@ -1,0 +1,74 @@
+---
+id: update-an-issue
+title: "Update an issue"
+description: "Requires `issue:update` permission."
+sidebar_label: "Update an issue"
+hide_title: true
+hide_table_of_contents: true
+api: eJzdVm1uGzcQvcqA+dMGK61sNEizKArYQQokaJHAVhCglpEdLUcSYy7J8MOOIwjoIXrCnqQYcmXJkdID1H+84rwZcmYe53EtIi6DaK7E6xASBXFdCUmh88pFZY1oxAV9TspTgFYxoklOYqQWHPlehaCsGc/MzLznZWWW0IaIMYUWolfLJfkAcUXQFre8yWUGfLD+ZqHtXTved8YQ1NIQfVTyIESx5RD7zuc2rsAnA3cqriDgEqGzvSMTkFMAa2CBSidP45kRlXDosadIntNeC8VJOowrUQmDPYlGKCkq4UveUjTRJ6pE6FbUo2jWIt47RoXolVmKzea6gCnEcyvvGdFZE8lE/kTntOrySepPgSu6Pgxl55+oi3w2bx35qChkq4qajuz4TYuO2EsPjpqcV9areH/UWBaOGPb7sgdA7/FeVEJF6o9tx0dxXpn4UclDcyVM0hrnnCQXmRNL9JGJcgy8sL7HKBrBgFFUPR2LQCGq/nEEk/o5+UNw/uPmBWdNKDU/nUz43+M7kPlJEvINyFn1FFdWMnNS7hvzpxE1yl6ZOsNCvVZyIyoRyN9uyZa8Fo1Yxeiauta2Q72yITYvJpOJ+Pbi/c5mkHRL2rqeTIQSSTDhAnWpdPFqLeaEnvxZ4jNcXe+bL5lpJbF90ENl+CRi4Db/LiBRDR+/bSv+5sM0p80Mvthx/dUX7N1A0cLVXbceJ/OwvGXmbmVHyN3at61/TL+rreH6Eb329n5gkTidnP40mjwfnb6Ynjxrnp00pz+PJ89P/hT7TJlsKqHMwu4n8gd5JRWaN5dw9u71QUIXry6nbICF9bCH/eevvwENWEdmFGzyHUFvZdLowXnL1xx6NLik3NEFj6I762/yDH3yBLg/ZOIwMWbmTGtoB1o9bYGMdFaZGGAYT4Bwi1pJePNhCg5DIAkYAOE8NxCivSHTzEzbtjPDwa1XX3PsZgv5JWN+HTBv5xGVASyecKsQ2ndvL6dQY4qrWtulMu0YpjyQy9LTFtBIaGuX5lp1j4+JniAZ3GVFcpvqhdUUZoYjlcPfa4sSOvReEafQeka0kIfMGM6T0nGkDOTlZmZG0IbkyI9yedpc+kXSGrDrKASIFlBr4PIGhx3HNBIkRsy+3/FiFVGGFUf5nW/26InnyOCidCRPEub3O1Te4KHNGR1WynHCL1OItoeFMjRaelSG5J6ElkIVYshcdFa8M+e4SIVAg3rxKCkMPBlPxjw1WGywy2Iz6NeOjqLaGzmhqeuliqs0H3e2ryPf+QL8FOrdZ77ozobYo9kLWmYgc7tMwQMRehC9/9+TYRhHkb7E2mlUhiUxF3Y9jP4rkenEUljeUZVolOQBxQOe7ev1HAO993qz4eXPiTxP7+tK3KJXRZWu1kKqwN9SNAvUgf6jyj8MZZY/wveOuFVpwxp9izrxL1GJG7ovz5zN9aYSK0JJPu9eDC/LHqMpu+8cD54yrDQPQvju/ZR1Y3gB9Vayi8c7fkrhXdnX5jSyHOW1tdBolgmXjC0h+e9fY7m8uw==
+sidebar_class_name: "put api-method"
+info_path: docs/api/meridianjs-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Update an issue"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"put"}
+  path={"/admin/issues/{id}"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Requires `issue:update` permission.
+
+Updating `status` triggers the `updateIssueStatusWorkflow`.
+Updating `assignee_ids` triggers the `assignIssueWorkflow`.
+Both run with saga compensation on failure.
+
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./update-an-issue.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./update-an-issue.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./update-an-issue.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

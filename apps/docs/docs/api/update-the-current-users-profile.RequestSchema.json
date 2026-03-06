@@ -1,0 +1,1 @@
+{"title":"Body","body":{"content":{"application/json":{"schema":{"type":"object","properties":{"first_name":{"type":"string"},"last_name":{"type":"string"},"designation":{"type":"string"},"phone_number":{"type":"string"}}},"example":{"first_name":"Alice","last_name":"Smith","designation":"Engineering Lead"}}}}}

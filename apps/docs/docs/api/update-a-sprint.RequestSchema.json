@@ -1,0 +1,1 @@
+{"title":"Body","body":{"content":{"application/json":{"schema":{"type":"object","properties":{"name":{"type":"string"},"goal":{"type":"string"},"status":{"type":"string","enum":["planned","active","completed"]},"start_date":{"type":"string","format":"date-time"},"end_date":{"type":"string","format":"date-time"}}}}}}}

@@ -1,0 +1,1 @@
+{"parameters":[{"in":"query","name":"project_id","schema":{"type":"string"}},{"in":"query","name":"status","schema":{"type":"string","enum":["planned","active","completed"]}}]}

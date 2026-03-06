@@ -1,0 +1,1 @@
+{"title":"Body","body":{"content":{"multipart/form-data":{"schema":{"type":"object","properties":{"logo":{"type":"string","format":"binary"}}}}}}}

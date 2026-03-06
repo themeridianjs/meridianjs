@@ -1,0 +1,1 @@
+{"parameters":[{"in":"path","name":"holidayId","required":true,"schema":{"type":"string"}}]}

@@ -1,0 +1,1 @@
+{"title":"Body","body":{"content":{"application/json":{"schema":{"type":"object","properties":{"work_days":{"type":"array","items":{"type":"integer"},"description":"0=Sunday … 6=Saturday. Default is Mon–Fri [1,2,3,4,5]."},"timezone":{"type":"string"}}},"example":{"work_days":[1,2,3,4,5],"timezone":"America/New_York"}}}}}

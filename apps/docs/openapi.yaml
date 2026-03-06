@@ -1,0 +1,2419 @@
+openapi: 3.0.3
+info:
+  title: MeridianJS API
+  description: |
+    REST API for MeridianJS — an open-source modular project management framework.
+
+    ## Authentication
+    All `/admin/*` endpoints require a valid JWT passed as a Bearer token:
+    ```
+    Authorization: Bearer <token>
+    ```
+    Obtain a token via `POST /auth/login`. The `/auth/*` and `/public/*` endpoints are unauthenticated.
+
+    ## Roles
+    The JWT payload carries a `roles` array. Built-in roles:
+    - `super-admin` — full access to all workspaces and data
+    - `admin` — full access within their workspace
+    - `member` — filtered by workspace and project membership
+
+    Custom fine-grained permissions are managed via the AppRole module.
+  version: 1.0.0
+  contact:
+    name: MeridianJS
+    url: https://github.com/themeridianjs/meridianjs
+
+servers:
+  - url: http://localhost:9000
+    description: Local development server
+
+tags:
+  - name: Auth
+    description: Register, login, logout, and Google OAuth
+  - name: Users
+    description: User management and profile
+  - name: Workspaces
+    description: Workspace management
+  - name: Workspace Members
+    description: Add, list, update, and remove workspace members
+  - name: Teams
+    description: Team management within a workspace
+  - name: Projects
+    description: Project management
+  - name: Project Members
+    description: Project-level access control
+  - name: Project Statuses
+    description: Custom Kanban statuses per project
+  - name: Issues
+    description: Issue tracking
+  - name: Comments
+    description: Issue comments with @mention support
+  - name: Sprints
+    description: Sprint / cycle management
+  - name: Notifications
+    description: In-app notifications
+  - name: Roles
+    description: Custom AppRole management with fine-grained permissions
+  - name: Org Calendar
+    description: Organisation-wide working calendar and holidays
+  - name: Public
+    description: Unauthenticated public share endpoints
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            message:
+              type: string
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+        first_name:
+          type: string
+          nullable: true
+        last_name:
+          type: string
+          nullable: true
+        avatar_url:
+          type: string
+          nullable: true
+        designation:
+          type: string
+          nullable: true
+        roles:
+          type: array
+          items:
+            type: string
+        created_at:
+          type: string
+          format: date-time
+
+    Workspace:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        slug:
+          type: string
+        plan:
+          type: string
+          enum: [free, pro, enterprise]
+        logo_url:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    Project:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        identifier:
+          type: string
+          description: Short uppercase code used as issue prefix (e.g. "MER")
+        description:
+          type: string
+          nullable: true
+        workspace_id:
+          type: string
+        status:
+          type: string
+          enum: [active, archived]
+        visibility:
+          type: string
+          enum: [private, public]
+        color:
+          type: string
+          nullable: true
+        icon:
+          type: string
+          nullable: true
+        owner_id:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    ProjectStatus:
+      type: object
+      properties:
+        id:
+          type: string
+        project_id:
+          type: string
+        name:
+          type: string
+        key:
+          type: string
+        color:
+          type: string
+        category:
+          type: string
+          enum: [backlog, unstarted, started, completed, cancelled]
+        position:
+          type: integer
+
+    Issue:
+      type: object
+      properties:
+        id:
+          type: string
+        identifier:
+          type: string
+          description: Auto-generated identifier (e.g. "MER-42")
+        number:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        status:
+          type: string
+          description: Matches one of the project's custom status keys
+        type:
+          type: string
+          enum: [feature, bug, task, story, epic, improvement, question]
+        priority:
+          type: string
+          enum: [urgent, high, medium, low, none]
+        project_id:
+          type: string
+        workspace_id:
+          type: string
+        assignee_ids:
+          type: array
+          items:
+            type: string
+        reporter_id:
+          type: string
+          nullable: true
+        sprint_id:
+          type: string
+          nullable: true
+        parent_id:
+          type: string
+          nullable: true
+        start_date:
+          type: string
+          format: date-time
+          nullable: true
+        due_date:
+          type: string
+          format: date-time
+          nullable: true
+        estimate:
+          type: number
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    Comment:
+      type: object
+      properties:
+        id:
+          type: string
+        issue_id:
+          type: string
+        author_id:
+          type: string
+        body:
+          type: string
+          description: HTML string. Mention chips use <span data-type="mention" data-id="user_id">.
+        metadata:
+          type: object
+          nullable: true
+          properties:
+            mentioned_user_ids:
+              type: array
+              items:
+                type: string
+        created_at:
+          type: string
+          format: date-time
+
+    Sprint:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        goal:
+          type: string
+          nullable: true
+        project_id:
+          type: string
+        status:
+          type: string
+          enum: [planned, active, completed]
+        start_date:
+          type: string
+          format: date-time
+          nullable: true
+        end_date:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    Notification:
+      type: object
+      properties:
+        id:
+          type: string
+        user_id:
+          type: string
+        title:
+          type: string
+        body:
+          type: string
+          nullable: true
+        type:
+          type: string
+        is_read:
+          type: boolean
+        data:
+          type: object
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    WorkspaceMember:
+      type: object
+      properties:
+        id:
+          type: string
+        workspace_id:
+          type: string
+        user_id:
+          type: string
+        role:
+          type: string
+          enum: [admin, member]
+        user:
+          $ref: "#/components/schemas/User"
+
+    Team:
+      type: object
+      properties:
+        id:
+          type: string
+        workspace_id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        icon:
+          type: string
+          nullable: true
+        member_count:
+          type: integer
+
+    AppRole:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        permissions:
+          type: array
+          items:
+            type: string
+        is_system:
+          type: boolean
+
+    OrgCalendar:
+      type: object
+      properties:
+        id:
+          type: string
+        work_days:
+          type: array
+          items:
+            type: integer
+            description: 0=Sunday, 1=Monday … 6=Saturday
+        timezone:
+          type: string
+
+    OrgHoliday:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        date:
+          type: string
+          format: date
+        recurring:
+          type: boolean
+
+security:
+  - bearerAuth: []
+
+paths:
+
+  # ─── Auth ─────────────────────────────────────────────────────────────────
+
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register the first user
+      description: |
+        Creates the initial super-admin account. **Only works when no users exist yet.**
+        Subsequent accounts must be created via an invitation link.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  minLength: 8
+                first_name:
+                  type: string
+                last_name:
+                  type: string
+            example:
+              email: admin@example.com
+              password: supersecret123
+              first_name: Alice
+              last_name: Admin
+      responses:
+        "201":
+          description: User created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: "#/components/schemas/User"
+                  token:
+                    type: string
+        "400":
+          description: Validation error
+        "403":
+          description: Registration is closed (users already exist)
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Log in and get a JWT
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+            example:
+              email: admin@example.com
+              password: supersecret123
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: "#/components/schemas/User"
+                  token:
+                    type: string
+        "400":
+          description: Validation error
+        "401":
+          description: Invalid credentials
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Invalidate the current session
+      responses:
+        "200":
+          description: Logged out
+
+  /auth/setup:
+    get:
+      tags: [Auth]
+      summary: Check if initial setup is required
+      description: Returns whether the system has any users yet.
+      security: []
+      responses:
+        "200":
+          description: Setup status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  needs_setup:
+                    type: boolean
+
+  /auth/invite/{token}:
+    get:
+      tags: [Auth]
+      summary: Validate an invitation token
+      security: []
+      parameters:
+        - in: path
+          name: token
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Invite details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  invite:
+                    type: object
+                    properties:
+                      email:
+                        type: string
+                      workspace_id:
+                        type: string
+                      role:
+                        type: string
+        "404":
+          description: Token not found or expired
+    post:
+      tags: [Auth]
+      summary: Accept an invitation (register or login)
+      description: |
+        If the invited email already has an account, this logs them in and adds them to the workspace.
+        If not, a new account is created.
+      security: []
+      parameters:
+        - in: path
+          name: token
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [password]
+              properties:
+                password:
+                  type: string
+                  minLength: 8
+                first_name:
+                  type: string
+                last_name:
+                  type: string
+      responses:
+        "200":
+          description: Accepted — user logged in and added to workspace
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: "#/components/schemas/User"
+                  token:
+                    type: string
+
+  # ─── Users ────────────────────────────────────────────────────────────────
+
+  /admin/users:
+    get:
+      tags: [Users]
+      summary: List all users
+      description: Requires `admin` or `super-admin` role.
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  users:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/User"
+                  count:
+                    type: integer
+
+  /admin/users/me:
+    get:
+      tags: [Users]
+      summary: Get the current user's profile
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: "#/components/schemas/User"
+    put:
+      tags: [Users]
+      summary: Update the current user's profile
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                first_name:
+                  type: string
+                last_name:
+                  type: string
+                designation:
+                  type: string
+                phone_number:
+                  type: string
+            example:
+              first_name: Alice
+              last_name: Smith
+              designation: Engineering Lead
+      responses:
+        "200":
+          description: Updated user
+
+  /admin/users/me/avatar:
+    post:
+      tags: [Users]
+      summary: Upload a profile avatar
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                avatar:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: Avatar uploaded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  avatar_url:
+                    type: string
+
+  /admin/users/invite:
+    post:
+      tags: [Users]
+      summary: Invite a user to a workspace by email
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, workspace_id]
+              properties:
+                email:
+                  type: string
+                  format: email
+                workspace_id:
+                  type: string
+                role:
+                  type: string
+                  default: member
+            example:
+              email: bob@example.com
+              workspace_id: ws_123
+              role: member
+      responses:
+        "201":
+          description: Invitation created and email sent
+
+  /admin/users/{id}:
+    get:
+      tags: [Users]
+      summary: Get a user by ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: User object
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: "#/components/schemas/User"
+    put:
+      tags: [Users]
+      summary: Update a user (admin only)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                first_name:
+                  type: string
+                last_name:
+                  type: string
+                is_active:
+                  type: boolean
+      responses:
+        "200":
+          description: Updated user
+
+  /admin/users/{id}/role:
+    put:
+      tags: [Users]
+      summary: Assign an AppRole to a user
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [app_role_id]
+              properties:
+                app_role_id:
+                  type: string
+      responses:
+        "200":
+          description: Role assigned
+
+  # ─── Workspaces ───────────────────────────────────────────────────────────
+
+  /admin/workspaces:
+    get:
+      tags: [Workspaces]
+      summary: List workspaces
+      description: |
+        Admins see all workspaces. Members see only workspaces they belong to.
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: List of workspaces
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  workspaces:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Workspace"
+                  count:
+                    type: integer
+    post:
+      tags: [Workspaces]
+      summary: Create a workspace
+      description: Requires `workspace:create` permission. The creator is automatically added as an admin member.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                plan:
+                  type: string
+                  default: free
+            example:
+              name: Acme Corp
+              plan: free
+      responses:
+        "201":
+          description: Workspace created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  workspace:
+                    $ref: "#/components/schemas/Workspace"
+
+  /admin/workspaces/{id}:
+    get:
+      tags: [Workspaces]
+      summary: Get a workspace by ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Workspace object
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  workspace:
+                    $ref: "#/components/schemas/Workspace"
+    put:
+      tags: [Workspaces]
+      summary: Update a workspace
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                plan:
+                  type: string
+      responses:
+        "200":
+          description: Updated workspace
+    delete:
+      tags: [Workspaces]
+      summary: Delete a workspace
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
+  /admin/workspaces/{id}/logo:
+    post:
+      tags: [Workspaces]
+      summary: Upload a workspace logo
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                logo:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: Logo uploaded
+
+  # ─── Workspace Members ────────────────────────────────────────────────────
+
+  /admin/workspaces/{id}/members:
+    get:
+      tags: [Workspace Members]
+      summary: List workspace members
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Members list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  members:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/WorkspaceMember"
+                  count:
+                    type: integer
+    post:
+      tags: [Workspace Members]
+      summary: Add a user to a workspace
+      description: Requires `member:invite` permission.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_id]
+              properties:
+                user_id:
+                  type: string
+                role:
+                  type: string
+                  enum: [admin, member]
+                  default: member
+                app_role_id:
+                  type: string
+                  description: Optional custom AppRole to assign to the user
+      responses:
+        "201":
+          description: Member added
+        "409":
+          description: User already a member
+
+  /admin/workspaces/{id}/members/{userId}:
+    patch:
+      tags: [Workspace Members]
+      summary: Update a member's role
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [role]
+              properties:
+                role:
+                  type: string
+                  enum: [admin, member]
+      responses:
+        "200":
+          description: Role updated
+    delete:
+      tags: [Workspace Members]
+      summary: Remove a member from a workspace
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Member removed
+
+  /admin/workspaces/{id}/invitations:
+    get:
+      tags: [Workspace Members]
+      summary: List pending invitations for a workspace
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of invitations
+    post:
+      tags: [Workspace Members]
+      summary: Create a workspace invitation
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+                role:
+                  type: string
+                  default: member
+      responses:
+        "201":
+          description: Invitation created
+
+  /admin/workspaces/{id}/invitations/{inviteId}:
+    delete:
+      tags: [Workspace Members]
+      summary: Revoke a pending invitation
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: inviteId
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Invitation revoked
+
+  # ─── Teams ────────────────────────────────────────────────────────────────
+
+  /admin/workspaces/{id}/teams:
+    get:
+      tags: [Teams]
+      summary: List teams in a workspace
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Teams list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  teams:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Team"
+                  count:
+                    type: integer
+    post:
+      tags: [Teams]
+      summary: Create a team
+      description: Requires `team:create` permission.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                icon:
+                  type: string
+            example:
+              name: Frontend Team
+              description: Handles all UI work
+      responses:
+        "201":
+          description: Team created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  team:
+                    $ref: "#/components/schemas/Team"
+
+  /admin/workspaces/{id}/teams/{teamId}:
+    get:
+      tags: [Teams]
+      summary: Get a team by ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: teamId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Team object
+    put:
+      tags: [Teams]
+      summary: Update a team
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: teamId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                icon:
+                  type: string
+      responses:
+        "200":
+          description: Updated team
+    delete:
+      tags: [Teams]
+      summary: Delete a team
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: teamId
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
+  /admin/workspaces/{id}/teams/{teamId}/members:
+    get:
+      tags: [Teams]
+      summary: List team members
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: teamId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Team members
+    post:
+      tags: [Teams]
+      summary: Add a user to a team
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: teamId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_id]
+              properties:
+                user_id:
+                  type: string
+      responses:
+        "201":
+          description: Member added
+
+  /admin/workspaces/{id}/teams/{teamId}/members/{userId}:
+    delete:
+      tags: [Teams]
+      summary: Remove a user from a team
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: teamId
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Member removed
+
+  # ─── Projects ─────────────────────────────────────────────────────────────
+
+  /admin/projects:
+    get:
+      tags: [Projects]
+      summary: List projects
+      description: |
+        Admins see all projects. Members see only projects where they have explicit access (via ProjectMember or ProjectTeam).
+      parameters:
+        - in: query
+          name: workspace_id
+          schema:
+            type: string
+          description: Filter by workspace
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [active, archived]
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: List of projects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  projects:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Project"
+                  count:
+                    type: integer
+    post:
+      tags: [Projects]
+      summary: Create a project
+      description: Requires `project:create` permission. The creator is automatically added as a `manager` project member.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, workspace_id]
+              properties:
+                name:
+                  type: string
+                workspace_id:
+                  type: string
+                identifier:
+                  type: string
+                  description: Uppercase short code (auto-generated if omitted)
+                description:
+                  type: string
+                visibility:
+                  type: string
+                  enum: [private, public]
+                  default: private
+                color:
+                  type: string
+                icon:
+                  type: string
+                initial_statuses:
+                  type: array
+                  description: Override the default 6 Kanban statuses
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      key:
+                        type: string
+                      color:
+                        type: string
+                      category:
+                        type: string
+                        enum: [backlog, unstarted, started, completed, cancelled]
+            example:
+              name: Website Redesign
+              workspace_id: ws_abc123
+              identifier: SITE
+              visibility: private
+              color: "#6366f1"
+      responses:
+        "201":
+          description: Project created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  project:
+                    $ref: "#/components/schemas/Project"
+
+  /admin/projects/{id}:
+    get:
+      tags: [Projects]
+      summary: Get a project by ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Project object
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  project:
+                    $ref: "#/components/schemas/Project"
+        "403":
+          description: No access to this project
+        "404":
+          description: Not found
+    put:
+      tags: [Projects]
+      summary: Update a project
+      description: Requires `project:update` permission.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                status:
+                  type: string
+                  enum: [active, archived]
+                visibility:
+                  type: string
+                  enum: [private, public]
+                color:
+                  type: string
+                icon:
+                  type: string
+      responses:
+        "200":
+          description: Updated project
+    delete:
+      tags: [Projects]
+      summary: Soft-delete a project
+      description: Requires `project:delete` permission.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
+  # ─── Project Members ──────────────────────────────────────────────────────
+
+  /admin/projects/{id}/access:
+    get:
+      tags: [Project Members]
+      summary: Get enriched access list (members + teams)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Access list
+
+  /admin/projects/{id}/members:
+    post:
+      tags: [Project Members]
+      summary: Add a user to a project
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_id]
+              properties:
+                user_id:
+                  type: string
+                role:
+                  type: string
+                  default: member
+      responses:
+        "201":
+          description: Member added
+
+  /admin/projects/{id}/members/{userId}:
+    delete:
+      tags: [Project Members]
+      summary: Remove a user from a project
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Member removed
+
+  /admin/projects/{id}/teams:
+    post:
+      tags: [Project Members]
+      summary: Grant a team access to a project
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [team_id]
+              properties:
+                team_id:
+                  type: string
+      responses:
+        "201":
+          description: Team access granted
+
+  /admin/projects/{id}/teams/{teamId}:
+    delete:
+      tags: [Project Members]
+      summary: Remove a team's access from a project
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: teamId
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Access removed
+
+  # ─── Project Statuses ─────────────────────────────────────────────────────
+
+  /admin/projects/{id}/statuses:
+    get:
+      tags: [Project Statuses]
+      summary: List custom statuses for a project
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Statuses list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  statuses:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ProjectStatus"
+    post:
+      tags: [Project Statuses]
+      summary: Create a custom status
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, key, color, category]
+              properties:
+                name:
+                  type: string
+                key:
+                  type: string
+                color:
+                  type: string
+                category:
+                  type: string
+                  enum: [backlog, unstarted, started, completed, cancelled]
+                position:
+                  type: integer
+            example:
+              name: In Review
+              key: in_review
+              color: "#f59e0b"
+              category: started
+      responses:
+        "201":
+          description: Status created
+
+  /admin/projects/{id}/statuses/{statusId}:
+    put:
+      tags: [Project Statuses]
+      summary: Update a status
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: statusId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                color:
+                  type: string
+                category:
+                  type: string
+      responses:
+        "200":
+          description: Updated status
+    delete:
+      tags: [Project Statuses]
+      summary: Delete a status
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: statusId
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
+  /admin/projects/{id}/statuses/reorder:
+    post:
+      tags: [Project Statuses]
+      summary: Reorder statuses
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ordered_ids]
+              properties:
+                ordered_ids:
+                  type: array
+                  items:
+                    type: string
+                  description: Full list of status IDs in the desired order
+      responses:
+        "200":
+          description: Reordered
+
+  # ─── Issues ───────────────────────────────────────────────────────────────
+
+  /admin/issues:
+    get:
+      tags: [Issues]
+      summary: List issues
+      parameters:
+        - in: query
+          name: project_id
+          schema:
+            type: string
+          description: Filter by project (recommended — enforces project access check)
+        - in: query
+          name: status
+          schema:
+            type: string
+          description: Single status key or comma-separated list (e.g. `todo,in_progress`)
+        - in: query
+          name: type
+          schema:
+            type: string
+          description: Single type or comma-separated list
+        - in: query
+          name: priority
+          schema:
+            type: string
+          description: Single priority or comma-separated list
+        - in: query
+          name: sprint_id
+          schema:
+            type: string
+          description: Filter by sprint. Pass `none` to get issues with no sprint.
+        - in: query
+          name: assignee_id
+          schema:
+            type: string
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: List of issues
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  issues:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Issue"
+                  count:
+                    type: integer
+    post:
+      tags: [Issues]
+      summary: Create an issue
+      description: Requires `issue:create` permission. Runs through the `createIssueWorkflow` (DAG with compensation).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, project_id, workspace_id]
+              properties:
+                title:
+                  type: string
+                project_id:
+                  type: string
+                workspace_id:
+                  type: string
+                description:
+                  type: string
+                type:
+                  type: string
+                  enum: [feature, bug, task, story, epic, improvement, question]
+                  default: task
+                priority:
+                  type: string
+                  enum: [urgent, high, medium, low, none]
+                  default: none
+                status:
+                  type: string
+                  description: Must match one of the project's custom status keys
+                assignee_ids:
+                  type: array
+                  items:
+                    type: string
+                sprint_id:
+                  type: string
+                parent_id:
+                  type: string
+                start_date:
+                  type: string
+                  format: date-time
+                due_date:
+                  type: string
+                  format: date-time
+                estimate:
+                  type: number
+                  description: Story point estimate
+            example:
+              title: Fix login crash on iOS 17
+              project_id: proj_abc
+              workspace_id: ws_abc
+              type: bug
+              priority: urgent
+              status: todo
+      responses:
+        "201":
+          description: Issue created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  issue:
+                    $ref: "#/components/schemas/Issue"
+
+  /admin/issues/{id}:
+    get:
+      tags: [Issues]
+      summary: Get an issue by ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Issue object
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  issue:
+                    $ref: "#/components/schemas/Issue"
+    put:
+      tags: [Issues]
+      summary: Update an issue
+      description: |
+        Requires `issue:update` permission.
+
+        Updating `status` triggers the `updateIssueStatusWorkflow`.
+        Updating `assignee_ids` triggers the `assignIssueWorkflow`.
+        Both run with saga compensation on failure.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                status:
+                  type: string
+                priority:
+                  type: string
+                type:
+                  type: string
+                assignee_ids:
+                  type: array
+                  items:
+                    type: string
+                sprint_id:
+                  type: string
+                  nullable: true
+                due_date:
+                  type: string
+                  format: date-time
+                  nullable: true
+                estimate:
+                  type: number
+                  nullable: true
+      responses:
+        "200":
+          description: Updated issue
+    delete:
+      tags: [Issues]
+      summary: Soft-delete an issue
+      description: Requires `issue:delete` permission.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
+  # ─── Comments ─────────────────────────────────────────────────────────────
+
+  /admin/issues/{id}/comments:
+    get:
+      tags: [Comments]
+      summary: List comments on an issue
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Comments list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  comments:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Comment"
+    post:
+      tags: [Comments]
+      summary: Post a comment on an issue
+      description: |
+        The `body` field accepts HTML. To @mention a user, include a span:
+        `<span data-type="mention" data-id="user_id" data-label="Alice">@Alice</span>`
+
+        Pass `metadata.mentioned_user_ids` to trigger mention email notifications.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [body]
+              properties:
+                body:
+                  type: string
+                  description: HTML string
+                metadata:
+                  type: object
+                  properties:
+                    mentioned_user_ids:
+                      type: array
+                      items:
+                        type: string
+            example:
+              body: "<p>Looks good! <span data-type=\"mention\" data-id=\"user_abc\">@Alice</span> can you review?</p>"
+              metadata:
+                mentioned_user_ids: [user_abc]
+      responses:
+        "201":
+          description: Comment created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  comment:
+                    $ref: "#/components/schemas/Comment"
+
+  # ─── Sprints ──────────────────────────────────────────────────────────────
+
+  /admin/sprints:
+    get:
+      tags: [Sprints]
+      summary: List sprints
+      parameters:
+        - in: query
+          name: project_id
+          schema:
+            type: string
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [planned, active, completed]
+      responses:
+        "200":
+          description: List of sprints
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sprints:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Sprint"
+                  count:
+                    type: integer
+    post:
+      tags: [Sprints]
+      summary: Create a sprint
+      description: Requires `sprint:create` permission.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, project_id]
+              properties:
+                name:
+                  type: string
+                project_id:
+                  type: string
+                goal:
+                  type: string
+                start_date:
+                  type: string
+                  format: date-time
+                end_date:
+                  type: string
+                  format: date-time
+            example:
+              name: Sprint 3
+              project_id: proj_abc
+              start_date: "2026-03-10T00:00:00Z"
+              end_date: "2026-03-24T00:00:00Z"
+      responses:
+        "201":
+          description: Sprint created
+
+  /admin/sprints/{id}:
+    get:
+      tags: [Sprints]
+      summary: Get a sprint by ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Sprint object
+    put:
+      tags: [Sprints]
+      summary: Update a sprint
+      description: |
+        Also used to start (`status: active`) or complete (`status: completed`) a sprint.
+        Completing a sprint runs the `completeSprintWorkflow`, which moves unfinished issues to the next sprint.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                goal:
+                  type: string
+                status:
+                  type: string
+                  enum: [planned, active, completed]
+                start_date:
+                  type: string
+                  format: date-time
+                end_date:
+                  type: string
+                  format: date-time
+      responses:
+        "200":
+          description: Updated sprint
+    delete:
+      tags: [Sprints]
+      summary: Delete a sprint
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
+  # ─── Notifications ────────────────────────────────────────────────────────
+
+  /admin/notifications:
+    get:
+      tags: [Notifications]
+      summary: List notifications for the current user
+      parameters:
+        - in: query
+          name: unread
+          schema:
+            type: boolean
+          description: Pass `true` to return only unread notifications
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: Notifications list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  notifications:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Notification"
+                  count:
+                    type: integer
+
+  /admin/notifications/{id}/read:
+    post:
+      tags: [Notifications]
+      summary: Mark a notification as read
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Marked as read
+
+  /admin/notifications/read-all:
+    post:
+      tags: [Notifications]
+      summary: Mark all notifications as read
+      responses:
+        "200":
+          description: All marked as read
+
+  # ─── Roles ────────────────────────────────────────────────────────────────
+
+  /admin/roles:
+    get:
+      tags: [Roles]
+      summary: List all AppRoles
+      responses:
+        "200":
+          description: Roles list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  roles:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/AppRole"
+                  count:
+                    type: integer
+    post:
+      tags: [Roles]
+      summary: Create a custom AppRole
+      description: Requires `role:create` permission.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                permissions:
+                  type: array
+                  items:
+                    type: string
+                  description: List of permission strings (e.g. `project:create`, `issue:delete`)
+            example:
+              name: Project Manager
+              permissions: [project:create, project:update, sprint:create, issue:assign]
+      responses:
+        "201":
+          description: Role created
+
+  /admin/roles/{id}:
+    get:
+      tags: [Roles]
+      summary: Get a role by ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Role object
+    put:
+      tags: [Roles]
+      summary: Update a role
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                permissions:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        "200":
+          description: Updated role
+    delete:
+      tags: [Roles]
+      summary: Delete a role
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
+  # ─── Org Calendar ─────────────────────────────────────────────────────────
+
+  /admin/org/calendar:
+    get:
+      tags: [Org Calendar]
+      summary: Get the organisation's working calendar
+      responses:
+        "200":
+          description: Calendar settings
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  calendar:
+                    $ref: "#/components/schemas/OrgCalendar"
+    put:
+      tags: [Org Calendar]
+      summary: Update the organisation's working calendar
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                work_days:
+                  type: array
+                  items:
+                    type: integer
+                  description: 0=Sunday … 6=Saturday. Default is Mon–Fri [1,2,3,4,5].
+                timezone:
+                  type: string
+            example:
+              work_days: [1, 2, 3, 4, 5]
+              timezone: America/New_York
+      responses:
+        "200":
+          description: Updated calendar
+
+  /admin/org/holidays:
+    get:
+      tags: [Org Calendar]
+      summary: List organisation holidays
+      responses:
+        "200":
+          description: Holidays list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  holidays:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/OrgHoliday"
+    post:
+      tags: [Org Calendar]
+      summary: Add a holiday
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, date]
+              properties:
+                name:
+                  type: string
+                date:
+                  type: string
+                  format: date
+                recurring:
+                  type: boolean
+                  default: false
+                  description: If true, repeats every year on the same date
+            example:
+              name: New Year's Day
+              date: "2026-01-01"
+              recurring: true
+      responses:
+        "201":
+          description: Holiday added
+
+  /admin/org/holidays/{holidayId}:
+    put:
+      tags: [Org Calendar]
+      summary: Update a holiday
+      parameters:
+        - in: path
+          name: holidayId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                date:
+                  type: string
+                  format: date
+                recurring:
+                  type: boolean
+      responses:
+        "200":
+          description: Updated holiday
+    delete:
+      tags: [Org Calendar]
+      summary: Delete a holiday
+      parameters:
+        - in: path
+          name: holidayId
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
+  # ─── Public share ─────────────────────────────────────────────────────────
+
+  /public/share/{token}:
+    get:
+      tags: [Public]
+      summary: Get a shared project by share token
+      description: No authentication required. Share tokens are generated via `POST /admin/projects/{id}/share`.
+      security: []
+      parameters:
+        - in: path
+          name: token
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Shared project details
+        "404":
+          description: Invalid or expired token
+
+  /public/share/{token}/issues:
+    get:
+      tags: [Public]
+      summary: List issues on a shared project
+      security: []
+      parameters:
+        - in: path
+          name: token
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Issues list
+
+  /public/share/{token}/sprints:
+    get:
+      tags: [Public]
+      summary: List sprints on a shared project
+      security: []
+      parameters:
+        - in: path
+          name: token
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Sprints list

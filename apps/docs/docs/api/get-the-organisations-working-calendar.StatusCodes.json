@@ -1,0 +1,1 @@
+{"responses":{"200":{"description":"Calendar settings","content":{"application/json":{"schema":{"type":"object","properties":{"calendar":{"type":"object","properties":{"id":{"type":"string"},"work_days":{"type":"array","items":{"type":"integer","description":"0=Sunday, 1=Monday … 6=Saturday"}},"timezone":{"type":"string"}},"title":"OrgCalendar"}}}}}}}}
