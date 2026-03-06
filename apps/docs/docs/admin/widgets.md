@@ -95,7 +95,13 @@ export default defineWidgets([
 
 ## React Sharing
 
-Widget bundles are compiled with esbuild and loaded as ESM modules at runtime. The `meridian serve-dashboard` command rewrites `import React from 'react'` inside your widget bundle to use `window.__React` — the same React instance already loaded by the dashboard. This avoids duplicate React instances and hook failures.
+Widget bundles are compiled with esbuild and loaded as ESM modules at runtime. Always import React explicitly at the top of each widget file:
+
+```typescript
+import React from "react"
+```
+
+The `meridian serve-dashboard` command rewrites this import to use `window.__React` — the same React instance already loaded by the dashboard. This avoids duplicate React instances and hook failures.
 
 ---
 

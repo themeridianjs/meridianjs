@@ -66,6 +66,7 @@ const sidebars = {
       label: 'Tutorials',
       items: [
         'tutorials/build-a-module',
+        'tutorials/build-a-widget',
         'tutorials/build-a-plugin',
       ],
     },

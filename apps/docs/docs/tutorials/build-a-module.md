@@ -221,6 +221,65 @@ This registers `GET /admin/projects/:id/budget` and `POST /admin/projects/:id/bu
 
 ---
 
+## Optional — Restrict access by role
+
+By default, any authenticated user can call these routes. You can lock them down in two ways.
+
+**Option A — Role guard in `middlewares.ts`** (protects the whole route prefix at once):
+
+```typescript
+// src/api/middlewares.ts
+import { authenticateJWT, requireRoles } from "@meridianjs/auth"
+
+export default {
+  routes: [
+    { matcher: "/admin", middlewares: [authenticateJWT] },
+    // Only admins can read or write budget data
+    { matcher: "/admin/projects/:id/budget", middlewares: [requireRoles("admin", "super-admin")] },
+  ],
+}
+```
+
+A `member` hitting `GET /admin/projects/:id/budget` now gets `403 Forbidden`.
+
+**Option B — Permission guard inline** (per-handler, using a custom `AppRole` permission string):
+
+```typescript
+// src/api/admin/projects/[id]/budget/route.ts
+import { requirePermission } from "@meridianjs/auth"
+
+export async function POST(req: any, res: Response) {
+  requirePermission("budget:write")(req, res, async () => {
+    const svc = req.scope.resolve("projectBudgetModuleService") as ProjectBudgetModuleService
+    const { amount } = req.body
+    const budget = await svc.recordExpense(req.params.id, amount)
+    res.json({ budget })
+  })
+}
+```
+
+Create the matching `AppRole` via the API:
+
+```bash
+curl -X POST http://localhost:9000/admin/roles \
+  -H "Authorization: Bearer <admin-token>" \
+  -H "Content-Type: application/json" \
+  -d '{ "name": "Budget Manager", "permissions": ["budget:write"], "workspace_id": "<ws-id>" }'
+```
+
+Then assign it to a user:
+
+```bash
+curl -X POST http://localhost:9000/admin/roles/<role-id>/assign \
+  -H "Authorization: Bearer <admin-token>" \
+  -H "Content-Type: application/json" \
+  -d '{ "user_id": "<user-id>" }'
+```
+
+Only users with that role — or `super-admin` — can record expenses. See [RBAC & Permissions](../auth/rbac) for the full guide.
+
+---
+
 ## What you built
 
 ```
@@ -230,3 +289,21 @@ POST /admin/projects/:id/budget/setup  → createProjectBudget (auto-generated)
 ```
 
 The module is fully isolated, has its own schema, and is resolvable from any route or subscriber in the application.
+
+---
+
+## Next steps
+
+Now that the API is working, display this data in the admin dashboard with a custom widget:
+
+**[→ Tutorial: Build a Widget — Project Budget Panel](./build-a-widget)**
+
+---
+
+## Full tutorial series
+
+| Tutorial | What you learn |
+|---|---|
+| **Build a Module** *(this page)* | Persist data, write a service, expose API routes |
+| [Build a Widget →](./build-a-widget) | Display module data in the admin dashboard |
+| [Build a Plugin →](./build-a-plugin) | Add cron jobs, event subscribers, and new routes as a plugin |
