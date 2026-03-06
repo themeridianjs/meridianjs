@@ -106,6 +106,119 @@ export default defineConfig({
 })
 ```
 
+## Modules vs Plugins
+
+Meridian has two extension primitives. Choosing the right one depends on whether you need to **store data** or **add behaviour**.
+
+### Module — use when you need a new entity
+
+A module owns a single bounded context: a data model, a database schema, and the business logic to manage it. It has no knowledge of HTTP or events.
+
+**Create a module when you need to:**
+- Persist a new type of data (e.g. `Client`, `Invoice`, `Document`)
+- Add custom CRUD or domain methods on top of that data
+- Make the data linkable to other modules (foreign-key-free joins via `linkable`)
+
+```typescript
+// src/modules/client/index.ts
+import { Module, MeridianService, model } from "@meridianjs/framework-utils"
+
+const ClientModel = model.define("client", {
+  id:      model.id(),
+  name:    model.text(),
+  email:   model.text(),
+})
+
+class ClientModuleService extends MeridianService({ Client: ClientModel }) {
+  constructor(container) { super(container) }
+  // Auto-generated: listClients, retrieveClient, createClient, updateClient, deleteClient
+
+  async findByEmail(email: string) {
+    const repo = this.container.resolve("clientRepository")
+    return repo.findOne({ email })
+  }
+}
+
+export default Module("clientModuleService", {
+  service: ClientModuleService,
+  models: [ClientModel],
+})
+```
+
+Register in `meridian.config.ts`:
+
+```typescript
+modules: [{ resolve: "./src/modules/client/index.ts" }]
+```
+
+Resolve in any route handler:
+
+```typescript
+const clients = req.scope.resolve("clientModuleService") as ClientModuleService
+```
+
+---
+
+### Plugin — use when you need routes, events, or jobs
+
+A plugin is a deployable feature package. It has no schema of its own but wires together API routes, event subscribers, and cron jobs — and can declare which modules it depends on via `ctx.addModule()`.
+
+**Create a plugin when you need to:**
+- Add a group of related API routes (e.g. a billing integration, a reporting feature)
+- Handle domain events and trigger side-effects (emails, webhooks, syncs)
+- Run scheduled background jobs
+- Ship a reusable feature to other Meridian projects as an npm package
+
+```
+src/plugins/billing/
+├── api/
+│   └── admin/billing/route.ts      ← auto-registered as GET/POST /admin/billing
+├── subscribers/
+│   └── invoice-paid.ts             ← auto-registered for the "invoice.paid" event
+├── jobs/
+│   └── send-reminders.ts           ← auto-registered as a cron job
+└── index.ts                        ← pluginRoot + register()
+```
+
+```typescript
+// src/plugins/billing/index.ts
+import path from "path"
+import type { PluginRegistrationContext } from "@meridianjs/types"
+
+export const pluginRoot = path.resolve(__dirname, "..")
+
+export default async function register(ctx: PluginRegistrationContext) {
+  // Declare the modules this plugin needs — loaded before routes are mounted
+  await ctx.addModule({ resolve: "./src/modules/invoice/index.ts" })
+}
+```
+
+Register in `meridian.config.ts`:
+
+```typescript
+plugins: [
+  { resolve: "@meridianjs/meridian" },           // core plugin
+  { resolve: "./src/plugins/billing/index.ts" },  // your plugin
+]
+```
+
+---
+
+### Quick comparison
+
+| | Module | Plugin |
+|---|---|---|
+| Has a database schema | Yes | No (loads modules that do) |
+| Registered in | `modules[]` | `plugins[]` |
+| Primary export | `Module(...)` default | `pluginRoot` + `register()` |
+| Owns | Data model + service | Routes + subscribers + jobs |
+| Visible to routes as | `req.scope.resolve("myModuleService")` | auto-scanned directories |
+| Publish as npm package | Yes | Yes |
+
+**Rule of thumb:** if you're asking "where does this data live?", you need a module. If you're asking "what should happen when X occurs?", you need a plugin. Most non-trivial features need both — a module for storage and a plugin (or the default `@meridianjs/meridian` plugin) to expose it over HTTP.
+
+---
+
 ## Custom Modules
 
 ```typescript

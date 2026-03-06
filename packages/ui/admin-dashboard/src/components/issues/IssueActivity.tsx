@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import { format } from "date-fns"
 import { useIssueComments, useIssueActivities } from "@/api/hooks/useIssues"
 import type { Activity } from "@/api/hooks/useIssues"
@@ -164,11 +164,22 @@ export function IssueActivity({
     onTabChange?.(tab)
   }
 
+  const commentsEndRef = useRef<HTMLDivElement>(null)
+  const prevCommentCountRef = useRef(0)
+
   const { user: currentUser } = useAuth()
   const { data: userMap } = useUserMap()
   const { data: comments, isLoading: loadingComments } = useIssueComments(issueId)
   const { data: activities, isLoading: loadingActivities } = useIssueActivities(issueId)
   const { data: allAttachments } = useAttachments(issueId)
+
+  useEffect(() => {
+    const count = comments?.length ?? 0
+    if (count > prevCommentCountRef.current) {
+      commentsEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" })
+    }
+    prevCommentCountRef.current = count
+  }, [comments?.length])
 
   const getCommentAuthor = (authorId: string) => {
     if (currentUser && authorId === currentUser.id) {
@@ -282,6 +293,8 @@ export function IssueActivity({
               View all {comments.length} comments →
             </button>
           )}
+
+          <div ref={commentsEndRef} />
 
           {!hideCommentInput && (
             <CommentInput issueId={issueId} projectId={projectId} />

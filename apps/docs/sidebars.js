@@ -63,6 +63,14 @@ const sidebars = {
     },
     {
       type: 'category',
+      label: 'Tutorials',
+      items: [
+        'tutorials/build-a-module',
+        'tutorials/build-a-plugin',
+      ],
+    },
+    {
+      type: 'category',
       label: 'Deployment',
       items: [
         'deployment/production-checklist',
