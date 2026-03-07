@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react"
-import { useParams } from "react-router-dom"
+import { useParams, Navigate } from "react-router-dom"
+import { useIsMobile } from "@/lib/hooks"
 import { useQueryClient, useMutation } from "@tanstack/react-query"
 import { format, addDays, subDays } from "date-fns"
 import { useProjectByKey } from "@/api/hooks/useProjects"
@@ -54,8 +55,9 @@ function issueToFeature(issue: Issue, statusColor: string): GanttFeature {
 }
 
 export function ProjectTimelinePage() {
-  const { projectKey } = useParams<{ projectKey: string }>()
+  const { projectKey, workspace } = useParams<{ projectKey: string; workspace: string }>()
   const qc = useQueryClient()
+  const isMobile = useIsMobile()
 
   const [range, setRange] = useState<Range>("monthly")
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null)
@@ -156,6 +158,10 @@ export function ProjectTimelinePage() {
   const handleSelectIssue = (id: string) => {
     const issue = issues.find((i) => i.id === id) ?? null
     setSelectedIssue(issue)
+  }
+
+  if (isMobile && projectKey && workspace) {
+    return <Navigate to={`/${workspace}/projects/${projectKey}/issues`} replace />
   }
 
   if (!projectKey) return null

@@ -228,8 +228,8 @@ export function IssueNewPage() {
       </div>
 
       {/* ── Content ──────────────────────────────────────────────────────────── */}
-      <div className="px-2 py-2">
-        <div className="grid grid-cols-[1fr_256px] gap-5 items-start">
+      <div className="px-2 py-2 pb-24 md:pb-2">
+        <div className="flex flex-col gap-4 md:grid md:grid-cols-[1fr_256px] md:gap-5 md:items-start">
 
           {/* ── Left — title + editor ───────────────────────────────────────── */}
           <div className="bg-white dark:bg-card border border-border rounded-xl overflow-hidden shadow-sm">

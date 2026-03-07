@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react"
-import { useParams } from "react-router-dom"
+import { useParams, Navigate } from "react-router-dom"
+import { useIsMobile } from "@/lib/hooks"
 import { useProjectByKey } from "@/api/hooks/useProjects"
 import { useIssues, type BoardFilters } from "@/api/hooks/useIssues"
 import type { Issue } from "@/api/hooks/useIssues"
@@ -16,7 +17,8 @@ import { Plus } from "lucide-react"
 import { WidgetZone } from "@/components/WidgetZone"
 
 export function ProjectBoardPage() {
-  const { projectKey } = useParams<{ projectKey: string }>()
+  const { projectKey, workspace } = useParams<{ projectKey: string; workspace: string }>()
+  const isMobile = useIsMobile()
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null)
   const [createOpen, setCreateOpen] = useState(false)
   const [filters, setFilters] = useState<BoardFilters>({})
@@ -29,14 +31,6 @@ export function ProjectBoardPage() {
   const { data: userMap } = useUserMap()
   const reorderStatuses = useReorderProjectStatuses(projectId)
 
-  if (!projectKey) return null
-
-  const isLoading = issuesLoading || statusesLoading || !project
-
-  const handleColumnsReorder = (orderedIds: string[]) => {
-    reorderStatuses.mutate(orderedIds)
-  }
-
   const members = useMemo(() => {
     if (!access?.members || !userMap) return []
     return access.members
@@ -47,6 +41,18 @@ export function ProjectBoardPage() {
       })
       .filter((m): m is NonNullable<typeof m> => m !== null)
   }, [access, userMap])
+
+  if (isMobile && projectKey && workspace) {
+    return <Navigate to={`/${workspace}/projects/${projectKey}/issues`} replace />
+  }
+
+  if (!projectKey) return null
+
+  const isLoading = issuesLoading || statusesLoading || !project
+
+  const handleColumnsReorder = (orderedIds: string[]) => {
+    reorderStatuses.mutate(orderedIds)
+  }
 
   return (
     <div className="flex flex-col h-full gap-0">

@@ -93,107 +93,172 @@ function SprintRow({ sprint, projectId, issueCount, workingDays, holidays = [] }
   const hasStart = !!sprint.start_date
   const hasEnd = !!sprint.end_date
 
+  const dateRangeEl = (
+    <>
+      {hasStart || hasEnd ? (
+        <span className="flex items-center gap-1">
+          <CalendarRange className="h-3.5 w-3.5 shrink-0" />
+          {hasStart ? format(new Date(sprint.start_date!), "MMM d") : "—"}
+          {" → "}
+          {hasEnd ? format(new Date(sprint.end_date!), "MMM d, yyyy") : "—"}
+          {hasStart && hasEnd && workingDays && (() => {
+            const biz = countBusinessDays(
+              new Date(sprint.start_date!),
+              new Date(sprint.end_date!),
+              workingDays,
+              holidays
+            )
+            return (
+              <span className="ml-1 text-[11px] text-muted-foreground/70">
+                ({biz}d)
+              </span>
+            )
+          })()}
+        </span>
+      ) : (
+        <span className="italic text-muted-foreground/60">No dates</span>
+      )}
+    </>
+  )
+
   return (
-    <div className="flex items-center gap-4 px-6 py-4 hover:bg-muted/30 transition-colors group">
-      {/* Left: status icon + name + goal */}
-      <div className="flex items-center gap-3 flex-1 min-w-0">
-        <div className={cn(
-          "flex h-7 w-7 items-center justify-center rounded-full shrink-0",
-          sprint.status === "active" ? "bg-emerald-100 dark:bg-emerald-900/30" :
-          sprint.status === "completed" ? "bg-blue-100 dark:bg-blue-900/30" :
-          "bg-zinc-100 dark:bg-zinc-800"
-        )}>
-          <Icon className={cn("h-3.5 w-3.5",
-            sprint.status === "active" ? "text-emerald-600 dark:text-emerald-400" :
-            sprint.status === "completed" ? "text-blue-600 dark:text-blue-400" :
-            "text-zinc-500"
-          )} />
+    <>
+      {/* Desktop row */}
+      <div className="hidden md:flex items-center gap-4 px-6 py-4 hover:bg-muted/30 transition-colors group">
+        {/* Left: status icon + name + goal */}
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          <div className={cn(
+            "flex h-7 w-7 items-center justify-center rounded-full shrink-0",
+            sprint.status === "active" ? "bg-emerald-100 dark:bg-emerald-900/30" :
+            sprint.status === "completed" ? "bg-blue-100 dark:bg-blue-900/30" :
+            "bg-zinc-100 dark:bg-zinc-800"
+          )}>
+            <Icon className={cn("h-3.5 w-3.5",
+              sprint.status === "active" ? "text-emerald-600 dark:text-emerald-400" :
+              sprint.status === "completed" ? "text-blue-600 dark:text-blue-400" :
+              "text-zinc-500"
+            )} />
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-medium truncate">{sprint.name}</p>
+            {sprint.goal && (
+              <p className="text-xs text-muted-foreground truncate mt-0.5 flex items-center gap-1">
+                <Target className="h-3 w-3 shrink-0" />
+                {sprint.goal}
+              </p>
+            )}
+          </div>
         </div>
-        <div className="min-w-0">
-          <p className="text-sm font-medium truncate">{sprint.name}</p>
-          {sprint.goal && (
-            <p className="text-xs text-muted-foreground truncate mt-0.5 flex items-center gap-1">
-              <Target className="h-3 w-3 shrink-0" />
-              {sprint.goal}
-            </p>
+
+        {/* Date range */}
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0 w-64">
+          <CalendarRange className="h-3.5 w-3.5 shrink-0" />
+          {hasStart || hasEnd ? (
+            <span>
+              {hasStart ? format(new Date(sprint.start_date!), "MMM d") : "—"}
+              {" → "}
+              {hasEnd ? format(new Date(sprint.end_date!), "MMM d, yyyy") : "—"}
+              {hasStart && hasEnd && workingDays && (() => {
+                const biz = countBusinessDays(
+                  new Date(sprint.start_date!),
+                  new Date(sprint.end_date!),
+                  workingDays,
+                  holidays
+                )
+                return (
+                  <span className="ml-1.5 text-[11px] text-muted-foreground/70">
+                    ({biz} biz day{biz !== 1 ? "s" : ""})
+                  </span>
+                )
+              })()}
+            </span>
+          ) : (
+            <span className="italic">No dates set</span>
           )}
         </div>
-      </div>
 
-      {/* Date range */}
-      <div className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0 w-64">
-        <CalendarRange className="h-3.5 w-3.5 shrink-0" />
-        {hasStart || hasEnd ? (
-          <span>
-            {hasStart ? format(new Date(sprint.start_date!), "MMM d") : "—"}
-            {" → "}
-            {hasEnd ? format(new Date(sprint.end_date!), "MMM d, yyyy") : "—"}
-            {hasStart && hasEnd && workingDays && (() => {
-              const biz = countBusinessDays(
-                new Date(sprint.start_date!),
-                new Date(sprint.end_date!),
-                workingDays,
-                holidays
-              )
-              return (
-                <span className="ml-1.5 text-[11px] text-muted-foreground/70">
-                  ({biz} biz day{biz !== 1 ? "s" : ""})
-                </span>
-              )
-            })()}
-          </span>
-        ) : (
-          <span className="italic">No dates set</span>
-        )}
-      </div>
+        {/* Issue count */}
+        <div className="text-xs text-muted-foreground shrink-0 w-20 text-right">
+          {issueCount} issue{issueCount !== 1 ? "s" : ""}
+        </div>
 
-      {/* Issue count */}
-      <div className="text-xs text-muted-foreground shrink-0 w-20 text-right">
-        {issueCount} issue{issueCount !== 1 ? "s" : ""}
-      </div>
+        {/* Status badge */}
+        <Badge className={cn("shrink-0 text-[11px] border-0 w-20 justify-center", cfg.badge)}>
+          {cfg.label}
+        </Badge>
 
-      {/* Status badge */}
-      <Badge className={cn("shrink-0 text-[11px] border-0 w-20 justify-center", cfg.badge)}>
-        {cfg.label}
-      </Badge>
-
-      {/* Actions */}
-      <div className="flex items-center gap-1.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-        {sprint.status === "planned" && (
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-7 text-xs gap-1"
-            onClick={startSprint}
-            disabled={update.isPending}
-          >
-            <Play className="h-3 w-3" />
-            Start
+        {/* Actions */}
+        <div className="flex items-center gap-1.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+          {sprint.status === "planned" && (
+            <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={startSprint} disabled={update.isPending}>
+              <Play className="h-3 w-3" />
+              Start
+            </Button>
+          )}
+          {sprint.status === "active" && (
+            <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={completeSprint} disabled={update.isPending}>
+              <CheckCircle2 className="h-3 w-3" />
+              Complete
+            </Button>
+          )}
+          <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive" onClick={handleDelete} disabled={deleteSprint.isPending}>
+            <Trash2 className="h-3.5 w-3.5" />
           </Button>
-        )}
-        {sprint.status === "active" && (
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-7 text-xs gap-1"
-            onClick={completeSprint}
-            disabled={update.isPending}
-          >
-            <CheckCircle2 className="h-3 w-3" />
-            Complete
-          </Button>
-        )}
-        <Button
-          size="sm"
-          variant="ghost"
-          className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
-          onClick={handleDelete}
-          disabled={deleteSprint.isPending}
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-        </Button>
+        </div>
       </div>
-    </div>
+
+      {/* Mobile card */}
+      <div className="md:hidden px-4 py-3 hover:bg-muted/30 transition-colors">
+        <div className="flex items-start gap-3">
+          <div className={cn(
+            "flex h-7 w-7 items-center justify-center rounded-full shrink-0 mt-0.5",
+            sprint.status === "active" ? "bg-emerald-100 dark:bg-emerald-900/30" :
+            sprint.status === "completed" ? "bg-blue-100 dark:bg-blue-900/30" :
+            "bg-zinc-100 dark:bg-zinc-800"
+          )}>
+            <Icon className={cn("h-3.5 w-3.5",
+              sprint.status === "active" ? "text-emerald-600 dark:text-emerald-400" :
+              sprint.status === "completed" ? "text-blue-600 dark:text-blue-400" :
+              "text-zinc-500"
+            )} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <p className="text-sm font-medium truncate flex-1">{sprint.name}</p>
+              <Badge className={cn("shrink-0 text-[11px] border-0", cfg.badge)}>{cfg.label}</Badge>
+            </div>
+            {sprint.goal && (
+              <p className="text-xs text-muted-foreground line-clamp-2 mb-1.5 flex items-center gap-1">
+                <Target className="h-3 w-3 shrink-0" />
+                {sprint.goal}
+              </p>
+            )}
+            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+              {dateRangeEl}
+              <span>·</span>
+              <span>{issueCount} issue{issueCount !== 1 ? "s" : ""}</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-1 shrink-0">
+            {sprint.status === "planned" && (
+              <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={startSprint} disabled={update.isPending}>
+                <Play className="h-3 w-3" />
+                Start
+              </Button>
+            )}
+            {sprint.status === "active" && (
+              <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={completeSprint} disabled={update.isPending}>
+                <CheckCircle2 className="h-3 w-3" />
+                Complete
+              </Button>
+            )}
+            <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive" onClick={handleDelete} disabled={deleteSprint.isPending}>
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        </div>
+      </div>
+    </>
   )
 }
 

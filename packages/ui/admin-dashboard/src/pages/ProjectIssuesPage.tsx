@@ -584,6 +584,7 @@ interface CreateDialogState {
 }
 
 export function ProjectIssuesPage() {
+  const navigate = useNavigate()
   const { workspace, projectKey } = useParams<{ workspace: string; projectKey: string }>()
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null)
   const [createDialog, setCreateDialog] = useState<CreateDialogState>({ open: false })
@@ -738,10 +739,10 @@ export function ProjectIssuesPage() {
         </div>
 
         {/* Toolbar */}
-        <div className="flex items-center justify-between px-6 py-3 border-b border-border gap-3 flex-wrap">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-col gap-2 px-4 md:px-6 py-3 border-b border-border md:flex-row md:items-center md:justify-between md:gap-3">
+          <div className="flex items-center gap-2 md:overflow-x-auto md:scrollbar-none">
             <Select value={sprintFilter} onValueChange={setSprintFilter}>
-              <SelectTrigger className="h-8 text-xs w-[140px] bg-transparent">
+              <SelectTrigger className="h-8 text-xs flex-1 md:flex-none md:w-[140px] md:shrink-0 bg-transparent">
                 <SelectValue placeholder="Sprint" />
               </SelectTrigger>
               <SelectContent>
@@ -754,7 +755,7 @@ export function ProjectIssuesPage() {
             </Select>
 
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="h-8 text-xs w-[130px] bg-transparent">
+              <SelectTrigger className="h-8 text-xs flex-1 md:flex-none md:w-[130px] md:shrink-0 bg-transparent">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -766,7 +767,7 @@ export function ProjectIssuesPage() {
             </Select>
 
             <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-              <SelectTrigger className="h-8 text-xs w-[130px] bg-transparent">
+              <SelectTrigger className="h-8 text-xs flex-1 md:flex-none md:w-[130px] md:shrink-0 bg-transparent">
                 <SelectValue placeholder="Priority" />
               </SelectTrigger>
               <SelectContent>
@@ -784,13 +785,13 @@ export function ProjectIssuesPage() {
               placeholder="Search..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-8 h-8 w-[200px] text-xs bg-transparent"
+              className="pl-8 h-8 w-full md:w-[200px] text-xs bg-transparent"
             />
           </div>
         </div>
 
-        {/* Table header + scrollable content */}
-        <div className="overflow-x-auto">
+        {/* Desktop: scrollable table (hidden on mobile) */}
+        <div className="hidden md:block overflow-x-auto">
           <div className="min-w-[1025px]">
             {/* Table header */}
             <div className={cn("grid items-center py-2.5 border-b border-border", GRID)}>
@@ -883,6 +884,55 @@ export function ProjectIssuesPage() {
             )}
           </div>{/* /min-w */}
         </div>{/* /overflow-x-auto */}
+
+        {/* Mobile: flat card list (no horizontal scroll) */}
+        <div className="md:hidden divide-y divide-border/60">
+          {isLoading ? (
+            [1, 2, 3, 4].map((i) => (
+              <div key={i} className="flex items-start gap-3 px-4 py-3">
+                <div className="flex-1 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="h-3 w-10 bg-muted rounded animate-pulse" />
+                    <div className="h-4 w-48 bg-muted rounded animate-pulse" />
+                  </div>
+                  <div className="h-3 w-32 bg-muted rounded animate-pulse" />
+                </div>
+              </div>
+            ))
+          ) : topLevel.length === 0 ? null : (
+            topLevel.map((issue) => {
+              const statusColor = statusColorMap?.[issue.status] ?? "#94a3b8"
+              const activeSprint = allSprints.find((s) => s.id === issue.sprint_id)
+              return (
+                <div
+                  key={issue.id}
+                  onClick={() => navigate(`/${workspace}/projects/${projectKey}/issues/${issue.id}`)}
+                  className="flex items-start gap-3 px-4 py-3 hover:bg-[#f9fafb] dark:hover:bg-muted/30 cursor-pointer transition-colors"
+                >
+                  <div className="flex-1 min-w-0 space-y-1">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-[10px] font-mono text-muted-foreground shrink-0">{issue.identifier}</span>
+                      <span className="text-sm text-foreground truncate font-medium">{issue.title}</span>
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <PriorityIcon priority={issue.priority} />
+                      <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                        <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: statusColor }} />
+                        {statusLabels[issue.status] ?? issue.status}
+                      </span>
+                      {activeSprint && (
+                        <span className="text-[11px] text-muted-foreground truncate max-w-[120px]">{activeSprint.name}</span>
+                      )}
+                      {issue.due_date && (
+                        <span className="text-[11px] text-muted-foreground">{format(new Date(issue.due_date), "MMM d")}</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )
+            })
+          )}
+        </div>
 
         {/* Footer */}
         {!isLoading && totalCount > 0 && (

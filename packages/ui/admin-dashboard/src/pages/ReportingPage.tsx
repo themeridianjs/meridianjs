@@ -147,50 +147,56 @@ export function ReportingPage({ workspaceId }: { workspaceId?: string }) {
       </div>
 
       {/* Filter bar */}
-      <div className="bg-white dark:bg-card border border-border rounded-xl px-4 py-3 flex items-center gap-3 flex-wrap">
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0">
-          <CalendarRange className="h-3.5 w-3.5" />
-          <span className="font-medium">Date range</span>
+      <div className="bg-white dark:bg-card border border-border rounded-xl px-4 py-3 flex flex-col gap-3 md:flex-row md:items-center md:flex-wrap">
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0">
+            <CalendarRange className="h-3.5 w-3.5" />
+            <span className="font-medium">Date range</span>
+          </div>
+          <DatePicker value={from} onChange={setFrom} placeholder="From" />
+          <span className="text-xs text-muted-foreground shrink-0">→</span>
+          <DatePicker value={to} onChange={setTo} placeholder="To" />
         </div>
-        <DatePicker value={from} onChange={setFrom} placeholder="From" />
-        <span className="text-xs text-muted-foreground">→</span>
-        <DatePicker value={to} onChange={setTo} placeholder="To" />
 
-        <div className="w-px h-5 bg-border mx-1 shrink-0" />
+        <div className="hidden md:block w-px h-5 bg-border mx-1 shrink-0" />
 
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0">
-          <Users className="h-3.5 w-3.5" />
-          <span className="font-medium">Employees</span>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0">
+            <Users className="h-3.5 w-3.5" />
+            <span className="font-medium">Employees</span>
+          </div>
+          {usersLoading ? (
+            <Skeleton className="h-8 w-40" />
+          ) : (
+            <MultiSelect
+              options={userOptions}
+              selected={selectedUserIds}
+              onSelectionChange={setSelectedUserIds}
+              placeholder="All employees"
+              className="w-44"
+            />
+          )}
         </div>
-        {usersLoading ? (
-          <Skeleton className="h-8 w-40" />
-        ) : (
-          <MultiSelect
-            options={userOptions}
-            selected={selectedUserIds}
-            onSelectionChange={setSelectedUserIds}
-            placeholder="All employees"
-            className="w-44"
-          />
-        )}
 
-        <div className="w-px h-5 bg-border mx-1 shrink-0" />
+        <div className="hidden md:block w-px h-5 bg-border mx-1 shrink-0" />
 
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0">
-          <Layers className="h-3.5 w-3.5" />
-          <span className="font-medium">Projects</span>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0">
+            <Layers className="h-3.5 w-3.5" />
+            <span className="font-medium">Projects</span>
+          </div>
+          {projectsLoading ? (
+            <Skeleton className="h-8 w-40" />
+          ) : (
+            <MultiSelect
+              options={projectOptions}
+              selected={selectedProjectIds}
+              onSelectionChange={setSelectedProjectIds}
+              placeholder="All projects"
+              className="w-44"
+            />
+          )}
         </div>
-        {projectsLoading ? (
-          <Skeleton className="h-8 w-40" />
-        ) : (
-          <MultiSelect
-            options={projectOptions}
-            selected={selectedProjectIds}
-            onSelectionChange={setSelectedProjectIds}
-            placeholder="All projects"
-            className="w-44"
-          />
-        )}
       </div>
 
       {isLoading ? (

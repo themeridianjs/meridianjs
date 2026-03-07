@@ -62,6 +62,7 @@ import {
   Users2,
   Trash2,
   ChevronDown,
+  ChevronLeft,
   ChevronRight,
   UserPlus,
 } from "lucide-react"
@@ -649,6 +650,8 @@ function GeneralTab({ workspaceId }: { workspaceId: string }) {
 
 // ── Members tab ───────────────────────────────────────────────────────────────
 
+const WS_PAGE_SIZE = 20
+
 function MembersTab({ workspaceId, onInvite }: { workspaceId: string; onInvite: () => void }) {
   const { data: members, isLoading: membersLoading } = useWorkspaceMembers(workspaceId)
   const { data: invitations, isLoading: invitationsLoading } = useInvitations(workspaceId)
@@ -658,6 +661,7 @@ function MembersTab({ workspaceId, onInvite }: { workspaceId: string; onInvite: 
   const { user } = useAuth()
 
   const [confirmRemove, setConfirmRemove] = useState<WorkspaceMember | null>(null)
+  const [page, setPage] = useState(0)
 
   const pending = invitations?.filter((i) => i.status === "pending") ?? []
 
@@ -701,8 +705,9 @@ function MembersTab({ workspaceId, onInvite }: { workspaceId: string; onInvite: 
           </button>
         </div>
       ) : (
+        <>
         <div className="divide-y divide-border">
-          {members.map((m) => {
+          {(members ?? []).slice(page * WS_PAGE_SIZE, (page + 1) * WS_PAGE_SIZE).map((m) => {
             const u = m.user
             const first = u?.first_name ?? ""
             const last = u?.last_name ?? ""
@@ -797,6 +802,25 @@ function MembersTab({ workspaceId, onInvite }: { workspaceId: string; onInvite: 
             )
           })}
         </div>
+        {(members?.length ?? 0) > WS_PAGE_SIZE && (
+          <div className="flex items-center justify-between px-4 md:px-6 py-3 border-t border-border">
+            <span className="text-xs text-muted-foreground">
+              {page * WS_PAGE_SIZE + 1}–{Math.min((page + 1) * WS_PAGE_SIZE, members!.length)} of {members!.length}
+            </span>
+            <div className="flex items-center gap-1">
+              <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setPage((p) => p - 1)} disabled={page === 0}>
+                <ChevronLeft className="h-3.5 w-3.5" />
+              </Button>
+              <span className="text-xs text-muted-foreground tabular-nums w-12 text-center">
+                {page + 1} / {Math.ceil(members!.length / WS_PAGE_SIZE)}
+              </span>
+              <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setPage((p) => p + 1)} disabled={(page + 1) * WS_PAGE_SIZE >= members!.length}>
+                <ChevronRight className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          </div>
+        )}
+        </>
       )}
 
       {/* ── Pending invitations ── */}
@@ -1233,13 +1257,13 @@ export function WorkspaceSettingsPage() {
 
         {/* Tab nav row */}
         <div className="flex items-center justify-between border-b border-border px-2">
-          <div className="flex">
+          <div className="flex overflow-x-auto scrollbar-none">
             {(["general", "members", "teams"] as const).map((tab) => (
               <button
                 key={tab}
                 onClick={() => handleTabChange(tab)}
                 className={cn(
-                  "h-12 px-4 text-sm font-medium border-b-2 transition-colors capitalize",
+                  "h-12 px-4 text-sm font-medium border-b-2 transition-colors capitalize whitespace-nowrap shrink-0",
                   activeTab === tab
                     ? "border-foreground text-foreground"
                     : "border-transparent text-muted-foreground hover:text-foreground"
@@ -1251,9 +1275,9 @@ export function WorkspaceSettingsPage() {
           </div>
 
           {activeTab === "members" && (
-            <Button size="sm" onClick={() => setInviteOpen(true)}>
+            <Button size="sm" onClick={() => setInviteOpen(true)} className="shrink-0 ml-2">
               <Plus className="h-4 w-4" />
-              Add member
+              <span className="hidden sm:inline">Add member</span>
             </Button>
           )}
         </div>

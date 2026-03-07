@@ -32,8 +32,10 @@ import { useWorkspaceMembers, useTeams } from "@/api/hooks/useWorkspaces"
 import { useProjectByKey } from "@/api/hooks/useProjects"
 import { useAuth } from "@/stores/auth"
 import { toast } from "sonner"
-import { X, UserPlus, Users2 } from "lucide-react"
+import { X, UserPlus, Users2, ChevronLeft, ChevronRight } from "lucide-react"
 import { cn } from "@/lib/utils"
+
+const PAGE_SIZE = 20
 
 function MemberRow({
   member,
@@ -75,7 +77,7 @@ function MemberRow({
       <Button
         size="sm"
         variant="ghost"
-        className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+        className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
         onClick={() => onRequestRemove(member.user_id, displayName)}
       >
         <X className="h-3.5 w-3.5" />
@@ -111,7 +113,7 @@ function TeamRow({
       <Button
         size="sm"
         variant="ghost"
-        className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+        className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
         onClick={() => onRemove(teamEntry.team_id)}
       >
         <X className="h-3.5 w-3.5" />
@@ -139,6 +141,8 @@ export function ProjectAccessPage() {
 
   const [addUserId, setAddUserId] = useState("")
   const [addTeamId, setAddTeamId] = useState("")
+  const [memberPage, setMemberPage] = useState(0)
+  const [teamPage, setTeamPage] = useState(0)
   const [memberPendingRemoval, setMemberPendingRemoval] = useState<{
     userId: string
     displayName: string
@@ -265,20 +269,37 @@ export function ProjectAccessPage() {
               {memberCount === 0 ? (
                 <p className="text-sm text-muted-foreground px-6 py-4">No individual members.</p>
               ) : (
-                <div className="divide-y divide-border">
-                  {access?.members.map((m) => (
-                    <MemberRow
-                      key={m.id}
-                      member={m}
-                      onRequestRemove={(userId, displayName) =>
-                        setMemberPendingRemoval({
-                          userId,
-                          displayName,
-                        })
-                      }
-                    />
-                  ))}
-                </div>
+                <>
+                  <div className="divide-y divide-border">
+                    {(access?.members ?? []).slice(memberPage * PAGE_SIZE, (memberPage + 1) * PAGE_SIZE).map((m) => (
+                      <MemberRow
+                        key={m.id}
+                        member={m}
+                        onRequestRemove={(userId, displayName) =>
+                          setMemberPendingRemoval({ userId, displayName })
+                        }
+                      />
+                    ))}
+                  </div>
+                  {memberCount > PAGE_SIZE && (
+                    <div className="flex items-center justify-between px-4 md:px-6 py-3 border-t border-border">
+                      <span className="text-xs text-muted-foreground">
+                        {memberPage * PAGE_SIZE + 1}–{Math.min((memberPage + 1) * PAGE_SIZE, memberCount)} of {memberCount}
+                      </span>
+                      <div className="flex items-center gap-1">
+                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setMemberPage((p) => p - 1)} disabled={memberPage === 0}>
+                          <ChevronLeft className="h-3.5 w-3.5" />
+                        </Button>
+                        <span className="text-xs text-muted-foreground tabular-nums w-12 text-center">
+                          {memberPage + 1} / {Math.ceil(memberCount / PAGE_SIZE)}
+                        </span>
+                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setMemberPage((p) => p + 1)} disabled={(memberPage + 1) * PAGE_SIZE >= memberCount}>
+                          <ChevronRight className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </div>
 
@@ -325,20 +346,40 @@ export function ProjectAccessPage() {
               {teamCount === 0 ? (
                 <p className="text-sm text-muted-foreground px-6 py-4">No teams have access.</p>
               ) : (
-                <div className="divide-y divide-border">
-                  {access?.teams.map((t) => (
-                    <TeamRow
-                      key={t.id}
-                      teamEntry={t}
-                      onRemove={(teamId) =>
-                        removeTeam.mutate(teamId, {
-                          onSuccess: () => toast.success("Team access removed"),
-                          onError: () => toast.error("Failed to remove team"),
-                        })
-                      }
-                    />
-                  ))}
-                </div>
+                <>
+                  <div className="divide-y divide-border">
+                    {(access?.teams ?? []).slice(teamPage * PAGE_SIZE, (teamPage + 1) * PAGE_SIZE).map((t) => (
+                      <TeamRow
+                        key={t.id}
+                        teamEntry={t}
+                        onRemove={(teamId) =>
+                          removeTeam.mutate(teamId, {
+                            onSuccess: () => toast.success("Team access removed"),
+                            onError: () => toast.error("Failed to remove team"),
+                          })
+                        }
+                      />
+                    ))}
+                  </div>
+                  {teamCount > PAGE_SIZE && (
+                    <div className="flex items-center justify-between px-4 md:px-6 py-3 border-t border-border">
+                      <span className="text-xs text-muted-foreground">
+                        {teamPage * PAGE_SIZE + 1}–{Math.min((teamPage + 1) * PAGE_SIZE, teamCount)} of {teamCount}
+                      </span>
+                      <div className="flex items-center gap-1">
+                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setTeamPage((p) => p - 1)} disabled={teamPage === 0}>
+                          <ChevronLeft className="h-3.5 w-3.5" />
+                        </Button>
+                        <span className="text-xs text-muted-foreground tabular-nums w-12 text-center">
+                          {teamPage + 1} / {Math.ceil(teamCount / PAGE_SIZE)}
+                        </span>
+                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setTeamPage((p) => p + 1)} disabled={(teamPage + 1) * PAGE_SIZE >= teamCount}>
+                          <ChevronRight className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </div>
 

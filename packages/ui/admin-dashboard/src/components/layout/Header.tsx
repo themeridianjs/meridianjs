@@ -59,7 +59,7 @@ export function Header() {
 
         {/* Right actions */}
         <div className="ml-auto flex items-center gap-1">
-          <ThemeToggle />
+          <span className="hidden md:flex"><ThemeToggle /></span>
           <Button
             variant="ghost"
             size="icon"
