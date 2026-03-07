@@ -66,7 +66,7 @@ export default async function handler({ event, container }: SubscriberArgs<Comme
   // ── Email ──────────────────────────────────────────────────────────────────
   try {
     const emailService = container.resolve("emailService") as any
-    const userService  = container.resolve("userModuleService") as any
+    const userService = container.resolve("userModuleService") as any
     const config = container.resolve("config") as any
     const appUrl: string = config?.appUrl ?? process.env.APP_URL ?? "http://localhost:9001"
 
