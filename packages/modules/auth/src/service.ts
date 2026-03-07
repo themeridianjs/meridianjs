@@ -303,6 +303,8 @@ export class AuthModuleService extends MeridianService({}) {
     const userService = this.container.resolve<any>("userModuleService")
     const password_hash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS)
     await userService.updateUser(userId, { password_hash, has_password: true })
+    // Revoke all existing sessions so old credentials can't be reused
+    await userService.revokeAllUserSessions(userId).catch(() => {})
   }
 
   /**

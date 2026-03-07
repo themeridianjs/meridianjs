@@ -41,16 +41,24 @@ export function requirePermission(...permissions: string[]) {
 
 /**
  * Workspace isolation guard — rejects requests where the `workspace_id` query
- * param or body field does not match the authenticated user's workspace.
+ * param, body field, or URL path param (:id on /workspaces/:id sub-routes)
+ * does not match the authenticated user's workspace.
  *
- * Allows the request through when no `workspace_id` is present (so general
- * listing endpoints that omit workspace_id are not blocked).
+ * Allows the request through when no workspace identifier is present (so
+ * general listing endpoints that omit workspace_id are not blocked).
  *
  * Must be used after `authenticateJWT`.
  */
 export function requireWorkspace(req: any, res: Response, next: NextFunction) {
-  const workspaceId = (req.query?.workspace_id ?? req.body?.workspace_id) as string | undefined
-  if (workspaceId && req.user?.workspaceId && req.user.workspaceId !== workspaceId) {
+  // Check explicit workspace_id in query / body
+  const queryOrBodyId = (req.query?.workspace_id ?? req.body?.workspace_id) as string | undefined
+  // Check path param only on /admin/workspaces/:id sub-routes to avoid
+  // accidentally treating project/issue :id params as workspace IDs.
+  const isWorkspacePath = /\/workspaces\/[^/]/.test(req.path ?? req.url ?? "")
+  const paramId = isWorkspacePath ? (req.params?.workspaceId ?? req.params?.id) as string | undefined : undefined
+
+  const requestedId = queryOrBodyId ?? paramId
+  if (requestedId && req.user?.workspaceId && req.user.workspaceId !== requestedId) {
     return res.status(403).json({ error: { message: "Forbidden — wrong workspace" } })
   }
   next()

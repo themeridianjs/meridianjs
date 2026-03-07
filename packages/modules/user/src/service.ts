@@ -55,6 +55,17 @@ export class UserModuleService extends MeridianService({ User: UserModel, Team: 
     return user
   }
 
+  /**
+   * Fetch multiple users by ID in a single query.
+   * Returns a Map keyed by user ID for O(1) lookup.
+   */
+  async listUsersByIds(ids: string[]): Promise<Map<string, any>> {
+    if (!ids.length) return new Map()
+    const userRepository = this.container.resolve<any>("userRepository")
+    const users = await userRepository.find({ id: { $in: ids } })
+    return new Map(users.map((u: any) => [u.id, u]))
+  }
+
   /** Return the total number of registered users. */
   async countUsers(): Promise<number> {
     const userRepository = this.container.resolve<any>("userRepository")

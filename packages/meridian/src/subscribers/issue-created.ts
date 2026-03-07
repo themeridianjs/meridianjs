@@ -18,15 +18,20 @@ export default async function handler({ event, container }: SubscriberArgs<Issue
   if (data.assignee_ids) data.assignee_ids.forEach(id => recipients.add(id))
   if (data.reporter_id && data.reporter_id !== data.actor_id) recipients.add(data.reporter_id)
 
-  await Promise.all([...recipients].map(userId =>
-    notifService.createNotification({
-      user_id: userId, entity_type: "issue", entity_id: data.issue_id,
-      action: "created",
-      message: data.assignee_ids?.includes(userId) ? "You were assigned to a new issue" : "An issue was created in your project",
-      workspace_id: data.workspace_id,
-      metadata: { project_id: data.project_id },
-    })
-  ))
+  try {
+    await Promise.all([...recipients].map(userId =>
+      notifService.createNotification({
+        user_id: userId, entity_type: "issue", entity_id: data.issue_id,
+        action: "created",
+        message: data.assignee_ids?.includes(userId) ? "You were assigned to a new issue" : "An issue was created in your project",
+        workspace_id: data.workspace_id,
+        metadata: { project_id: data.project_id },
+      })
+    ))
+  } catch (err) {
+    const logger = container.resolve("logger") as any
+    logger.error(`[notification] issue.created: ${err instanceof Error ? err.message : String(err)}`)
+  }
 
   sseManager.broadcast(data.workspace_id, "issue.created", {
     issue_id: data.issue_id,
