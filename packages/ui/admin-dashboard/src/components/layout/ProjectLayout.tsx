@@ -1,4 +1,4 @@
-import { NavLink, Outlet, useParams, useNavigate, useSearchParams, useLocation } from "react-router-dom"
+import { NavLink, Outlet, useParams, useNavigate, useSearchParams, useLocation, Navigate } from "react-router-dom"
 import { useEffect, useState } from "react"
 import { Zap, GitBranch, LayoutDashboard, Lock, CalendarRange, BarChart2, Share2, Activity } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
@@ -8,6 +8,7 @@ import { useAuth } from "@/stores/auth"
 import { Button } from "@/components/ui/button"
 import { ShareProjectDialog } from "@/components/projects/ShareProjectDialog"
 import { ApiError } from "@/api/client"
+import { useIsMobile } from "@/lib/hooks"
 
 const PROJECT_TAB_ROUTES = ["board", "issues", "sprints", "timeline", "access", "reports", "activity"] as const
 
@@ -20,6 +21,7 @@ export function ProjectLayout() {
   const navigate = useNavigate()
   const location = useLocation()
   const [searchParams] = useSearchParams()
+  const isMobile = useIsMobile()
 
   // Show Share button only for workspace/project admins and project managers
   const userRoles = user?.roles ?? []
@@ -50,22 +52,31 @@ export function ProjectLayout() {
   }, []) // intentionally run once on mount to consume the ?tab= query param
 
   const base = `/${ws}/projects/${projectKey}`
-  const tabs: { to: string; label: string; icon: LucideIcon; end: boolean }[] = [
-    { to: `${base}/board`, label: "Board", icon: LayoutDashboard, end: true },
+  const allTabs: { to: string; label: string; icon: LucideIcon; end: boolean; mobileOnly?: boolean; desktopOnly?: boolean }[] = [
+    { to: `${base}/board`, label: "Board", icon: LayoutDashboard, end: true, desktopOnly: true },
     { to: `${base}/issues`, label: "Issues", icon: GitBranch, end: false },
     { to: `${base}/sprints`, label: "Sprints", icon: Zap, end: true },
-    { to: `${base}/timeline`, label: "Timeline", icon: CalendarRange, end: true },
+    { to: `${base}/timeline`, label: "Timeline", icon: CalendarRange, end: true, desktopOnly: true },
     { to: `${base}/access`, label: "Access", icon: Lock, end: true },
     { to: `${base}/reports`, label: "Reports", icon: BarChart2, end: true },
     { to: `${base}/activity`, label: "Activity", icon: Activity, end: true },
   ]
 
+  const desktopTabs = allTabs
+  const mobileTabs = allTabs.filter((t) => !t.desktopOnly)
+
+  // On mobile, redirect board/timeline → issues
+  const isBoardOrTimeline = location.pathname.endsWith("/board") || location.pathname.endsWith("/timeline")
+  if (isMobile && isBoardOrTimeline) {
+    return <Navigate to={`${base}/issues`} replace />
+  }
+
   return (
     <div className="flex flex-col h-full">
       {/* Project header with tabs */}
-      <div className="px-6 pt-5 border-b border-border bg-white dark:bg-card shrink-0">
+      <div className="border-b border-border bg-white dark:bg-card shrink-0 px-4 pt-4 md:px-6 md:pt-5">
         {/* Project name row */}
-        <div className="flex items-center gap-2.5 mb-4">
+        <div className="flex items-center gap-2.5 mb-3 md:mb-4">
           {project && (
             <span className="text-xs font-mono text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200 dark:border-indigo-800 px-2 py-0.5 rounded">
               {project.identifier}
@@ -76,10 +87,10 @@ export function ProjectLayout() {
           </h1>
         </div>
 
-        {/* Tab bar */}
-        <div className="flex items-center -mb-px">
+        {/* Desktop tab bar */}
+        <div className="hidden md:flex items-center -mb-px">
           <div className="flex flex-1">
-            {tabs.map(({ to, label, icon: Icon, end }) => (
+            {desktopTabs.map(({ to, label, icon: Icon, end }) => (
               <NavLink
                 key={to}
                 to={to}
@@ -104,6 +115,26 @@ export function ProjectLayout() {
               </Button>
             </div>
           )}
+        </div>
+
+        {/* Mobile tab bar — scrollable, no Board/Timeline */}
+        <div className="flex md:hidden overflow-x-auto -mb-px scrollbar-none">
+          {mobileTabs.map(({ to, label, icon: Icon, end }) => (
+            <NavLink
+              key={to}
+              to={to}
+              end={end}
+              className={({ isActive }) =>
+                `flex items-center gap-1.5 px-3 py-2 text-sm border-b-2 whitespace-nowrap transition-colors shrink-0 ${isActive
+                  ? "border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400 font-medium"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+                }`
+              }
+            >
+              <Icon className="h-3.5 w-3.5" strokeWidth={1.5} />
+              {label}
+            </NavLink>
+          ))}
         </div>
       </div>
 

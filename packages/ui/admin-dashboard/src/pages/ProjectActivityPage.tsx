@@ -143,7 +143,7 @@ function ActivityRow({ activity, userMap, teamMap }: ActivityRowProps) {
   })()
 
   return (
-    <div className="flex items-center gap-4 px-6 py-4 hover:bg-muted/30 transition-colors">
+    <div className="flex items-start md:items-center gap-3 md:gap-4 px-4 md:px-6 py-4 hover:bg-muted/30 transition-colors">
       {/* Action icon */}
       <div className={cn("h-8 w-8 rounded-full flex items-center justify-center shrink-0", cfg.bg)}>
         <Icon className={cn("h-4 w-4", cfg.color)} />
@@ -151,13 +151,17 @@ function ActivityRow({ activity, userMap, teamMap }: ActivityRowProps) {
 
       {/* Content */}
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap md:flex-nowrap items-center gap-x-2 gap-y-0.5">
           <Avatar className="h-5 w-5 shrink-0">
             <AvatarFallback className="text-[10px] font-medium">{actorInitials}</AvatarFallback>
           </Avatar>
           <span className="text-sm font-medium truncate">{actorName}</span>
           <span className="text-xs text-muted-foreground shrink-0">{label}</span>
         </div>
+        {/* Timestamp — mobile only, second line */}
+        <time className="md:hidden text-[11px] text-muted-foreground/70 mt-1 block">
+          {format(new Date(activity.created_at), "MMM d, yyyy · h:mm a")}
+        </time>
         {detail && (
           <div className="mt-0.5 pl-7">
             {detail}
@@ -165,8 +169,8 @@ function ActivityRow({ activity, userMap, teamMap }: ActivityRowProps) {
         )}
       </div>
 
-      {/* Timestamp */}
-      <time className="text-xs text-muted-foreground shrink-0">
+      {/* Timestamp — desktop only, right side */}
+      <time className="hidden md:block text-xs text-muted-foreground shrink-0">
         {format(new Date(activity.created_at), "MMM d, yyyy · h:mm a")}
       </time>
     </div>

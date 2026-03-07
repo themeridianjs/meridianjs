@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useSearchParams } from "react-router-dom"
 import { format } from "date-fns"
 import {
@@ -321,8 +321,8 @@ function HolidaysTab() {
         </div>
       </div>
 
-      {/* Column headers */}
-      <div className="grid grid-cols-[160px_1fr_120px_40px] gap-4 px-6 py-2 border-b border-border bg-muted/20">
+      {/* Column headers — desktop only */}
+      <div className="hidden md:grid grid-cols-[160px_1fr_120px_40px] gap-4 px-6 py-2 border-b border-border bg-muted/20">
         <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">Date</span>
         <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">Name</span>
         <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">Recurrence</span>
@@ -354,49 +354,58 @@ function HolidaysTab() {
       ) : (
         sorted.map((h) => {
           const d = new Date(h.date)
+          const actionsMenu = (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="h-6 w-6 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-accent transition-colors">
+                  <MoreHorizontal className="h-3.5 w-3.5" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-36">
+                <DropdownMenuItem className="gap-2 cursor-pointer" onClick={() => { setEditing(h); setDialogOpen(true) }}>
+                  <Pencil className="h-3.5 w-3.5" />
+                  Edit
+                </DropdownMenuItem>
+                <DropdownMenuItem className="gap-2 cursor-pointer text-destructive focus:text-destructive" onClick={() => setDeleteTarget(h)}>
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Remove
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )
           return (
-            <div
-              key={h.id}
-              className="grid grid-cols-[160px_1fr_120px_40px] gap-4 items-center px-6 py-3.5 border-b border-border hover:bg-muted/20 transition-colors"
-            >
-              <span className="text-sm tabular-nums text-muted-foreground">
-                {format(d, "MMM d, yyyy")}
-              </span>
-              <span className="text-sm font-medium truncate">{h.name}</span>
-              <span className="text-sm">
-                {h.recurring ? (
-                  <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                    <RefreshCw className="h-3 w-3" />
-                    Every year
-                  </span>
-                ) : (
-                  <span className="text-xs text-muted-foreground/60">One-time</span>
-                )}
-              </span>
-              <div className="flex justify-end">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button className="h-6 w-6 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-accent transition-colors">
-                      <MoreHorizontal className="h-3.5 w-3.5" />
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-36">
-                    <DropdownMenuItem
-                      className="gap-2 cursor-pointer"
-                      onClick={() => { setEditing(h); setDialogOpen(true) }}
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                      Edit
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      className="gap-2 cursor-pointer text-destructive focus:text-destructive"
-                      onClick={() => setDeleteTarget(h)}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                      Remove
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+            <div key={h.id}>
+              {/* Desktop row */}
+              <div className="hidden md:grid grid-cols-[160px_1fr_120px_40px] gap-4 items-center px-6 py-3.5 border-b border-border hover:bg-muted/20 transition-colors">
+                <span className="text-sm tabular-nums text-muted-foreground">{format(d, "MMM d, yyyy")}</span>
+                <span className="text-sm font-medium truncate">{h.name}</span>
+                <span className="text-sm">
+                  {h.recurring ? (
+                    <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                      <RefreshCw className="h-3 w-3" />
+                      Every year
+                    </span>
+                  ) : (
+                    <span className="text-xs text-muted-foreground/60">One-time</span>
+                  )}
+                </span>
+                <div className="flex justify-end">{actionsMenu}</div>
+              </div>
+              {/* Mobile card */}
+              <div className="md:hidden flex items-center gap-3 px-4 py-3 border-b border-border hover:bg-muted/20 transition-colors">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{h.name}</p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-xs text-muted-foreground tabular-nums">{format(d, "MMM d, yyyy")}</span>
+                    {h.recurring && (
+                      <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                        <RefreshCw className="h-3 w-3" />
+                        Recurring
+                      </span>
+                    )}
+                  </div>
+                </div>
+                {actionsMenu}
               </div>
             </div>
           )
@@ -476,6 +485,8 @@ const ROLE_RANK: Record<string, number> = {
   "member": 0,
 }
 
+const PAGE_SIZE = 20
+
 function MembersTab() {
   const { data: me } = useMe()
   const myRank = ROLE_RANK[me?.role ?? "member"] ?? 0
@@ -492,6 +503,16 @@ function MembersTab() {
   const [inviteOpen, setInviteOpen] = useState(false)
   const [inviteEmail, setInviteEmail] = useState("")
   const [inviteRole, setInviteRole] = useState("member")
+  const [page, setPage] = useState(0)
+
+  const sortedUsers = useMemo(
+    () => [...users].sort((a, b) => {
+      const nameA = `${a.first_name ?? ""} ${a.last_name ?? ""}`.trim() || a.email
+      const nameB = `${b.first_name ?? ""} ${b.last_name ?? ""}`.trim() || b.email
+      return nameA.localeCompare(nameB)
+    }),
+    [users]
+  )
 
   const handleInvite = (e: React.FormEvent) => {
     e.preventDefault()
@@ -584,8 +605,8 @@ function MembersTab() {
         </DialogContent>
       </Dialog>
 
-      {/* Column headers */}
-      <div className="grid grid-cols-[1fr_160px_200px_40px] gap-4 px-6 py-2 border-b border-border bg-muted/20">
+      {/* Column headers — desktop only */}
+      <div className="hidden md:grid grid-cols-[1fr_160px_200px_40px] gap-4 px-6 py-2 border-b border-border bg-muted/20">
         <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">User</span>
         <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">Global role</span>
         <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">Custom role</span>
@@ -602,37 +623,23 @@ function MembersTab() {
           <p className="text-sm font-medium">No users found</p>
         </div>
       ) : (
-        users.map((user) => {
-          const first = user.first_name ?? ""
-          const last = user.last_name ?? ""
-          const name = `${first} ${last}`.trim() || user.email
-          const initials = (first[0] ?? last[0] ?? user.email?.[0] ?? "U").toUpperCase()
-          const userRank = ROLE_RANK[user.role ?? "member"] ?? 0
-          const isSelf = user.id === me?.id
-          const canManage = !isSelf && userRank < myRank
-          return (
-            <div
-              key={user.id}
-              className="grid grid-cols-[1fr_160px_200px_40px] gap-4 items-center px-6 py-3 border-b border-border hover:bg-muted/20 transition-colors group"
-            >
-              {/* Avatar + name/email */}
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="h-7 w-7 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center text-xs font-semibold text-zinc-600 dark:text-zinc-300 shrink-0">
-                  {initials}
-                </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-medium truncate">
-                    {name}
-                    {isSelf && <span className="text-xs text-muted-foreground ml-1.5">(you)</span>}
-                  </p>
-                  <p className="text-xs text-muted-foreground truncate">{user.email}</p>
-                </div>
-              </div>
+        <>
+          {sortedUsers.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE).map((user) => {
+            const first = user.first_name ?? ""
+            const last = user.last_name ?? ""
+            const name = `${first} ${last}`.trim() || user.email
+            const initials = (first[0] ?? last[0] ?? user.email?.[0] ?? "U").toUpperCase()
+            const userRank = ROLE_RANK[user.role ?? "member"] ?? 0
+            const isSelf = user.id === me?.id
+            const canManage = !isSelf && userRank < myRank
 
-              {/* Global role select */}
+            const globalRoleSelect = !canManage ? (
+              <span className={cn("inline-flex items-center px-2 py-0.5 rounded text-xs font-medium", ROLE_BADGE[user.role ?? "member"] ?? ROLE_BADGE.member)}>
+                {user.role ?? "member"}
+              </span>
+            ) : (
               <Select
                 value={user.role ?? "member"}
-                disabled={!canManage}
                 onValueChange={(val) =>
                   updateGlobalRole.mutate(
                     { userId: user.id, role: val },
@@ -643,7 +650,7 @@ function MembersTab() {
                   )
                 }
               >
-                <SelectTrigger className={cn("h-7 text-xs w-full", !canManage && "opacity-60 cursor-not-allowed")}>
+                <SelectTrigger className="h-7 text-xs w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -656,8 +663,9 @@ function MembersTab() {
                   ))}
                 </SelectContent>
               </Select>
+            )
 
-              {/* AppRole select */}
+            const appRoleSelect = (
               <Select
                 value={user.app_role_id ?? "none"}
                 disabled={!canManage}
@@ -681,31 +689,94 @@ function MembersTab() {
                   ))}
                 </SelectContent>
               </Select>
+            )
 
-              {/* Actions */}
-              <div className="flex justify-end opacity-0 group-hover:opacity-100 transition-opacity">
-                {canManage && (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button className="h-6 w-6 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-accent transition-colors">
-                        <MoreHorizontal className="h-3.5 w-3.5" />
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-36">
-                      <DropdownMenuItem
-                        className="gap-2 cursor-pointer text-destructive focus:text-destructive"
-                        onClick={() => setDeleteTarget(user.id)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                        Delete user
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                )}
+            const actionsMenu = canManage ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="h-6 w-6 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-accent transition-colors">
+                    <MoreHorizontal className="h-3.5 w-3.5" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-36">
+                  <DropdownMenuItem
+                    className="gap-2 cursor-pointer text-destructive focus:text-destructive"
+                    onClick={() => setDeleteTarget(user.id)}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    Delete user
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : null
+
+            return (
+              <div key={user.id} className="border-b border-border hover:bg-muted/20 transition-colors group">
+                {/* Desktop row */}
+                <div className="hidden md:grid grid-cols-[1fr_160px_200px_40px] gap-4 items-center px-6 py-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="h-7 w-7 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center text-xs font-semibold text-zinc-600 dark:text-zinc-300 shrink-0">
+                      {initials}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium truncate">
+                        {name}
+                        {isSelf && <span className="text-xs text-muted-foreground ml-1.5">(you)</span>}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                    </div>
+                  </div>
+                  {globalRoleSelect}
+                  {appRoleSelect}
+                  <div className="flex justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                    {actionsMenu}
+                  </div>
+                </div>
+
+                {/* Mobile row */}
+                <div className="md:hidden px-4 py-3">
+                  <div className="flex items-center gap-3 min-w-0 mb-2">
+                    <div className="h-7 w-7 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center text-xs font-semibold text-zinc-600 dark:text-zinc-300 shrink-0">
+                      {initials}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium truncate">
+                        {name}
+                        {isSelf && <span className="text-xs text-muted-foreground ml-1.5">(you)</span>}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                    </div>
+                    {actionsMenu}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1">{globalRoleSelect}</div>
+                    <div className="flex-1">{appRoleSelect}</div>
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+
+          {/* Pagination */}
+          {sortedUsers.length > PAGE_SIZE && (
+            <div className="flex items-center justify-between px-4 md:px-6 py-3 border-t border-border">
+              <span className="text-xs text-muted-foreground">
+                {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, sortedUsers.length)} of {sortedUsers.length}
+              </span>
+              <div className="flex items-center gap-1">
+                <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setPage((p) => p - 1)} disabled={page === 0}>
+                  <ChevronLeft className="h-3.5 w-3.5" />
+                </Button>
+                <span className="text-xs text-muted-foreground tabular-nums w-12 text-center">
+                  {page + 1} / {Math.ceil(sortedUsers.length / PAGE_SIZE)}
+                </span>
+                <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setPage((p) => p + 1)} disabled={(page + 1) * PAGE_SIZE >= sortedUsers.length}>
+                  <ChevronRight className="h-3.5 w-3.5" />
+                </Button>
               </div>
             </div>
-          )
-        })
+          )}
+        </>
       )}
 
       {/* ── Invitations section ────────────────────────────────────────────── */}

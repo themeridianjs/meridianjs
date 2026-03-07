@@ -126,28 +126,32 @@ export function ProjectReportsPage() {
   return (
     <div className="p-2 space-y-2">
       {/* Filters bar */}
-      <div className="bg-white dark:bg-card border border-border rounded-xl px-4 py-3 flex items-center gap-3 flex-wrap">
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0">
-          <CalendarRange className="h-3.5 w-3.5" />
-          <span className="font-medium">Date range</span>
+      <div className="bg-white dark:bg-card border border-border rounded-xl px-4 py-3 flex flex-col gap-3 md:flex-row md:items-center md:flex-wrap">
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0">
+            <CalendarRange className="h-3.5 w-3.5" />
+            <span className="font-medium">Date range</span>
+          </div>
+          <DatePicker value={from} onChange={setFrom} placeholder="From" />
+          <span className="text-xs text-muted-foreground shrink-0">→</span>
+          <DatePicker value={to} onChange={setTo} placeholder="To" />
         </div>
-        <DatePicker value={from} onChange={setFrom} placeholder="From" />
-        <span className="text-xs text-muted-foreground">→</span>
-        <DatePicker value={to} onChange={setTo} placeholder="To" />
 
-        <div className="w-px h-4 bg-border" />
+        <div className="hidden md:block w-px h-4 bg-border" />
 
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0">
-          <Users className="h-3.5 w-3.5" />
-          <span className="font-medium">Employee</span>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0">
+            <Users className="h-3.5 w-3.5" />
+            <span className="font-medium">Employee</span>
+          </div>
+          <MultiSelect
+            options={employeeOptions}
+            selected={selectedUserIds}
+            onSelectionChange={setSelectedUserIds}
+            placeholder="All employees"
+            className="w-44"
+          />
         </div>
-        <MultiSelect
-          options={employeeOptions}
-          selected={selectedUserIds}
-          onSelectionChange={setSelectedUserIds}
-          placeholder="All employees"
-          className="w-44"
-        />
       </div>
 
       {/* Summary cards */}
@@ -199,7 +203,7 @@ export function ProjectReportsPage() {
       ) : (
         <>
           {/* Charts row */}
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             {/* Time by user chart */}
             {byUser.size > 0 && (
               <div className="bg-white dark:bg-card border border-border rounded-xl p-4">

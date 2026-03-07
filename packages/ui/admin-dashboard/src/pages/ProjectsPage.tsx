@@ -49,14 +49,14 @@ export function ProjectsPage() {
           </Button>
         </div>
         {/* Card toolbar */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-          <div className="flex items-center gap-1">
+        <div className="flex flex-col gap-2 px-4 md:px-6 py-3 md:py-4 border-b border-border md:flex-row md:items-center md:justify-between">
+          <div className="flex items-center gap-1 overflow-x-auto scrollbar-none">
             {(["all", "active", "paused", "archived"] as const).map((s) => (
               <button
                 key={s}
                 onClick={() => setStatusFilter(s)}
                 className={cn(
-                  "px-3 h-7 rounded-md text-xs font-medium transition-colors",
+                  "px-3 h-7 rounded-md text-xs font-medium transition-colors whitespace-nowrap shrink-0",
                   statusFilter === s
                     ? "bg-foreground text-background"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted"
@@ -72,13 +72,13 @@ export function ProjectsPage() {
               placeholder="Search..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-8 h-8 w-[200px] text-xs bg-transparent"
+              className="pl-8 h-8 w-full md:w-[200px] text-xs bg-transparent"
             />
           </div>
         </div>
 
-        {/* Table header */}
-        <div className="grid grid-cols-[2fr_1fr_1fr_1fr_40px] items-center px-6 py-2.5 border-b border-border">
+        {/* Desktop table header */}
+        <div className="hidden md:grid grid-cols-[2fr_1fr_1fr_1fr_40px] items-center px-6 py-2.5 border-b border-border">
           <span className="text-xs font-medium text-[#6b7280]">Project</span>
           <span className="text-xs font-medium text-[#6b7280]">Identifier</span>
           <span className="text-xs font-medium text-[#6b7280]">Status</span>
@@ -90,13 +90,22 @@ export function ProjectsPage() {
         {isLoading ? (
           <div className="divide-y divide-border">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="grid grid-cols-[2fr_1fr_1fr_1fr_40px] items-center px-6 py-3">
-                <Skeleton className="h-4 w-48" />
-                <Skeleton className="h-4 w-12" />
-                <Skeleton className="h-5 w-16 rounded-full" />
-                <Skeleton className="h-4 w-24" />
-                <div />
-              </div>
+              <>
+                <div key={`d-${i}`} className="hidden md:grid grid-cols-[2fr_1fr_1fr_1fr_40px] items-center px-6 py-3">
+                  <Skeleton className="h-4 w-48" />
+                  <Skeleton className="h-4 w-12" />
+                  <Skeleton className="h-5 w-16 rounded-full" />
+                  <Skeleton className="h-4 w-24" />
+                  <div />
+                </div>
+                <div key={`m-${i}`} className="md:hidden flex items-center gap-3 px-4 py-3">
+                  <div className="flex-1 space-y-1.5">
+                    <Skeleton className="h-4 w-40" />
+                    <Skeleton className="h-3 w-24" />
+                  </div>
+                  <Skeleton className="h-6 w-6 rounded-full" />
+                </div>
+              </>
             ))}
           </div>
         ) : filtered.length === 0 ? (
@@ -120,99 +129,156 @@ export function ProjectsPage() {
         ) : (
           <div className="divide-y divide-border">
             {filtered.map((project) => (
-              <div
-                key={project.id}
-                className="grid grid-cols-[2fr_1fr_1fr_1fr_40px] items-center px-6 py-3 hover:bg-[#f9fafb] dark:hover:bg-muted/30 cursor-pointer transition-colors group"
-                onClick={() => navigate(`/${workspace}/projects/${project.identifier}/board`)}
-              >
-                {/* Name */}
-                <div className="flex items-center gap-3 min-w-0">
-                  <span className="text-sm font-medium text-foreground truncate">
-                    {project.name}
-                  </span>
-                  {project.description && (
-                    <span className="text-xs text-muted-foreground truncate hidden xl:block">
-                      {project.description}
+              <div key={project.id}>
+                {/* Desktop row */}
+                <div
+                  className="hidden md:grid grid-cols-[2fr_1fr_1fr_1fr_40px] items-center px-6 py-3 hover:bg-[#f9fafb] dark:hover:bg-muted/30 cursor-pointer transition-colors group"
+                  onClick={() => navigate(`/${workspace}/projects/${project.identifier}/board`)}
+                >
+                  {/* Name */}
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="text-sm font-medium text-foreground truncate">
+                      {project.name}
                     </span>
-                  )}
-                </div>
-
-                {/* Identifier */}
-                <span className="text-sm text-muted-foreground font-mono">
-                  {project.identifier}
-                </span>
-
-                {/* Status */}
-                <div>
-                  <span className={cn(
-                    "inline-flex items-center gap-1.5 text-xs",
-                    project.status === "active" && "text-emerald-600",
-                    project.status === "paused" && "text-amber-600",
-                    project.status === "archived" && "text-muted-foreground"
-                  )}>
-                    <span className={cn(
-                      "h-1.5 w-1.5 rounded-full shrink-0",
-                      project.status === "active" && "bg-emerald-500",
-                      project.status === "paused" && "bg-amber-500",
-                      project.status === "archived" && "bg-zinc-400"
-                    )} />
-                    {project.status.charAt(0).toUpperCase() + project.status.slice(1)}
+                    {project.description && (
+                      <span className="text-xs text-muted-foreground truncate hidden xl:block">
+                        {project.description}
+                      </span>
+                    )}
+                  </div>
+                  {/* Identifier */}
+                  <span className="text-sm text-muted-foreground font-mono">
+                    {project.identifier}
                   </span>
+                  {/* Status */}
+                  <div>
+                    <span className={cn(
+                      "inline-flex items-center gap-1.5 text-xs",
+                      project.status === "active" && "text-emerald-600",
+                      project.status === "paused" && "text-amber-600",
+                      project.status === "archived" && "text-muted-foreground"
+                    )}>
+                      <span className={cn(
+                        "h-1.5 w-1.5 rounded-full shrink-0",
+                        project.status === "active" && "bg-emerald-500",
+                        project.status === "paused" && "bg-amber-500",
+                        project.status === "archived" && "bg-zinc-400"
+                      )} />
+                      {project.status.charAt(0).toUpperCase() + project.status.slice(1)}
+                    </span>
+                  </div>
+                  {/* Created */}
+                  <span className="text-sm text-muted-foreground">
+                    {format(new Date(project.created_at), "MMM d, yyyy")}
+                  </span>
+                  {/* Actions */}
+                  <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          className="h-7 w-7 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => navigate(`/${workspace}/projects/${project.identifier}/board`)}>
+                          <Layers className="h-4 w-4" />
+                          Open board
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => navigate(`/${workspace}/projects/${project.identifier}/issues`)}>
+                          <GitBranch className="h-4 w-4" />
+                          View issues
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setAccessProject({ id: project.id, name: project.name })}>
+                          <Lock className="h-4 w-4" />
+                          Manage access
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          className="text-destructive focus:text-destructive"
+                          onClick={() => {
+                            if (confirm(`Delete "${project.name}"? This cannot be undone.`)) {
+                              deleteProject.mutate(project.id, {
+                                onSuccess: () => toast.success("Project deleted"),
+                                onError: () => toast.error("Failed to delete project"),
+                              })
+                            }
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </div>
 
-                {/* Created */}
-                <span className="text-sm text-muted-foreground">
-                  {format(new Date(project.created_at), "MMM d, yyyy")}
-                </span>
-
-                {/* Actions */}
-                <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        className="h-7 w-7 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem
-                        onClick={() => navigate(`/${workspace}/projects/${project.identifier}/board`)}
-                      >
-                        <Layers className="h-4 w-4" />
-                        Open board
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => navigate(`/${workspace}/projects/${project.identifier}/issues`)}
-                      >
-                        <GitBranch className="h-4 w-4" />
-                        View issues
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => setAccessProject({ id: project.id, name: project.name })}
-                      >
-                        <Lock className="h-4 w-4" />
-                        Manage access
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        className="text-destructive focus:text-destructive"
-                        onClick={() => {
-                          if (confirm(`Delete "${project.name}"? This cannot be undone.`)) {
-                            deleteProject.mutate(project.id, {
-                              onSuccess: () => toast.success("Project deleted"),
-                              onError: () => toast.error("Failed to delete project"),
-                            })
-                          }
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                {/* Mobile card */}
+                <div
+                  className="md:hidden flex items-center gap-3 px-4 py-3 hover:bg-[#f9fafb] dark:hover:bg-muted/30 cursor-pointer transition-colors"
+                  onClick={() => navigate(`/${workspace}/projects/${project.identifier}/issues`)}
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className="text-sm font-medium text-foreground truncate">{project.name}</span>
+                      <span className="text-[10px] font-mono text-muted-foreground shrink-0">{project.identifier}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className={cn(
+                        "h-1.5 w-1.5 rounded-full shrink-0",
+                        project.status === "active" && "bg-emerald-500",
+                        project.status === "paused" && "bg-amber-500",
+                        project.status === "archived" && "bg-zinc-400"
+                      )} />
+                      <span className={cn(
+                        "text-xs",
+                        project.status === "active" && "text-emerald-600",
+                        project.status === "paused" && "text-amber-600",
+                        project.status === "archived" && "text-muted-foreground"
+                      )}>
+                        {project.status.charAt(0).toUpperCase() + project.status.slice(1)}
+                      </span>
+                      <span className="text-xs text-muted-foreground">·</span>
+                      <span className="text-xs text-muted-foreground">{format(new Date(project.created_at), "MMM d, yyyy")}</span>
+                    </div>
+                  </div>
+                  <div onClick={(e) => e.stopPropagation()}>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon-sm" className="h-8 w-8 text-muted-foreground">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => navigate(`/${workspace}/projects/${project.identifier}/issues`)}>
+                          <GitBranch className="h-4 w-4" />
+                          View issues
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setAccessProject({ id: project.id, name: project.name })}>
+                          <Lock className="h-4 w-4" />
+                          Manage access
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          className="text-destructive focus:text-destructive"
+                          onClick={() => {
+                            if (confirm(`Delete "${project.name}"? This cannot be undone.`)) {
+                              deleteProject.mutate(project.id, {
+                                onSuccess: () => toast.success("Project deleted"),
+                                onError: () => toast.error("Failed to delete project"),
+                              })
+                            }
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </div>
               </div>
             ))}

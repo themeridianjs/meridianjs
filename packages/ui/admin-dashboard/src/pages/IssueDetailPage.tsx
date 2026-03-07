@@ -207,8 +207,8 @@ export function IssueDetailPage() {
     return (
       <div className="min-h-full bg-[hsl(60_5%_96%)] dark:bg-background">
         <div className="sticky top-0 z-10 h-[57px] bg-white dark:bg-card border-b border-border" />
-        <div className="px-2 py-2">
-          <div className="grid grid-cols-[1fr_256px] gap-5">
+        <div className="px-2 py-2 pb-24 md:pb-2">
+          <div className="flex flex-col gap-4 md:grid md:grid-cols-[1fr_256px] md:gap-5 md:items-start">
             <div className="space-y-4">
               <div className="bg-white dark:bg-card border border-border rounded-xl p-6 space-y-4 shadow-sm">
                 <Skeleton className="h-7 w-3/4" />
@@ -278,8 +278,8 @@ export function IssueDetailPage() {
       </div>
 
       {/* ── Content ─────────────────────────────────────────────────────────── */}
-      <div className="px-2 py-2">
-        <div className="grid grid-cols-[1fr_256px] gap-5 items-start">
+      <div className="px-2 py-2 pb-24 md:pb-2">
+        <div className="flex flex-col gap-4 md:grid md:grid-cols-[1fr_256px] md:gap-5 md:items-start">
 
           {/* ── Left column ───────────────────────────────────────────────── */}
           <div className="space-y-4">

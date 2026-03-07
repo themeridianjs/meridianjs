@@ -404,10 +404,10 @@ export function RolesPage() {
         </Button>
       </div>
 
-      {/* Two-panel layout */}
-      <div className="flex flex-1 min-h-0">
+      {/* Two-panel layout — stacks vertically on mobile */}
+      <div className="flex flex-col md:flex-row flex-1 min-h-0">
         {/* Left panel: role list */}
-        <div className="w-56 shrink-0 border-r border-border flex flex-col overflow-y-auto">
+        <div className="w-full md:w-56 shrink-0 md:border-r border-b md:border-b-0 border-border flex flex-col overflow-y-auto md:overflow-y-auto max-h-48 md:max-h-none">
           {isLoading ? (
             <div className="p-4 space-y-2">
               {[1, 2, 3].map((i) => (

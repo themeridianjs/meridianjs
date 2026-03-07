@@ -74,8 +74,8 @@ export function NotificationsPage() {
           )}
         </div>
 
-        {/* Table column headers */}
-        <div className="grid grid-cols-[20px_130px_1fr_130px_88px] items-center px-6 py-2.5 border-b border-border">
+        {/* Table column headers — desktop only */}
+        <div className="hidden md:grid grid-cols-[20px_130px_1fr_130px_88px] items-center px-6 py-2.5 border-b border-border">
           <span />
           <span className="text-xs font-medium text-[#6b7280]">Type</span>
           <span className="text-xs font-medium text-[#6b7280]">Message</span>
@@ -87,12 +87,21 @@ export function NotificationsPage() {
         {isLoading ? (
           <div className="divide-y divide-border">
             {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="grid grid-cols-[20px_130px_1fr_130px_88px] items-center px-6 py-3">
-                <div />
-                <Skeleton className="h-5 w-20 rounded-full" />
-                <Skeleton className="h-4 w-3/4" />
-                <Skeleton className="h-4 w-20" />
-                <div />
+              <div key={i}>
+                <div className="hidden md:grid grid-cols-[20px_130px_1fr_130px_88px] items-center px-6 py-3">
+                  <div />
+                  <Skeleton className="h-5 w-20 rounded-full" />
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-4 w-20" />
+                  <div />
+                </div>
+                <div className="md:hidden flex items-start gap-3 px-4 py-3">
+                  <Skeleton className="h-4 w-4 rounded-full mt-1 shrink-0" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-4 w-24 rounded-full" />
+                    <Skeleton className="h-4 w-full" />
+                  </div>
+                </div>
               </div>
             ))}
           </div>
@@ -107,69 +116,88 @@ export function NotificationsPage() {
         ) : (
           <div className="divide-y divide-border">
             {notifications.map((notification) => {
-              const cfg    = ENTITY_CONFIG[notification.entity_type] ?? { icon: Bell, label: notification.entity_type }
-              const Icon   = cfg.icon
-              const link   = getLink(notification)
+              const cfg  = ENTITY_CONFIG[notification.entity_type] ?? { icon: Bell, label: notification.entity_type }
+              const Icon = cfg.icon
+              const link = getLink(notification)
+
+              const handleClick = () => {
+                if (link) {
+                  if (!notification.read) markAsRead.mutate(notification.id)
+                  navigate(link)
+                }
+              }
 
               return (
-                <div
-                  key={notification.id}
-                  className={cn(
-                    "grid grid-cols-[20px_130px_1fr_130px_88px] items-center px-6 py-3 transition-colors",
-                    !notification.read && "bg-[#eff6ff] dark:bg-indigo-950/20",
-                    "hover:bg-[#f9fafb] dark:hover:bg-muted/30",
-                    link && "cursor-pointer"
-                  )}
-                  onClick={() => {
-                    if (link) {
-                      if (!notification.read) markAsRead.mutate(notification.id)
-                      navigate(link)
-                    }
-                  }}
-                >
-                  {/* Unread dot */}
-                  <div className="flex items-center justify-center">
-                    {!notification.read && (
-                      <div className="h-1.5 w-1.5 rounded-full bg-indigo-500 shrink-0" />
+                <div key={notification.id}>
+                  {/* Desktop row */}
+                  <div
+                    className={cn(
+                      "hidden md:grid grid-cols-[20px_130px_1fr_130px_88px] items-center px-6 py-3 transition-colors",
+                      !notification.read && "bg-[#eff6ff] dark:bg-indigo-950/20",
+                      "hover:bg-[#f9fafb] dark:hover:bg-muted/30",
+                      link && "cursor-pointer"
                     )}
+                    onClick={handleClick}
+                  >
+                    <div className="flex items-center justify-center">
+                      {!notification.read && <div className="h-1.5 w-1.5 rounded-full bg-indigo-500 shrink-0" />}
+                    </div>
+                    <div>
+                      <span className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                        <Icon className="h-3 w-3" />
+                        {cfg.label}
+                      </span>
+                    </div>
+                    <p className={cn("text-sm truncate", !notification.read ? "font-medium text-foreground" : "text-muted-foreground")}>
+                      {notification.message}
+                    </p>
+                    <span className="text-xs text-muted-foreground">{formatTime(notification.created_at)}</span>
+                    <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
+                      {!notification.read && (
+                        <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground px-2"
+                          onClick={() => markAsRead.mutate(notification.id, { onError: () => toast.error("Failed") })}
+                        >
+                          Mark read
+                        </Button>
+                      )}
+                    </div>
                   </div>
 
-                  {/* Type badge */}
-                  <div>
-                    <span className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-                      <Icon className="h-3 w-3" />
-                      {cfg.label}
-                    </span>
-                  </div>
-
-                  {/* Message */}
-                  <p className={cn(
-                    "text-sm truncate",
-                    !notification.read ? "font-medium text-foreground" : "text-muted-foreground"
-                  )}>
-                    {notification.message}
-                  </p>
-
-                  {/* Time */}
-                  <span className="text-xs text-muted-foreground">
-                    {formatTime(notification.created_at)}
-                  </span>
-
-                  {/* Mark read action — stopPropagation so row click doesn't also fire */}
-                  <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
+                  {/* Mobile card */}
+                  <div
+                    className={cn(
+                      "md:hidden flex items-start gap-3 px-4 py-3 transition-colors",
+                      !notification.read && "bg-[#eff6ff] dark:bg-indigo-950/20",
+                      "hover:bg-[#f9fafb] dark:hover:bg-muted/30",
+                      link && "cursor-pointer"
+                    )}
+                    onClick={handleClick}
+                  >
+                    <div className="mt-1 shrink-0">
+                      {!notification.read
+                        ? <div className="h-1.5 w-1.5 rounded-full bg-indigo-500" />
+                        : <div className="h-1.5 w-1.5" />}
+                    </div>
+                    <div className="flex-1 min-w-0 space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full shrink-0">
+                          <Icon className="h-3 w-3" />
+                          {cfg.label}
+                        </span>
+                        <span className="text-[11px] text-muted-foreground shrink-0">{formatTime(notification.created_at)}</span>
+                      </div>
+                      <p className={cn("text-sm", !notification.read ? "font-medium text-foreground" : "text-muted-foreground")}>
+                        {notification.message}
+                      </p>
+                    </div>
                     {!notification.read && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 text-xs text-muted-foreground px-2"
-                        onClick={() =>
-                          markAsRead.mutate(notification.id, {
-                            onError: () => toast.error("Failed"),
-                          })
-                        }
-                      >
-                        Mark read
-                      </Button>
+                      <div onClick={(e) => e.stopPropagation()} className="shrink-0">
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground"
+                          onClick={() => markAsRead.mutate(notification.id, { onError: () => toast.error("Failed") })}
+                        >
+                          <CheckCheck className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
                     )}
                   </div>
                 </div>

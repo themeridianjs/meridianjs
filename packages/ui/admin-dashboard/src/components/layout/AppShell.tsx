@@ -3,6 +3,7 @@ import { Outlet } from "react-router-dom"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { AppSidebar } from "./Sidebar"
 import { Header } from "./Header"
+import { MobileBottomNav } from "./MobileBottomNav"
 import { useAuth } from "@/stores/auth"
 
 /** If the auth store has a valid token but missing user profile data (e.g. stale
@@ -32,10 +33,11 @@ export function AppShell() {
       <AppSidebar variant="inset" />
       <SidebarInset className="flex flex-col min-w-0">
         <Header />
-        <div className="flex flex-1 flex-col min-h-0 overflow-y-auto overflow-x-hidden">
+        <div className="flex flex-1 flex-col min-h-0 overflow-y-auto overflow-x-hidden pb-16 md:pb-0">
           <Outlet />
         </div>
       </SidebarInset>
+      <MobileBottomNav />
     </SidebarProvider>
   )
 }
