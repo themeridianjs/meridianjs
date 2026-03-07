@@ -21,7 +21,7 @@ export default async function handler({ event, container }: SubscriberArgs<Works
 
     const [invitation, workspace, inviter] = await Promise.all([
       invitationSvc.retrieveInvitation(data.invitation_id),
-      workspaceSvc.retrieveWorkspace(data.workspace_id),
+      data.workspace_id ? workspaceSvc.retrieveWorkspace(data.workspace_id) : Promise.resolve(null),
       userSvc.retrieveUser(data.created_by),
     ])
 
@@ -43,21 +43,31 @@ export default async function handler({ event, container }: SubscriberArgs<Works
     const inviteLink = `${appUrl}/invite/${invitation.token}`
 
     const tpl = resolveTemplate(container, "workspace.member_invited", {
-      workspace: { name: workspace.name },
+      workspace: workspace ? { name: workspace.name } : null,
       inviter: { name: inviterName },
       invitation: { token: invitation.token, role: roleDisplay },
       invitee: { email: data.email },
     })
-    await emailService.send({
-      to: data.email,
-      subject: tpl?.subject ?? `${inviterName} invited you to join "${workspace.name}" on Meridian`,
-      text: tpl?.text ?? `${inviterName} has invited you to join "${workspace.name}" as a ${roleDisplay}.\n\nAccept your invitation here: ${inviteLink}`,
-      html: tpl?.html ?? emailHtml(
-        `<strong>${inviterName}</strong> has invited you to join <strong>${workspace.name}</strong> as a <strong>${roleDisplay}</strong>.<br/><br/>` +
-        `<a href="${inviteLink}" style="display:inline-block;padding:10px 20px;background:#4f46e5;color:#fff;text-decoration:none;border-radius:6px;font-weight:600">Accept Invitation</a><br/><br/>` +
-        `Or copy this link: <a href="${inviteLink}">${inviteLink}</a>`
-      ),
-    })
+
+    const subject = tpl?.subject ?? (workspace
+      ? `${inviterName} invited you to join "${workspace.name}" on Meridian`
+      : `${inviterName} invited you to Meridian`)
+    const text = tpl?.text ?? (workspace
+      ? `${inviterName} has invited you to join "${workspace.name}" as a ${roleDisplay}.\n\nAccept your invitation here: ${inviteLink}`
+      : `${inviterName} has invited you to Meridian as a ${roleDisplay}.\n\nAccept your invitation here: ${inviteLink}`)
+    const html = tpl?.html ?? (workspace
+      ? emailHtml(
+          `<strong>${inviterName}</strong> has invited you to join <strong>${workspace.name}</strong> as a <strong>${roleDisplay}</strong>.<br/><br/>` +
+          `<a href="${inviteLink}" style="display:inline-block;padding:10px 20px;background:#4f46e5;color:#fff;text-decoration:none;border-radius:6px;font-weight:600">Accept Invitation</a><br/><br/>` +
+          `Or copy this link: <a href="${inviteLink}">${inviteLink}</a>`
+        )
+      : emailHtml(
+          `<strong>${inviterName}</strong> has invited you to join <strong>Meridian</strong> as a <strong>${roleDisplay}</strong>.<br/><br/>` +
+          `<a href="${inviteLink}" style="display:inline-block;padding:10px 20px;background:#4f46e5;color:#fff;text-decoration:none;border-radius:6px;font-weight:600">Accept Invitation</a><br/><br/>` +
+          `Or copy this link: <a href="${inviteLink}">${inviteLink}</a>`
+        ))
+
+    await emailService.send({ to: data.email, subject, text, html })
   } catch (err) {
     const logger = container.resolve("logger") as any
     logger.error(`[email] workspace.member_invited: ${err instanceof Error ? err.message : String(err)}`)

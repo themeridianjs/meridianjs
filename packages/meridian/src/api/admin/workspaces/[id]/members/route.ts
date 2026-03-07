@@ -75,6 +75,17 @@ export const POST = async (req: any, res: Response, next: NextFunction) => {
         }
       }
 
+      const eventBus = req.scope.resolve("eventBus") as any
+      eventBus.emit({
+        name: "workspace.member_added",
+        data: {
+          workspace_id: req.params.id,
+          user_id,
+          role: wsRole,
+          actor_id: req.user?.id ?? "system",
+        },
+      }).catch(() => {})
+
       res.status(201).json({ member })
     } catch (err) {
       next(err)

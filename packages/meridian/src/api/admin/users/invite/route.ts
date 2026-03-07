@@ -44,6 +44,18 @@ export const POST = async (req: any, res: Response, next: NextFunction) => {
         created_by: req.user?.id ?? "system",
       })
 
+      const eventBus = req.scope.resolve("eventBus") as any
+      eventBus.emit({
+        name: "workspace.member_invited",
+        data: {
+          invitation_id: invitation.id,
+          workspace_id: null,
+          email: normalizedEmail,
+          role,
+          created_by: req.user?.id ?? "system",
+        },
+      }).catch(() => {})
+
       res.status(201).json({ invitation })
     } catch (err) {
       next(err)

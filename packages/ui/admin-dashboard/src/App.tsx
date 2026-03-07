@@ -13,6 +13,7 @@ import { CommandPalette } from "@/components/CommandPalette"
 import { LoginPage } from "@/pages/LoginPage"
 import { RegisterPage } from "@/pages/RegisterPage"
 import { SetupWorkspacePage } from "@/pages/SetupWorkspacePage"
+import { AwaitingAccessPage } from "@/pages/AwaitingAccessPage"
 import { ProjectsPage } from "@/pages/ProjectsPage"
 import { ProjectBoardPage } from "@/pages/ProjectBoardPage"
 import { ProjectIssuesPage } from "@/pages/ProjectIssuesPage"
@@ -79,7 +80,7 @@ function RedirectIfAuth({ children }: { children: ReactNode }) {
 
 /** Redirects to the stored or first available workspace, or /setup if none. */
 function WorkspaceRedirect() {
-  const { workspace, setWorkspace } = useAuth()
+  const { workspace, setWorkspace, user } = useAuth()
   const navigate = useNavigate()
   const { data: workspaces, isLoading } = useWorkspaces(!workspace)
 
@@ -95,10 +96,11 @@ function WorkspaceRedirect() {
         setWorkspace({ id: w.id, name: w.name, slug: w.slug })
         navigate(`/${w.slug}/projects`, { replace: true })
       } else {
-        navigate("/setup", { replace: true })
+        const isPrivileged = user?.roles?.includes("super-admin") || user?.roles?.includes("admin")
+        navigate(isPrivileged ? "/setup" : "/awaiting-access", { replace: true })
       }
     }
-  }, [workspace, workspaces, isLoading, navigate, setWorkspace])
+  }, [workspace, workspaces, isLoading, navigate, setWorkspace, user])
 
   return (
     <div className="min-h-screen flex items-center justify-center">
@@ -240,6 +242,16 @@ export function App() {
         element={
           <RequireAuth>
             <SetupWorkspacePage />
+          </RequireAuth>
+        }
+      />
+
+      {/* Awaiting access — member with no workspace yet */}
+      <Route
+        path="/awaiting-access"
+        element={
+          <RequireAuth>
+            <AwaitingAccessPage />
           </RequireAuth>
         }
       />
