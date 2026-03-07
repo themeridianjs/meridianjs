@@ -14,11 +14,13 @@ interface OtpEntry {
   otp: string
   expiresAt: number
   sentAt: number
+  attempts: number
 }
 
 const STORE_KEY = "__meridian_password_otp_store__"
 const OTP_TTL_MS = 10 * 60 * 1000  // 10 minutes
 const RESEND_COOLDOWN_MS = 60 * 1000 // 60 seconds
+const MAX_ATTEMPTS = 5
 
 function getStore(): Map<string, OtpEntry> {
   if (!(globalThis as any)[STORE_KEY]) {
@@ -36,15 +38,30 @@ export function generateAndStoreOtp(userId: string): string {
   }
 
   const otp = String(randomInt(100000, 999999))
-  store.set(userId, { otp, expiresAt: Date.now() + OTP_TTL_MS, sentAt: Date.now() })
+  store.set(userId, { otp, expiresAt: Date.now() + OTP_TTL_MS, sentAt: Date.now(), attempts: 0 })
   return otp
 }
 
-/** Consume an OTP. Always deletes the entry (single-use). Returns true if valid. */
+/**
+ * Consume an OTP. Returns true if the code matches and is not expired.
+ * Tracks failed attempts — after MAX_ATTEMPTS failures the entry is invalidated.
+ * On success the entry is deleted (single-use).
+ */
 export function consumeOtp(userId: string, otp: string): boolean {
   const store = getStore()
   const entry = store.get(userId)
-  store.delete(userId)
-  if (!entry || entry.expiresAt < Date.now()) return false
-  return entry.otp === otp
+  if (!entry || entry.expiresAt < Date.now()) {
+    store.delete(userId)
+    return false
+  }
+  if (entry.otp === otp) {
+    store.delete(userId)
+    return true
+  }
+  // Wrong code — increment attempt counter
+  entry.attempts += 1
+  if (entry.attempts >= MAX_ATTEMPTS) {
+    store.delete(userId)
+  }
+  return false
 }

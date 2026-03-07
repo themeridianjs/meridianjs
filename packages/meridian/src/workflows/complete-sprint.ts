@@ -44,18 +44,37 @@ const markSprintCompletedStep = createStep(
 
 const moveIncompleteIssuesStep = createStep(
   "move-incomplete-issues",
-  async (_input: { fromSprintId: string; toSprintId: string }, _ctx) => {
-    return { moved: 0 }
+  async (input: { fromSprintId: string; toSprintId: string }, { container }) => {
+    const issueSvc = container.resolve("issueModuleService") as any
+    const [issues] = await issueSvc.listAndCountIssues(
+      { sprint_id: input.fromSprintId },
+      { limit: 500 }
+    )
+    const incomplete = issues.filter(
+      (i: any) => i.status !== "done" && i.status !== "cancelled"
+    )
+    if (!incomplete.length) return { moved: 0 }
+    await Promise.all(
+      incomplete.map((i: any) => issueSvc.updateIssue(i.id, { sprint_id: input.toSprintId }))
+    )
+    return { moved: incomplete.length }
   }
 )
 
 const logSprintCompletedStep = createStep(
   "log-sprint-completed",
-  async (input: { entity_id: string; actor_id: string; workspace_id: string }, { container }) => {
-    const svc = container.resolve("activityModuleService") as any
-    await svc.recordActivity({
+  async (input: { entity_id: string; actor_id: string; project_id: string }, { container }) => {
+    const activitySvc = container.resolve("activityModuleService") as any
+    // Resolve workspace_id from the project (sprint model has project_id, not workspace_id)
+    let workspace_id: string = input.project_id
+    try {
+      const projectSvc = container.resolve("projectModuleService") as any
+      const project = await projectSvc.retrieveProject(input.project_id)
+      workspace_id = project?.workspace_id ?? input.project_id
+    } catch { /* fall back to project_id if project lookup fails */ }
+    await activitySvc.recordActivity({
       entity_type: "sprint", entity_id: input.entity_id,
-      actor_id: input.actor_id, action: "completed", workspace_id: input.workspace_id,
+      actor_id: input.actor_id, action: "completed", workspace_id,
     })
   }
 )
@@ -69,7 +88,7 @@ export const completeSprintWorkflow = createWorkflow(
       moveIncompleteIssuesStep({ fromSprintId: sprint.id, toSprintId: input.moveIncompleteToSprintId! })
     )
     const activityInput = transform(completed, (s) => ({
-      entity_id: s.id, actor_id: input.actor_id ?? "system", workspace_id: s.project_id,
+      entity_id: s.id, actor_id: input.actor_id ?? "system", project_id: s.project_id,
     }))
     await logSprintCompletedStep(activityInput)
     await emitEventStep({

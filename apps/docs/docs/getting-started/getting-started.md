@@ -17,3 +17,4 @@ Use the pages below:
 3. [How to Create Modules](getting-started/create-modules)
 4. [How to Create Subscribers](getting-started/create-subscribers)
 5. [Platform Events](getting-started/events)
+6. [How to Register a Webhook](plugins/webhook)

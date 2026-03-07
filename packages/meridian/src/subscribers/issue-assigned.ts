@@ -16,18 +16,23 @@ export default async function handler({ event, container }: SubscriberArgs<Issue
 
   const notifService = container.resolve("notificationModuleService") as any
 
-  await Promise.all(
-    data.assignee_ids
-      .filter(id => id !== data.actor_id)
-      .map(userId =>
-        notifService.createNotification({
-          user_id: userId, entity_type: "issue", entity_id: data.issue_id,
-          action: "assigned", message: "You were assigned to an issue",
-          workspace_id: data.workspace_id,
-          metadata: { project_id: data.project_id },
-        })
-      )
-  )
+  try {
+    await Promise.all(
+      data.assignee_ids
+        .filter(id => id !== data.actor_id)
+        .map(userId =>
+          notifService.createNotification({
+            user_id: userId, entity_type: "issue", entity_id: data.issue_id,
+            action: "assigned", message: "You were assigned to an issue",
+            workspace_id: data.workspace_id,
+            metadata: { project_id: data.project_id },
+          })
+        )
+    )
+  } catch (err) {
+    const logger = container.resolve("logger") as any
+    logger.error(`[notification] issue.assigned: ${err instanceof Error ? err.message : String(err)}`)
+  }
 
   sseManager.broadcast(data.workspace_id, "issue.assigned", {
     issue_id: data.issue_id,

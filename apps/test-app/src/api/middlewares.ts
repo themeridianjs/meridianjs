@@ -15,6 +15,7 @@ export default {
     { matcher: "/auth/forgot-password", middlewares: [authRateLimit] },
     { matcher: "/auth/reset-password",  middlewares: [authRateLimit] },
     { matcher: "/auth/google",          middlewares: [oauthRateLimit] },
+    { matcher: "/auth/invite",          middlewares: [authRateLimit] },
     { matcher: "/admin",         middlewares: [apiRateLimit, authenticateJWT, requireWorkspace] },
   ],
 }

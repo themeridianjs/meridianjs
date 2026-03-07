@@ -16,15 +16,20 @@ export default async function handler({ event, container }: SubscriberArgs<Proje
 
   const notifService = container.resolve("notificationModuleService") as any
 
-  await notifService.createNotification({
-    user_id: data.user_id,
-    entity_type: "project",
-    entity_id: data.project_id,
-    action: "member_added",
-    message: `You were added to the project "${data.project_name}"`,
-    workspace_id: data.workspace_id,
-    metadata: { project_id: data.project_id },
-  })
+  try {
+    await notifService.createNotification({
+      user_id: data.user_id,
+      entity_type: "project",
+      entity_id: data.project_id,
+      action: "member_added",
+      message: `You were added to the project "${data.project_name}"`,
+      workspace_id: data.workspace_id,
+      metadata: { project_id: data.project_id },
+    })
+  } catch (err) {
+    const logger = container.resolve("logger") as any
+    logger.error(`[notification] project.member_added: ${err instanceof Error ? err.message : String(err)}`)
+  }
 
   sseManager.broadcast(data.workspace_id, "project.member_added", {
     project_id: data.project_id,

@@ -3,11 +3,12 @@ import type { Response } from "express"
 /**
  * POST /webhooks/:provider
  *
- * Public endpoint that receives webhook events from external services.
- * Stores the event and emits `webhook.received` for downstream processing.
+ * Accepts inbound webhook events from any external service and forwards them
+ * to subscribers as-is. No signature verification is performed — that is the
+ * subscriber's responsibility since every platform uses a different scheme.
  *
  * Query params:
- *   ?event_type=push   — override the event type (default: from X-Event-Type header)
+ *   ?event_type=push   — override the event type stored on the record
  */
 export const POST = async (req: any, res: Response) => {
   const { provider } = req.params as { provider: string }
@@ -16,14 +17,7 @@ export const POST = async (req: any, res: Response) => {
     (req.query.event_type as string | undefined) ??
     req.headers["x-event-type"] ??
     req.headers["x-github-event"] ??
-    req.headers["x-stripe-event"] ??
     "unknown"
-
-  const signature = (
-    req.headers["x-hub-signature-256"] ??
-    req.headers["x-webhook-signature"] ??
-    null
-  ) as string | null
 
   const webhookService = req.scope.resolve("webhookModuleService") as any
   const eventBus = req.scope.resolve("eventBus") as any
@@ -32,11 +26,9 @@ export const POST = async (req: any, res: Response) => {
     provider,
     event_type: String(eventType),
     payload: req.body ?? {},
-    signature,
     status: "received",
   })
 
-  // Emit event for subscribers to handle asynchronously
   await eventBus.emit({
     name: "webhook.received",
     data: {
@@ -44,6 +36,8 @@ export const POST = async (req: any, res: Response) => {
       provider,
       event_type: String(eventType),
       payload: req.body ?? {},
+      rawBody: (req as any).rawBody ?? null,
+      headers: req.headers,
     },
   })
 

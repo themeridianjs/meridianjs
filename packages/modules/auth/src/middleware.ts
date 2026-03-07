@@ -45,8 +45,16 @@ export function authenticateJWT(req: any, res: Response, next: NextFunction): vo
             res.status(401).json({ error: { message: "Session revoked or expired" } })
             return
           }
-        } catch {
-          // If session service is unavailable, fall through (graceful degradation)
+        } catch (sessionErr) {
+          // Session service unavailable — fail closed (401) to prevent revoked
+          // sessions from being treated as valid when the DB is unreachable.
+          try {
+            const scope = req.scope as MeridianContainer
+            const logger = scope.resolve<any>("logger")
+            logger.warn(`[auth] jti session check failed: ${sessionErr instanceof Error ? sessionErr.message : String(sessionErr)}`)
+          } catch { /* logger unavailable */ }
+          res.status(401).json({ error: { message: "Session validation unavailable" } })
+          return
         }
       }
 

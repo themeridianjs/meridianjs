@@ -35,21 +35,14 @@ export const GET = async (req: any, res: Response) => {
   const members = await projectMemberService.listProjectMembers(projectId)
   const teamEntries = await projectMemberService.listProjectTeamIds(projectId)
 
-  const enrichedMembers = await Promise.all(
-    members.map(async (m: any) => {
-      try {
-        const user = await userService.retrieveUser(m.user_id)
-        return {
-          id: m.id,
-          user_id: m.user_id,
-          role: m.role,
-          user: { id: user.id, email: user.email, first_name: user.first_name, last_name: user.last_name },
-        }
-      } catch {
-        return { id: m.id, user_id: m.user_id, role: m.role, user: null }
-      }
-    })
-  )
+  // Batch-fetch all member users in a single query
+  const userMap = await userService.listUsersByIds(members.map((m: any) => m.user_id))
+  const enrichedMembers = members.map((m: any) => {
+    const user = userMap.get(m.user_id) ?? null
+    return user
+      ? { id: m.id, user_id: m.user_id, role: m.role, user: { id: user.id, email: user.email, first_name: user.first_name, last_name: user.last_name } }
+      : { id: m.id, user_id: m.user_id, role: m.role, user: null }
+  })
 
   const enrichedTeams = await Promise.all(
     teamEntries.map(async (t: any) => {

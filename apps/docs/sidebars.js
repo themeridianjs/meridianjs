@@ -12,6 +12,11 @@ const sidebars = {
         'getting-started/create-modules',
         'getting-started/create-subscribers',
         'getting-started/events',
+        {
+          type: 'link',
+          label: 'How to Register a Webhook',
+          href: '/docs/plugins/webhook',
+        },
       ],
     },
     {
