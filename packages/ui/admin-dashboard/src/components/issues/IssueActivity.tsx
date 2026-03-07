@@ -165,7 +165,7 @@ export function IssueActivity({
   }
 
   const commentsEndRef = useRef<HTMLDivElement>(null)
-  const prevCommentCountRef = useRef(0)
+  const prevCommentCountRef = useRef<number | null>(null)
 
   const { user: currentUser } = useAuth()
   const { data: userMap } = useUserMap()
@@ -174,8 +174,11 @@ export function IssueActivity({
   const { data: allAttachments } = useAttachments(issueId)
 
   useEffect(() => {
-    const count = comments?.length ?? 0
-    if (count > prevCommentCountRef.current) {
+    // comments is undefined while loading — don't initialize ref yet
+    const count = comments?.length
+    if (count === undefined) return
+    // Only scroll when a new comment is added after initial load
+    if (prevCommentCountRef.current !== null && count > prevCommentCountRef.current) {
       commentsEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" })
     }
     prevCommentCountRef.current = count

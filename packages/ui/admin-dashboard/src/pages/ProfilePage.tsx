@@ -1,13 +1,16 @@
-import { useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { useSearchParams } from "react-router-dom"
-import { useMe, useUpdateProfile, useUploadAvatar, useRemoveAvatar, useUnlinkGoogle } from "@/api/hooks/useProfile"
+import { useMe, useUpdateProfile, useUploadAvatar, useRemoveAvatar, useUnlinkGoogle, useSendPasswordOtp, useSetPassword } from "@/api/hooks/useProfile"
 import { useAuth } from "@/stores/auth"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
+import { InputOTP, InputOTPGroup, InputOTPSlot, InputOTPSeparator } from "@/components/ui/input-otp"
+import { Label } from "@/components/ui/label"
 import { toast } from "sonner"
-import { Camera, Trash2, User, CheckCircle2, XCircle } from "lucide-react"
+import { Camera, Trash2, User, CheckCircle2, XCircle, Eye, EyeOff, KeyRound } from "lucide-react"
 import { BASE_URL } from "@/api/client"
 
 // ── Google icon ───────────────────────────────────────────────────────────────
@@ -33,7 +36,9 @@ export function ProfilePage() {
   const updateProfile = useUpdateProfile()
   const uploadAvatar  = useUploadAvatar()
   const removeAvatar  = useRemoveAvatar()
-  const unlinkGoogle  = useUnlinkGoogle()
+  const unlinkGoogle   = useUnlinkGoogle()
+  const sendOtp        = useSendPasswordOtp()
+  const setPassword    = useSetPassword()
 
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -41,6 +46,16 @@ export function ProfilePage() {
   const [lastName,    setLastName]    = useState("")
   const [designation, setDesignation] = useState("")
   const [phoneNumber, setPhoneNumber] = useState("")
+
+  // Password dialog state
+  const [pwDialogOpen,    setPwDialogOpen]    = useState(false)
+  const [otpSent,         setOtpSent]         = useState(false)
+  const [otpCode,         setOtpCode]         = useState("")
+  const [newPassword,     setNewPassword]     = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
+  const [showNewPw,       setShowNewPw]       = useState(false)
+  const [resendTimer,     setResendTimer]     = useState(0)
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
     if (profile) {
@@ -111,6 +126,68 @@ export function ProfilePage() {
       onSuccess: () => toast.success("Google account disconnected"),
       onError: (err: any) => toast.error(err.message ?? "Failed to unlink Google account"),
     })
+  }
+
+  const startResendTimer = useCallback(() => {
+    setResendTimer(30)
+    if (timerRef.current) clearInterval(timerRef.current)
+    timerRef.current = setInterval(() => {
+      setResendTimer((prev) => {
+        if (prev <= 1) {
+          if (timerRef.current) clearInterval(timerRef.current)
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+  }, [])
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => { if (timerRef.current) clearInterval(timerRef.current) }
+  }, [])
+
+  const handleSendOtp = () => {
+    sendOtp.mutate(undefined, {
+      onSuccess: () => {
+        setOtpSent(true)
+        startResendTimer()
+        toast.success("Verification code sent to your email")
+      },
+      onError: (err: any) => toast.error(err.message ?? "Failed to send verification code"),
+    })
+  }
+
+  const handleSetPassword = () => {
+    if (newPassword.length < 8) {
+      toast.error("New password must be at least 8 characters")
+      return
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error("Passwords do not match")
+      return
+    }
+    setPassword.mutate(
+      { otp: otpCode, new_password: newPassword },
+      {
+        onSuccess: () => {
+          toast.success("Password updated")
+          resetPasswordDialog()
+        },
+        onError: (err: any) => toast.error(err.message ?? "Failed to set password"),
+      }
+    )
+  }
+
+  const resetPasswordDialog = () => {
+    setPwDialogOpen(false)
+    setOtpSent(false)
+    setOtpCode("")
+    setNewPassword("")
+    setConfirmPassword("")
+    setShowNewPw(false)
+    setResendTimer(0)
+    if (timerRef.current) clearInterval(timerRef.current)
   }
 
   return (
@@ -316,6 +393,143 @@ export function ProfilePage() {
               </div>
             )}
           </div>
+
+          {/* ── Password section ── */}
+          <div className="px-6 py-2 border-b border-border bg-muted/10">
+            <p className="text-xs text-muted-foreground">Security</p>
+          </div>
+
+          <div className="grid grid-cols-[180px_1fr] items-center gap-4 px-6 py-4 border-b border-border">
+            <span className="text-sm text-muted-foreground">Password</span>
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-muted-foreground">
+                {profile?.has_password === false ? "No password set" : "••••••••"}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 gap-1.5"
+                onClick={() => setPwDialogOpen(true)}
+              >
+                <KeyRound className="size-3.5" />
+                {profile?.has_password === false ? "Create password" : "Change password"}
+              </Button>
+            </div>
+          </div>
+
+          {/* ── Change/Create password dialog ── */}
+          <Dialog open={pwDialogOpen} onOpenChange={(open) => { if (!open) resetPasswordDialog() }}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>
+                  {profile?.has_password === false ? "Create password" : "Change password"}
+                </DialogTitle>
+                <DialogDescription>
+                  We'll send a 6-digit verification code to <span className="font-medium text-foreground">{profile?.email}</span>
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-4 py-2">
+                {/* OTP field + send/resend button */}
+                <div className="space-y-2">
+                  <Label className="text-sm">Verification code</Label>
+                  <div className="flex items-center gap-3">
+                    <InputOTP maxLength={6} value={otpCode} onChange={setOtpCode}>
+                      <InputOTPGroup>
+                        <InputOTPSlot index={0} />
+                        <InputOTPSlot index={1} />
+                        <InputOTPSlot index={2} />
+                      </InputOTPGroup>
+                      <InputOTPSeparator />
+                      <InputOTPGroup>
+                        <InputOTPSlot index={3} />
+                        <InputOTPSlot index={4} />
+                        <InputOTPSlot index={5} />
+                      </InputOTPGroup>
+                    </InputOTP>
+                    {!otpSent ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 shrink-0"
+                        onClick={handleSendOtp}
+                        disabled={sendOtp.isPending}
+                      >
+                        {sendOtp.isPending ? "Sending…" : "Send code"}
+                      </Button>
+                    ) : resendTimer > 0 ? (
+                      <span className="text-xs text-muted-foreground shrink-0 tabular-nums w-16 text-center">
+                        Resend in {resendTimer}s
+                      </span>
+                    ) : (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 shrink-0 text-indigo-500 hover:text-indigo-600"
+                        onClick={handleSendOtp}
+                        disabled={sendOtp.isPending}
+                      >
+                        {sendOtp.isPending ? "Sending…" : "Resend"}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                {/* New password */}
+                <div className="space-y-2">
+                  <Label className="text-sm">New password</Label>
+                  <div className="relative">
+                    <Input
+                      type={showNewPw ? "text" : "password"}
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      className="h-9 text-sm pr-9"
+                      placeholder="At least 8 characters"
+                      autoComplete="new-password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPw(!showNewPw)}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      tabIndex={-1}
+                    >
+                      {showNewPw ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Confirm password */}
+                <div className="space-y-2">
+                  <Label className="text-sm">Confirm password</Label>
+                  <Input
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="h-9 text-sm"
+                    placeholder="Re-enter new password"
+                    autoComplete="new-password"
+                  />
+                </div>
+              </div>
+
+              <DialogFooter>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={resetPasswordDialog}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleSetPassword}
+                  disabled={setPassword.isPending || otpCode.length !== 6 || !newPassword || !confirmPassword}
+                >
+                  {setPassword.isPending ? "Saving…" : profile?.has_password === false ? "Create password" : "Update password"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
 
         </div>
       </div>

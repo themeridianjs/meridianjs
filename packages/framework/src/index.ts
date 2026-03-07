@@ -33,3 +33,7 @@ export { validate } from "./validate.js"
 
 // SSE real-time updates
 export { SseManager, sseManager } from "./sse-manager.js"
+
+// HTTP logging & startup info
+export { httpLoggerMiddleware } from "./http-logger.js"
+export { printStartupTable } from "./startup-table.js"

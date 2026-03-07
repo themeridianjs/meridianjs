@@ -1,6 +1,18 @@
 import type { Response, NextFunction } from "express"
 import { requirePermission } from "@meridianjs/auth"
 
+const ROLE_RANK: Record<string, number> = {
+  "super-admin": 3,
+  "admin": 2,
+  "moderator": 1,
+  "member": 0,
+}
+
+function actorRank(req: any): number {
+  const roles: string[] = req.user?.roles ?? []
+  return Math.max(...roles.map((r) => ROLE_RANK[r] ?? 0), 0)
+}
+
 export const PATCH = async (req: any, res: Response, next: NextFunction) => {
   requirePermission("member:update_role")(req, res, async () => {
     try {
@@ -15,6 +27,19 @@ export const PATCH = async (req: any, res: Response, next: NextFunction) => {
       const membership = await workspaceMemberService.getMembership(req.params.id, req.params.userId)
       if (!membership) {
         res.status(404).json({ error: { message: "Member not found" } })
+        return
+      }
+
+      const actor = actorRank(req)
+      const targetRank = ROLE_RANK[membership.role] ?? 0
+
+      if (targetRank >= actor) {
+        res.status(403).json({ error: { message: "You cannot change the role of a member at or above your level" } })
+        return
+      }
+
+      if ((ROLE_RANK[role] ?? 0) >= actor) {
+        res.status(403).json({ error: { message: "You cannot assign a role equal to or above your own" } })
         return
       }
 
@@ -36,6 +61,19 @@ export const DELETE = async (req: any, res: Response, next: NextFunction) => {
       const membership = await workspaceMemberService.getMembership(req.params.id, req.params.userId)
       if (!membership) {
         res.status(404).json({ error: { message: "Member not found" } })
+        return
+      }
+
+      const actor = actorRank(req)
+      const targetRank = ROLE_RANK[membership.role] ?? 0
+
+      if (targetRank >= actor) {
+        res.status(403).json({ error: { message: "You cannot remove a member at or above your level" } })
+        return
+      }
+
+      if (req.params.userId === req.user?.id) {
+        res.status(400).json({ error: { message: "You cannot remove yourself" } })
         return
       }
 

@@ -17,6 +17,7 @@ import {
   Check,
 } from "lucide-react"
 import { useUsers, useDeleteUser, useUpdateUserGlobalRole, useInviteOrgMember, useOrgInvitations, useRevokeOrgInvitation, type OrgInvitation } from "@/api/hooks/useUsers"
+import { useMe } from "@/api/hooks/useProfile"
 import { useRoles, useAssignUserRole } from "@/api/hooks/useRoles"
 import {
   Select,
@@ -67,13 +68,13 @@ import { cn } from "@/lib/utils"
 // ── Constants ──────────────────────────────────────────────────────────────────
 
 const DAY_ENTRIES: { key: keyof WorkingDays; label: string; short: string }[] = [
-  { key: "mon", label: "Monday",    short: "Mon" },
-  { key: "tue", label: "Tuesday",   short: "Tue" },
+  { key: "mon", label: "Monday", short: "Mon" },
+  { key: "tue", label: "Tuesday", short: "Tue" },
   { key: "wed", label: "Wednesday", short: "Wed" },
-  { key: "thu", label: "Thursday",  short: "Thu" },
-  { key: "fri", label: "Friday",    short: "Fri" },
-  { key: "sat", label: "Saturday",  short: "Sat" },
-  { key: "sun", label: "Sunday",    short: "Sun" },
+  { key: "thu", label: "Thursday", short: "Thu" },
+  { key: "fri", label: "Friday", short: "Fri" },
+  { key: "sat", label: "Saturday", short: "Sat" },
+  { key: "sun", label: "Sunday", short: "Sun" },
 ]
 
 const DEFAULT_WORKING_DAYS: WorkingDays = {
@@ -89,8 +90,8 @@ interface HolidayDialogProps {
 }
 
 function HolidayDialog({ open, onClose, holiday }: HolidayDialogProps) {
-  const [name, setName]           = useState(holiday?.name ?? "")
-  const [date, setDate]           = useState(holiday?.date ? holiday.date.split("T")[0] : "")
+  const [name, setName] = useState(holiday?.name ?? "")
+  const [date, setDate] = useState(holiday?.date ? holiday.date.split("T")[0] : "")
   const [recurring, setRecurring] = useState(holiday?.recurring ?? false)
 
   useEffect(() => {
@@ -108,14 +109,14 @@ function HolidayDialog({ open, onClose, holiday }: HolidayDialogProps) {
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault()
     if (!name.trim()) { toast.error("Holiday name is required"); return }
-    if (!date)        { toast.error("Date is required");          return }
+    if (!date) { toast.error("Date is required"); return }
 
     if (holiday) {
       updateHoliday.mutate(
         { id: holiday.id, name: name.trim(), date, recurring },
         {
           onSuccess: () => { toast.success("Holiday updated"); onClose() },
-          onError:   () => toast.error("Failed to update holiday"),
+          onError: () => toast.error("Failed to update holiday"),
         }
       )
     } else {
@@ -123,7 +124,7 @@ function HolidayDialog({ open, onClose, holiday }: HolidayDialogProps) {
         { name: name.trim(), date, recurring },
         {
           onSuccess: () => { toast.success("Holiday added"); onClose() },
-          onError:   () => toast.error("Failed to add holiday"),
+          onError: () => toast.error("Failed to add holiday"),
         }
       )
     }
@@ -201,7 +202,7 @@ function WorkingDaysTab() {
       { working_days: updated },
       {
         onSuccess: () => toast.success("Working days updated"),
-        onError:   () => toast.error("Failed to update working days"),
+        onError: () => toast.error("Failed to update working days"),
       }
     )
   }
@@ -209,7 +210,7 @@ function WorkingDaysTab() {
   return (
     <>
       {/* Section header */}
-      <div className="px-6 py-2 border-b border-border bg-muted/20">
+      <div className="px-6 py-2 border-b border-border bg-muted/20 min-h-[45px] flex items-center">
         <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
           Working days
         </span>
@@ -261,9 +262,9 @@ function WorkingDaysTab() {
 // ── Holidays tab ───────────────────────────────────────────────────────────────
 
 function HolidaysTab() {
-  const [year, setYear]               = useState(new Date().getFullYear())
-  const [dialogOpen, setDialogOpen]   = useState(false)
-  const [editingHoliday, setEditing]  = useState<OrgHoliday | null>(null)
+  const [year, setYear] = useState(new Date().getFullYear())
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [editingHoliday, setEditing] = useState<OrgHoliday | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<OrgHoliday | null>(null)
 
   const { data: holidays = [], isLoading } = useHolidays(year)
@@ -273,7 +274,7 @@ function HolidaysTab() {
     if (!deleteTarget) return
     deleteHoliday.mutate(deleteTarget.id, {
       onSuccess: () => { toast.success("Holiday removed"); setDeleteTarget(null) },
-      onError:   () => toast.error("Failed to remove holiday"),
+      onError: () => toast.error("Failed to remove holiday"),
     })
   }
 
@@ -438,14 +439,14 @@ const GLOBAL_ROLES = ["super-admin", "admin", "member"] as const
 
 const ROLE_BADGE: Record<string, string> = {
   "super-admin": "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300",
-  "admin":       "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300",
-  "member":      "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300",
+  "admin": "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300",
+  "member": "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300",
 }
 
 const STATUS_BADGE: Record<string, string> = {
-  pending:  "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
+  pending: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
   accepted: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
-  revoked:  "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400",
+  revoked: "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400",
 }
 
 function CopyButton({ value }: { value: string }) {
@@ -468,7 +469,16 @@ function CopyButton({ value }: { value: string }) {
   )
 }
 
+const ROLE_RANK: Record<string, number> = {
+  "super-admin": 3,
+  "admin": 2,
+  "moderator": 1,
+  "member": 0,
+}
+
 function MembersTab() {
+  const { data: me } = useMe()
+  const myRank = ROLE_RANK[me?.role ?? "member"] ?? 0
   const { data: users = [], isLoading: usersLoading } = useUsers()
   const { data: invitations = [], isLoading: invitationsLoading } = useOrgInvitations()
   const { data: roles = [] } = useRoles()
@@ -504,7 +514,7 @@ function MembersTab() {
     if (!deleteTarget) return
     deleteUser.mutate(deleteTarget, {
       onSuccess: () => { toast.success("User deleted"); setDeleteTarget(null) },
-      onError:   () => toast.error("Failed to delete user"),
+      onError: () => toast.error("Failed to delete user"),
     })
   }
 
@@ -594,9 +604,12 @@ function MembersTab() {
       ) : (
         users.map((user) => {
           const first = user.first_name ?? ""
-          const last  = user.last_name  ?? ""
-          const name  = `${first} ${last}`.trim() || user.email
+          const last = user.last_name ?? ""
+          const name = `${first} ${last}`.trim() || user.email
           const initials = (first[0] ?? last[0] ?? user.email?.[0] ?? "U").toUpperCase()
+          const userRank = ROLE_RANK[user.role ?? "member"] ?? 0
+          const isSelf = user.id === me?.id
+          const canManage = !isSelf && userRank < myRank
           return (
             <div
               key={user.id}
@@ -608,7 +621,10 @@ function MembersTab() {
                   {initials}
                 </div>
                 <div className="min-w-0">
-                  <p className="text-sm font-medium truncate">{name}</p>
+                  <p className="text-sm font-medium truncate">
+                    {name}
+                    {isSelf && <span className="text-xs text-muted-foreground ml-1.5">(you)</span>}
+                  </p>
                   <p className="text-xs text-muted-foreground truncate">{user.email}</p>
                 </div>
               </div>
@@ -616,21 +632,22 @@ function MembersTab() {
               {/* Global role select */}
               <Select
                 value={user.role ?? "member"}
+                disabled={!canManage}
                 onValueChange={(val) =>
                   updateGlobalRole.mutate(
                     { userId: user.id, role: val },
                     {
                       onSuccess: () => toast.success("Global role updated"),
-                      onError:   () => toast.error("Failed to update global role"),
+                      onError: (err: any) => toast.error(err?.message ?? "Failed to update global role"),
                     }
                   )
                 }
               >
-                <SelectTrigger className="h-7 text-xs w-full">
+                <SelectTrigger className={cn("h-7 text-xs w-full", !canManage && "opacity-60 cursor-not-allowed")}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {GLOBAL_ROLES.map((r) => (
+                  {GLOBAL_ROLES.filter((r) => (ROLE_RANK[r] ?? 0) < myRank).map((r) => (
                     <SelectItem key={r} value={r} className="text-xs">
                       <span className={cn("inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium", ROLE_BADGE[r])}>
                         {r}
@@ -643,17 +660,18 @@ function MembersTab() {
               {/* AppRole select */}
               <Select
                 value={user.app_role_id ?? "none"}
+                disabled={!canManage}
                 onValueChange={(val) =>
                   assignRole.mutate(
                     { userId: user.id, appRoleId: val === "none" ? null : val },
                     {
                       onSuccess: () => toast.success("Custom role updated"),
-                      onError:   () => toast.error("Failed to update custom role"),
+                      onError: () => toast.error("Failed to update custom role"),
                     }
                   )
                 }
               >
-                <SelectTrigger className="h-7 text-xs w-full">
+                <SelectTrigger className={cn("h-7 text-xs w-full", !canManage && "opacity-60 cursor-not-allowed")}>
                   <SelectValue placeholder="No role" />
                 </SelectTrigger>
                 <SelectContent>
@@ -666,22 +684,24 @@ function MembersTab() {
 
               {/* Actions */}
               <div className="flex justify-end opacity-0 group-hover:opacity-100 transition-opacity">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button className="h-6 w-6 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-accent transition-colors">
-                      <MoreHorizontal className="h-3.5 w-3.5" />
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-36">
-                    <DropdownMenuItem
-                      className="gap-2 cursor-pointer text-destructive focus:text-destructive"
-                      onClick={() => setDeleteTarget(user.id)}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                      Delete user
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                {canManage && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className="h-6 w-6 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-accent transition-colors">
+                        <MoreHorizontal className="h-3.5 w-3.5" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-36">
+                      <DropdownMenuItem
+                        className="gap-2 cursor-pointer text-destructive focus:text-destructive"
+                        onClick={() => setDeleteTarget(user.id)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        Delete user
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
               </div>
             </div>
           )
@@ -699,12 +719,12 @@ function MembersTab() {
         <div className="px-6 py-4 space-y-3">
           {[1, 2, 3].map((i) => <Skeleton key={i} className="h-8 w-full" />)}
         </div>
-      ) : invitations.length === 0 ? (
+      ) : invitations.filter((inv) => inv.status === "pending").length === 0 ? (
         <div className="px-6 py-6 text-center">
-          <p className="text-xs text-muted-foreground">No invitations yet.</p>
+          <p className="text-xs text-muted-foreground">No pending invitations.</p>
         </div>
       ) : (
-        invitations.map((inv) => {
+        invitations.filter((inv) => inv.status === "pending").map((inv) => {
           const inviteUrl = `${window.location.origin}/invite/${inv.token}`
           return (
             <div
@@ -724,8 +744,8 @@ function MembersTab() {
                     inv.role === "super-admin"
                       ? "bg-purple-50 text-purple-700 dark:bg-purple-950/30 dark:text-purple-300"
                       : inv.role === "admin"
-                      ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300"
-                      : "bg-muted text-muted-foreground"
+                        ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300"
+                        : "bg-muted text-muted-foreground"
                   )}>
                     {inv.role === "super-admin" ? "Super Admin" : inv.role === "admin" ? "Admin" : "Member"}
                   </span>
@@ -801,7 +821,7 @@ function MembersTab() {
                 if (!revokeTarget) return
                 revokeInvitation.mutate(revokeTarget.id, {
                   onSuccess: () => { toast.success("Invitation revoked"); setRevokeTarget(null) },
-                  onError:   () => toast.error("Failed to revoke invitation"),
+                  onError: () => toast.error("Failed to revoke invitation"),
                 })
               }}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
@@ -830,8 +850,8 @@ export function OrgSettingsPage() {
 
   const tabs: { id: Tab; label: string }[] = [
     { id: "working-days", label: "Working Days" },
-    { id: "holidays",     label: "Holidays" },
-    { id: "members",      label: "Members" },
+    { id: "holidays", label: "Holidays" },
+    { id: "members", label: "Members" },
   ]
 
   return (
@@ -872,8 +892,8 @@ export function OrgSettingsPage() {
         {/* Scrollable tab content */}
         <div className="flex-1 overflow-y-auto">
           {tab === "working-days" && <WorkingDaysTab />}
-          {tab === "holidays"     && <HolidaysTab />}
-          {tab === "members"      && <MembersTab />}
+          {tab === "holidays" && <HolidaysTab />}
+          {tab === "members" && <MembersTab />}
         </div>
 
       </div>

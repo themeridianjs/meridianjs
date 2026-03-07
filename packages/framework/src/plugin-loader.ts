@@ -44,7 +44,7 @@ export async function loadPlugins(
   const logger = container.resolve<ILogger>("logger")
 
   for (const plugin of plugins) {
-    logger.info(`Loading plugin: ${plugin.resolve}`)
+    logger.debug(`Loading plugin: ${plugin.resolve}`)
 
     // ── 1. Resolve import path ──────────────────────────────────────────────
     const isLocalPath = plugin.resolve.startsWith(".") || path.isAbsolute(plugin.resolve)
@@ -104,7 +104,7 @@ export async function loadPlugins(
       await autoScanPlugin(scanRoot, container, logger, server, plugin.disableSubscribers ?? [])
     }
 
-    logger.info(`Plugin loaded: ${plugin.resolve}`)
+    logger.debug(`Plugin loaded: ${plugin.resolve}`)
   }
 }
 

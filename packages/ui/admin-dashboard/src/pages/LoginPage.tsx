@@ -28,7 +28,7 @@ export function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[hsl(60_5%_96%)] dark:bg-background flex items-center justify-center p-4">
+    <div className="min-h-screen bg-white dark:bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-[360px]">
         <WidgetZone zone="login.before" props={{}} />
         {/* Logo */}
@@ -76,6 +76,11 @@ export function LoginPage() {
             >
               {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
+          </div>
+          <div className="flex justify-end">
+            <Link to="/forgot-password" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+              Forgot password?
+            </Link>
           </div>
           <div className="pt-1">
             <Button

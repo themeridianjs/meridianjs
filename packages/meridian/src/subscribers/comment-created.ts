@@ -31,6 +31,7 @@ export default async function handler({ event, container }: SubscriberArgs<Comme
       user_id: userId, entity_type: "issue", entity_id: data.issue_id,
       action: "commented", message: "Someone commented on an issue you're involved with",
       workspace_id: issue.workspace_id,
+      metadata: { project_id: issue.project_id },
     })
   ))
 
@@ -43,6 +44,7 @@ export default async function handler({ event, container }: SubscriberArgs<Comme
       user_id: userId, entity_type: "issue", entity_id: data.issue_id,
       action: "mentioned", message: `You were mentioned in a comment on [${issue.identifier}]: ${issue.title}`,
       workspace_id: issue.workspace_id,
+      metadata: { project_id: issue.project_id },
     })
   ))
 

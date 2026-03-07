@@ -16,7 +16,7 @@ function useEnsureUserProfile() {
       .then((profile) => {
         if (profile) {
           login(
-            { id: profile.id, email: profile.email, first_name: profile.first_name ?? "", last_name: profile.last_name ?? "" },
+            { id: profile.id, email: profile.email, first_name: profile.first_name ?? "", last_name: profile.last_name ?? "", avatar_url: profile.avatar_url ?? null },
             token
           )
         }

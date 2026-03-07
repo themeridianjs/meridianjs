@@ -18,7 +18,7 @@ export function GoogleSignInButton({ flow, inviteToken, label, disabled }: Props
     <Button
       type="button"
       variant="outline"
-      className="w-full gap-2"
+      className="w-full gap-2 bg-white dark:bg-black text-black dark:text-white"
       onClick={handleClick}
       disabled={disabled}
     >

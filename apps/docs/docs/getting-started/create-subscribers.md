@@ -63,3 +63,23 @@ export const config: SubscriberConfig = {
 ```
 
 Subscribers are auto-loaded from `src/subscribers/` at bootstrap.
+
+---
+
+## Overriding Built-in System Events
+
+`@meridianjs/meridian` ships subscribers for all core domain events (issue creation, assignment, comments, invitations, etc.). To replace one with your own logic, disable the built-in handler in `meridian.config.ts` and create a subscriber with the same event name in your own `src/subscribers/`:
+
+```typescript
+// meridian.config.ts
+plugins: [
+  {
+    resolve: '@meridianjs/meridian',
+    disableSubscribers: ['issue.assigned'], // suppress the built-in handler
+  },
+],
+```
+
+Your `src/subscribers/issue-assigned.ts` will then be the sole handler for that event.
+
+See the full list of disableable events and a complete example in the [Plugin System → Disabling Built-in Subscribers](/docs/plugins/overview#disabling-built-in-subscribers) guide.

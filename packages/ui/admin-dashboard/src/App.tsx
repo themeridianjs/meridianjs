@@ -31,6 +31,8 @@ import { OrgSettingsPage } from "@/pages/OrgSettingsPage"
 import { PublicProjectPage } from "@/pages/public/PublicProjectPage"
 import { GoogleCallbackPage } from "@/pages/GoogleCallbackPage"
 import { ProfilePage } from "@/pages/ProfilePage"
+import { ForgotPasswordPage } from "@/pages/ForgotPasswordPage"
+import { ResetPasswordPage } from "@/pages/ResetPasswordPage"
 
 const ProjectTimelinePage = lazy(() => import("@/pages/ProjectTimelinePage").then(m => ({ default: m.ProjectTimelinePage })))
 const WorkspaceReportingPage = lazy(() => import("@/pages/WorkspaceReportingPage").then(m => ({ default: m.WorkspaceReportingPage })))
@@ -163,6 +165,22 @@ export function App() {
         element={
           <RedirectIfAuth>
             <RegisterPage />
+          </RedirectIfAuth>
+        }
+      />
+      <Route
+        path="/forgot-password"
+        element={
+          <RedirectIfAuth>
+            <ForgotPasswordPage />
+          </RedirectIfAuth>
+        }
+      />
+      <Route
+        path="/reset-password"
+        element={
+          <RedirectIfAuth>
+            <ResetPasswordPage />
           </RedirectIfAuth>
         }
       />

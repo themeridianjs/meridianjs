@@ -107,6 +107,82 @@ Users never need to manually load core modules — they are all handled by this 
 
 ---
 
+## Disabling Built-in Subscribers
+
+Every plugin's subscribers can be selectively disabled using the `disableSubscribers` option in `meridian.config.ts`. Pass the event name(s) you want to suppress, and the framework will skip registering that subscriber entirely — letting you handle those events yourself in `src/subscribers/`.
+
+```typescript
+// meridian.config.ts
+plugins: [
+  {
+    resolve: '@meridianjs/meridian',
+    disableSubscribers: ['issue.assigned', 'comment.created'],
+  },
+],
+```
+
+### Built-in system events from `@meridianjs/meridian`
+
+| Event | Default behaviour |
+|---|---|
+| `issue.created` | Creates in-app notification + sends email to assignees / reporter |
+| `issue.assigned` | Creates in-app notification + sends email to new assignees |
+| `comment.created` | Creates in-app notification + sends email to assignees, reporter, and mentioned users |
+| `issue.status_changed` | Records activity log entry |
+| `project.member_added` | Creates in-app notification + sends email to the added member |
+| `workspace.member_invited` | Sends invitation email with the accept link |
+| `password.reset_requested` | Sends password-reset email |
+| `password.otp_requested` | Sends OTP verification email for password create/change |
+
+### Example — custom assignment email
+
+```typescript
+// meridian.config.ts
+plugins: [
+  {
+    resolve: '@meridianjs/meridian',
+    // Disable the built-in handler so we can send our own branded email
+    disableSubscribers: ['issue.assigned'],
+  },
+],
+```
+
+```typescript
+// src/subscribers/issue-assigned.ts
+import type { SubscriberArgs, SubscriberConfig } from '@meridianjs/types'
+
+export default async function handler({ event, container }: SubscriberArgs) {
+  const { issue_id, assignee_ids, actor_id } = event.data as any
+  const emailService = container.resolve('emailService') as any
+  const userService  = container.resolve('userModuleService') as any
+  const issueService = container.resolve('issueModuleService') as any
+
+  const issue = await issueService.retrieveIssue(issue_id)
+
+  await Promise.allSettled(
+    (assignee_ids as string[])
+      .filter((id: string) => id !== actor_id)
+      .map(async (userId: string) => {
+        const user = await userService.retrieveUser(userId)
+        if (!user?.email) return
+        await emailService.send({
+          to: user.email,
+          subject: `[${issue.identifier}] You've been assigned: ${issue.title}`,
+          text: `Hi ${user.first_name ?? 'there'}, you were assigned to "${issue.title}".`,
+        })
+      })
+  )
+}
+
+export const config: SubscriberConfig = { event: 'issue.assigned' }
+```
+
+:::tip
+You can disable multiple events at once. Any event name not listed in `disableSubscribers` continues to use the built-in subscriber unchanged.
+:::
+
+---
+
 ## Creating a Local Plugin
 
 You can create a plugin inside your own app for organizational purposes:

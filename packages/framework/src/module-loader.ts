@@ -24,7 +24,7 @@ export async function loadModules(
   for (const moduleConfig of moduleConfigs) {
     const definition = await resolveModuleDefinition(moduleConfig, rootDir)
 
-    logger.info(`Loading module: ${definition.key}`)
+    logger.debug(`Loading module: ${definition.key}`)
 
     // Each module gets an isolated child scope
     const moduleContainer = globalContainer.createScope()
@@ -58,7 +58,7 @@ export async function loadModules(
     // Promote to the global container so routes/workflows/subscribers can resolve it
     globalContainer.register({ [definition.key]: serviceInstance })
 
-    logger.info(`Module loaded: ${definition.key}`)
+    logger.debug(`Module loaded: ${definition.key}`)
   }
 }
 

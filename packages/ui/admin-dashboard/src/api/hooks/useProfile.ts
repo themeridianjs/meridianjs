@@ -10,6 +10,7 @@ export interface ProfileUser {
   avatar_url: string | null
   designation: string | null
   phone_number: string | null
+  has_password: boolean
   google_id: string | null
   role: string
   is_active: boolean
@@ -69,6 +70,23 @@ export function useRemoveAvatar() {
     mutationFn: () => api.delete<{ ok: boolean }>("/admin/users/me/avatar"),
     onSuccess: () => {
       updateLocalUser({ avatar_url: null })
+      qc.invalidateQueries({ queryKey: ["me"] })
+    },
+  })
+}
+
+export function useSendPasswordOtp() {
+  return useMutation({
+    mutationFn: () => api.post<{ ok: boolean }>("/admin/users/me/password/send-otp", {}),
+  })
+}
+
+export function useSetPassword() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: { otp: string; new_password: string }) =>
+      api.post<{ ok: boolean }>("/admin/users/me/password", data),
+    onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["me"] })
     },
   })

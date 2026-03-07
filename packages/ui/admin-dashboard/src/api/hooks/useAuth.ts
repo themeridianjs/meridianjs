@@ -55,6 +55,20 @@ export function useRegister() {
   })
 }
 
+export function useForgotPassword() {
+  return useMutation({
+    mutationFn: (data: { email: string }) =>
+      api.post<{ ok: boolean; message: string }>("/auth/forgot-password", data),
+  })
+}
+
+export function useResetPassword() {
+  return useMutation({
+    mutationFn: (data: { token: string; password: string }) =>
+      api.post<{ ok: boolean; message: string }>("/auth/reset-password", data),
+  })
+}
+
 export function useRegisterViaInvite(token: string) {
   const { login } = useAuth()
   return useMutation({

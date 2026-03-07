@@ -8,6 +8,7 @@ import cookieParser from "cookie-parser"
 import cors from "cors"
 import helmet from "helmet"
 import type { MeridianConfig, MeridianContainer, ILogger } from "@meridianjs/types"
+import { httpLoggerMiddleware } from "./http-logger.js"
 
 export function createServer(
   container: MeridianContainer,
@@ -40,6 +41,9 @@ export function createServer(
     },
     crossOriginEmbedderPolicy: false,
   }))
+
+  // HTTP request logging
+  app.use(httpLoggerMiddleware())
 
   // CORS
   const corsOrigin = config.projectConfig.cors?.origin ?? "*"

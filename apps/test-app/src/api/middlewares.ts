@@ -10,9 +10,11 @@ import { authRateLimit, oauthRateLimit, apiRateLimit } from "@meridianjs/framewo
  */
 export default {
   routes: [
-    { matcher: "/auth/login",    middlewares: [authRateLimit] },
-    { matcher: "/auth/register", middlewares: [authRateLimit] },
-    { matcher: "/auth/google",   middlewares: [oauthRateLimit] },
+    { matcher: "/auth/login",           middlewares: [authRateLimit] },
+    { matcher: "/auth/register",        middlewares: [authRateLimit] },
+    { matcher: "/auth/forgot-password", middlewares: [authRateLimit] },
+    { matcher: "/auth/reset-password",  middlewares: [authRateLimit] },
+    { matcher: "/auth/google",          middlewares: [oauthRateLimit] },
     { matcher: "/admin",         middlewares: [apiRateLimit, authenticateJWT, requireWorkspace] },
   ],
 }

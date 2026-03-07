@@ -12,6 +12,7 @@ import { loadLinks } from "./link-loader.js"
 import { createServer } from "./server.js"
 import { ConsoleLogger } from "./logger.js"
 import type { MeridianConfig, MeridianContainer, ILogger, IEventBus, IScheduler } from "@meridianjs/types"
+import { printStartupTable } from "./startup-table.js"
 
 export interface BootstrapOptions {
   /** Absolute path to the project root directory */
@@ -45,6 +46,7 @@ export interface MeridianApp {
  * 11. Load scheduled jobs from src/jobs/
  */
 export async function bootstrap(opts: BootstrapOptions): Promise<MeridianApp> {
+  const startTime = Date.now()
   const { rootDir } = opts
 
   // ── 1. Load config ─────────────────────────────────────────────────────────
@@ -114,6 +116,8 @@ export async function bootstrap(opts: BootstrapOptions): Promise<MeridianApp> {
   // ── Build HTTP server wrapper ─────────────────────────────────────────────
   const httpServer = http.createServer(server)
 
+  const elapsedMs = Date.now() - startTime
+  printStartupTable({ config, elapsedMs })
   logger.info("Meridian application bootstrapped successfully.")
 
   return {

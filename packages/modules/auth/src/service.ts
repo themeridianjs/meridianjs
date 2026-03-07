@@ -2,11 +2,12 @@ import { MeridianService } from "@meridianjs/framework-utils"
 import type { MeridianContainer, MeridianConfig } from "@meridianjs/types"
 import bcrypt from "bcrypt"
 import jwt from "jsonwebtoken"
-import { randomUUID } from "crypto"
+import { randomBytes, randomUUID } from "crypto"
 
 const BCRYPT_ROUNDS = 12
 const JWT_EXPIRES_IN = "7d"
 const JWT_EXPIRES_MS = 7 * 24 * 60 * 60 * 1000
+const RESET_TOKEN_EXPIRES_MS = 30 * 60 * 1000 // 30 minutes
 
 export type UserRole = "super-admin" | "admin" | "moderator" | "member"
 
@@ -176,8 +177,8 @@ export class AuthModuleService extends MeridianService({}) {
       if (existingByEmail) {
         throw Object.assign(
           new Error(
-            "An account with this email already exists. Please sign in with your password. " +
-            "You can link Google sign-in from your account settings afterwards."
+            "GOOGLE_NOT_LINKED: Your Google account is not connected yet. " +
+            "Please sign in with your email and password, then connect Google from your Profile settings to use Google sign-in."
           ),
           { status: 409 }
         )
@@ -191,6 +192,10 @@ export class AuthModuleService extends MeridianService({}) {
 
       if (!user.is_active) {
         throw Object.assign(new Error("Account deactivated"), { status: 403 })
+      }
+      // Set avatar from Google profile picture if user doesn't have one yet
+      if (!user.avatar_url && input.picture) {
+        await userService.updateUser(user.id, { avatar_url: input.picture }).catch(() => {})
       }
       await userService.recordLogin(user.id).catch(() => {})
       const permissions = await this.resolvePermissions(user.app_role_id)
@@ -231,7 +236,9 @@ export class AuthModuleService extends MeridianService({}) {
       last_name: input.lastName ?? null,
       role,
       is_active: true,
+      has_password: false,
       google_id: input.googleId,
+      avatar_url: input.picture ?? null,
       ...(invite?.app_role_id ? { app_role_id: invite.app_role_id } : {}),
     })
 
@@ -289,6 +296,63 @@ export class AuthModuleService extends MeridianService({}) {
       },
       token,
     }
+  }
+
+  /** Set (or reset) password for a user. Used after OTP verification. */
+  async setPassword(userId: string, newPassword: string): Promise<void> {
+    const userService = this.container.resolve<any>("userModuleService")
+    const password_hash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS)
+    await userService.updateUser(userId, { password_hash, has_password: true })
+  }
+
+  /**
+   * Generate a password reset token for the given email.
+   * Returns the token and user info so the caller can emit an event / send an email.
+   * Returns null (instead of throwing) when the email isn't found — prevents enumeration.
+   */
+  async requestPasswordReset(email: string): Promise<{ token: string; userId: string; email: string } | null> {
+    const userService = this.container.resolve<any>("userModuleService")
+    const config = this.container.resolve<MeridianConfig>("config")
+
+    const user = await userService.retrieveUserByEmail(email.toLowerCase().trim())
+    if (!user || user.deleted_at || !user.is_active) return null
+
+    const resetToken = randomBytes(32).toString("hex")
+    const payload = { sub: user.id, purpose: "password_reset", jti: resetToken }
+    const signedToken = jwt.sign(payload, config.projectConfig.jwtSecret, { expiresIn: "30m" })
+
+    return { token: signedToken, userId: user.id, email: user.email }
+  }
+
+  /** Validate a password reset token and set the new password. */
+  async resetPassword(token: string, newPassword: string): Promise<void> {
+    const config = this.container.resolve<MeridianConfig>("config")
+    const userService = this.container.resolve<any>("userModuleService")
+
+    let payload: { sub: string; purpose: string }
+    try {
+      payload = jwt.verify(token, config.projectConfig.jwtSecret, { algorithms: ["HS256"] }) as any
+    } catch (err: any) {
+      if (err.name === "TokenExpiredError") {
+        throw Object.assign(new Error("Reset link has expired. Please request a new one."), { status: 400 })
+      }
+      throw Object.assign(new Error("Invalid reset link"), { status: 400 })
+    }
+
+    if (payload.purpose !== "password_reset") {
+      throw Object.assign(new Error("Invalid reset link"), { status: 400 })
+    }
+
+    const user = await userService.retrieveUser(payload.sub)
+    if (!user || user.deleted_at || !user.is_active) {
+      throw Object.assign(new Error("Account not found or inactive"), { status: 400 })
+    }
+
+    const password_hash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS)
+    await userService.updateUser(payload.sub, { password_hash })
+
+    // Revoke all existing sessions so the old password can't be used
+    await userService.revokeAllUserSessions(payload.sub).catch(() => {})
   }
 
   /** Verify a JWT and return its decoded payload. Throws if invalid or expired. */
