@@ -11,7 +11,7 @@
     "@meridianjs/activity": "*",
     "@meridianjs/app-role": "*",
     "@meridianjs/auth": "*",
-    "@meridianjs/email-ses": "0.1.0",
+    "@meridianjs/email-ses": "*",
     "@meridianjs/event-bus-local": "*",
     "@meridianjs/framework": "*",
     "@meridianjs/framework-utils": "*",
