@@ -65,10 +65,12 @@ Development uses in-process implementations. Production requires Redis:
 ```typescript
 modules: [
   // swap out local for redis
-  { resolve: "@meridianjs/event-bus-redis", options: { redisUrl: process.env.REDIS_URL } },
-  { resolve: "@meridianjs/job-queue-redis", options: { redisUrl: process.env.REDIS_URL } },
+  { resolve: "@meridianjs/event-bus-redis", options: { url: process.env.REDIS_URL } },
+  { resolve: "@meridianjs/job-queue-redis", options: { url: process.env.REDIS_URL } },
 ],
 ```
+
+Both packages accept additional options. See the [Event Bus](/docs/architecture/event-bus#redis-configuration) docs for the full options reference.
 
 ### Set CORS origin
 
@@ -108,46 +110,27 @@ npm run db:migrate
 
 ---
 
-## 5. Build
+## 5. Start the Server
+
+`meridian start` (or `npm run start`) handles everything in a single command — it starts the API server with `NODE_ENV=production`, compiles any admin widget extensions, and serves the admin dashboard:
 
 ```bash
-# Build the API server
-npm run build
-
-# Build the admin dashboard (if included)
-cd node_modules/@meridianjs/admin-dashboard && npm run build
-# or if you have it locally:
-npm run build --workspace=@meridianjs/admin-dashboard
+npm run start
 ```
 
----
-
-## 6. Start the Processes
-
-You need two long-running processes:
-
-```bash
-# Process 1 — API server
-NODE_ENV=production node dist/main.js
-
-# Process 2 — Admin dashboard
-NODE_ENV=production npx meridian serve-dashboard
-```
-
-Use a process manager like [PM2](https://pm2.keymetrics.io/) to keep them running:
+Use a process manager like [PM2](https://pm2.keymetrics.io/) to keep it running:
 
 ```bash
 npm install -g pm2
 
-pm2 start dist/main.js --name meridian-api
-pm2 start "npx meridian serve-dashboard" --name meridian-dashboard
+pm2 start "npm run start" --name meridian
 pm2 save
 pm2 startup   # auto-start on server reboot
 ```
 
 ---
 
-## 7. nginx Configuration
+## 6. nginx Configuration
 
 The recommended setup uses two subdomains:
 - `api.yourdomain.com` → API server on port `9000`
@@ -223,7 +206,7 @@ cors: {
 
 ---
 
-## 8. Health Check
+## 7. Health Check
 
 Verify the API is running:
 
@@ -234,7 +217,7 @@ curl http://api.yourdomain.com/health
 
 ---
 
-## 9. Security Headers
+## 8. Security Headers
 
 Helmet is applied automatically by `@meridianjs/framework` when `NODE_ENV=production`. No configuration needed. Headers applied:
 
@@ -246,7 +229,7 @@ Helmet is applied automatically by `@meridianjs/framework` when `NODE_ENV=produc
 
 ---
 
-## 10. Google OAuth (if used)
+## 9. Google OAuth (if used)
 
 Update your `.env` with the production URLs and register the callback URL in the Google Cloud Console:
 

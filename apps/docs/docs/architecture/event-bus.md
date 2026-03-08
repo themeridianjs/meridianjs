@@ -21,14 +21,63 @@ The event bus decouples domain mutations from their side effects. Workflows emit
 Switch by changing `modules[]` in `meridian.config.ts`:
 
 ```typescript
-// Development
+// Development (default — no Redis needed)
 { resolve: '@meridianjs/event-bus-local' }
 
-// Production
-{ resolve: '@meridianjs/event-bus-redis', options: { redisUrl: process.env.REDIS_URL } }
+// Production — requires a running Redis instance
+{ resolve: '@meridianjs/event-bus-redis', options: { url: process.env.REDIS_URL } }
 ```
 
 Both implement the same `IEventBus` interface — no code changes needed elsewhere.
+
+---
+
+## Redis Configuration
+
+When moving to production, swap **both** the event bus and the job queue to their Redis-backed implementations. Both packages accept a `url` option pointing to your Redis instance:
+
+```typescript
+// meridian.config.ts
+modules: [
+  {
+    resolve: "@meridianjs/event-bus-redis",
+    options: { url: process.env.REDIS_URL },    // e.g. redis://localhost:6379
+  },
+  {
+    resolve: "@meridianjs/job-queue-redis",
+    options: { url: process.env.REDIS_URL },
+  },
+],
+```
+
+### Options
+
+#### `@meridianjs/event-bus-redis`
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `url` | `string` | **(required)** | Redis connection string (e.g. `redis://localhost:6379`) |
+| `queueName` | `string` | `"meridian:events"` | BullMQ queue name for events |
+| `concurrency` | `number` | `5` | Number of events processed concurrently |
+
+#### `@meridianjs/job-queue-redis`
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `url` | `string` | **(required)** | Redis connection string (e.g. `redis://localhost:6379`) |
+| `prefix` | `string` | `"meridian:job"` | BullMQ key prefix for scheduled jobs |
+
+Set `REDIS_URL` in your `.env`:
+
+```bash
+REDIS_URL=redis://localhost:6379
+```
+
+For Redis with authentication or TLS, use the full connection string:
+
+```bash
+REDIS_URL=rediss://default:password@redis-host:6380
+```
 
 ---
 
