@@ -5,7 +5,7 @@ export default defineConfig({
     databaseUrl: process.env.DATABASE_URL ?? "postgresql://arjusmoon@localhost:5432/meridian_test",
     jwtSecret: process.env.JWT_SECRET ?? "super-secret-jwt-key-for-testing-only",
     httpPort: 9000,
-    maxChildIssueDepth:3
+    maxChildIssueDepth: 3
   },
   modules: [
     // Infrastructure (optional — swap for @meridianjs/event-bus-redis in production)
@@ -14,22 +14,22 @@ export default defineConfig({
     // Local test module (Phase 1 smoke test)
     { resolve: "./src/modules/hello-module/index.ts" },
     // Core domain modules are automatically loaded by the @meridianjs/meridian plugin
-    // {
-    //   resolve: "@meridianjs/email-ses",
-    //   options: {
-    //     fromAddress: process.env.EMAIL_FROM_ADDRESS ?? "no-reply@arjusmoon.com",
-    //     region: process.env.SES_REGION ?? process.env.S3_REGION ?? "ap-south-1",
-    //     accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-    //     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-    //   },
-    // },
-    { 
-      resolve: "@meridianjs/email-sendgrid", 
-      options: { 
-        apiKey: process.env.SENDGRID_API_KEY, 
-        fromAddress: process.env.EMAIL_FROM_ADDRESS ?? "no-reply@arjusmoon.com" 
-      } 
+    {
+      resolve: "@meridianjs/email-ses",
+      options: {
+        fromAddress: process.env.EMAIL_FROM ?? "no-reply@arjusmoon.com",
+        region: process.env.SES_REGION ?? process.env.S3_REGION ?? "ap-south-1",
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+      },
     },
+    // { 
+    //   resolve: "@meridianjs/email-sendgrid", 
+    //   options: { 
+    //     apiKey: process.env.SENDGRID_API_KEY, 
+    //     fromAddress: process.env.EMAIL_FROM_ADDRESS ?? "no-reply@arjusmoon.com" 
+    //   } 
+    // },
     // { 
     //   resolve: "@meridianjs/email-resend", 
     //   options: { 
@@ -48,8 +48,8 @@ export default defineConfig({
         // endpoint: process.env.S3_ENDPOINT,   // for MinIO / localstack
       },
     },
-    { 
-      resolve: "@meridianjs/google-oauth", 
+    {
+      resolve: "@meridianjs/google-oauth",
       options: {
         clientId: process.env.GOOGLE_CLIENT_ID,
         clientSecret: process.env.GOOGLE_CLIENT_SECRET,
