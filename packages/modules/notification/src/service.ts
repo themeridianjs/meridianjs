@@ -70,4 +70,14 @@ export class NotificationModuleService extends MeridianService({ Notification })
     }
     await repo.flush()
   }
+
+  /** Delete all notifications for a user (used during deactivation) */
+  async deleteNotificationsForUser(userId: string): Promise<number> {
+    const repo = this.container.resolve("notificationRepository") as any
+    const notifications = await repo.find({ user_id: userId })
+    const count = notifications.length
+    for (const n of notifications) repo.remove(n)
+    if (count > 0) await repo.flush()
+    return count
+  }
 }

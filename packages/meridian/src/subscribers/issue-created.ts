@@ -13,13 +13,18 @@ interface IssueCreatedData {
 
 export default async function handler({ event, container }: SubscriberArgs<IssueCreatedData>): Promise<void> {
   const notifService = container.resolve("notificationModuleService") as any
+  const userService = container.resolve("userModuleService") as any
   const data = event.data
   const recipients = new Set<string>()
   if (data.assignee_ids) data.assignee_ids.forEach(id => recipients.add(id))
   if (data.reporter_id && data.reporter_id !== data.actor_id) recipients.add(data.reporter_id)
 
+  // Filter out deactivated users
+  const activeUserMap = await userService.listUsersByIds([...recipients])
+  const activeRecipients = [...recipients].filter(id => activeUserMap.has(id))
+
   try {
-    await Promise.all([...recipients].map(userId =>
+    await Promise.all(activeRecipients.map(userId =>
       notifService.createNotification({
         user_id: userId, entity_type: "issue", entity_id: data.issue_id,
         action: "created",

@@ -61,18 +61,22 @@ export const DELETE = async (req: any, res: Response, next: NextFunction) => {
       const target = await targetRank(req)
 
       if (target >= actor) {
-        res.status(403).json({ error: { message: "You cannot delete a user at or above your level" } })
+        res.status(403).json({ error: { message: "You cannot deactivate a user at or above your level" } })
         return
       }
 
       if (req.params.id === req.user?.id) {
-        res.status(400).json({ error: { message: "You cannot delete yourself" } })
+        res.status(400).json({ error: { message: "You cannot deactivate yourself" } })
         return
       }
 
       const userService = req.scope.resolve("userModuleService") as any
-      await userService.softDeleteUser(req.params.id)
+      await userService.deactivateUser(req.params.id)
       await userService.revokeAllUserSessions(req.params.id).catch(() => {})
+
+      const notifService = req.scope.resolve("notificationModuleService") as any
+      await notifService.deleteNotificationsForUser(req.params.id).catch(() => {})
+
       res.json({ success: true })
     } catch (err) {
       next(err)

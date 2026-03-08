@@ -15,8 +15,11 @@ import {
   X,
   Copy,
   Check,
+  UserX,
+  UserCheck,
+  RotateCw,
 } from "lucide-react"
-import { useUsers, useDeleteUser, useUpdateUserGlobalRole, useInviteOrgMember, useOrgInvitations, useRevokeOrgInvitation, type OrgInvitation } from "@/api/hooks/useUsers"
+import { useUsers, useDeactivateUser, useReactivateUser, useUpdateUserGlobalRole, useInviteOrgMember, useOrgInvitations, useRevokeOrgInvitation, useResendOrgInvitation, type OrgInvitation } from "@/api/hooks/useUsers"
 import { useMe } from "@/api/hooks/useProfile"
 import { useRoles, useAssignUserRole } from "@/api/hooks/useRoles"
 import {
@@ -62,6 +65,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 
@@ -495,11 +499,14 @@ function MembersTab() {
   const { data: roles = [] } = useRoles()
   const assignRole = useAssignUserRole()
   const updateGlobalRole = useUpdateUserGlobalRole()
-  const deleteUser = useDeleteUser()
+  const deactivateUser = useDeactivateUser()
+  const reactivateUser = useReactivateUser()
   const revokeInvitation = useRevokeOrgInvitation()
+  const resendInvitation = useResendOrgInvitation()
   const inviteMember = useInviteOrgMember()
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
   const [revokeTarget, setRevokeTarget] = useState<OrgInvitation | null>(null)
+  const [resendTarget, setResendTarget] = useState<OrgInvitation | null>(null)
   const [inviteOpen, setInviteOpen] = useState(false)
   const [inviteEmail, setInviteEmail] = useState("")
   const [inviteRole, setInviteRole] = useState("member")
@@ -531,11 +538,11 @@ function MembersTab() {
     )
   }
 
-  const handleDelete = () => {
+  const handleDeactivate = () => {
     if (!deleteTarget) return
-    deleteUser.mutate(deleteTarget, {
-      onSuccess: () => { toast.success("User deleted"); setDeleteTarget(null) },
-      onError: () => toast.error("Failed to delete user"),
+    deactivateUser.mutate(deleteTarget, {
+      onSuccess: () => { toast.success("User deactivated"); setDeleteTarget(null) },
+      onError: () => toast.error("Failed to deactivate user"),
     })
   }
 
@@ -691,6 +698,8 @@ function MembersTab() {
               </Select>
             )
 
+            const isActive = (user as any).is_active !== false
+
             const actionsMenu = canManage ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -698,14 +707,29 @@ function MembersTab() {
                     <MoreHorizontal className="h-3.5 w-3.5" />
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-36">
-                  <DropdownMenuItem
-                    className="gap-2 cursor-pointer text-destructive focus:text-destructive"
-                    onClick={() => setDeleteTarget(user.id)}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    Delete user
-                  </DropdownMenuItem>
+                <DropdownMenuContent align="end" className="w-40">
+                  {isActive ? (
+                    <DropdownMenuItem
+                      className="gap-2 cursor-pointer text-destructive focus:text-destructive"
+                      onClick={() => setDeleteTarget(user.id)}
+                    >
+                      <UserX className="h-3.5 w-3.5" />
+                      Deactivate user
+                    </DropdownMenuItem>
+                  ) : (
+                    <DropdownMenuItem
+                      className="gap-2 cursor-pointer"
+                      onClick={() => {
+                        reactivateUser.mutate(user.id, {
+                          onSuccess: () => toast.success("User reactivated"),
+                          onError: () => toast.error("Failed to reactivate user"),
+                        })
+                      }}
+                    >
+                      <UserCheck className="h-3.5 w-3.5" />
+                      Reactivate user
+                    </DropdownMenuItem>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : null
@@ -722,6 +746,7 @@ function MembersTab() {
                       <p className="text-sm font-medium truncate">
                         {name}
                         {isSelf && <span className="text-xs text-muted-foreground ml-1.5">(you)</span>}
+                        {!isActive && <span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">Deactivated</span>}
                       </p>
                       <p className="text-xs text-muted-foreground truncate">{user.email}</p>
                     </div>
@@ -743,6 +768,7 @@ function MembersTab() {
                       <p className="text-sm font-medium truncate">
                         {name}
                         {isSelf && <span className="text-xs text-muted-foreground ml-1.5">(you)</span>}
+                        {!isActive && <span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">Deactivated</span>}
                       </p>
                       <p className="text-xs text-muted-foreground truncate">{user.email}</p>
                     </div>
@@ -840,6 +866,20 @@ function MembersTab() {
                 <span className="text-xs text-muted-foreground hidden sm:block">
                   {format(new Date(inv.created_at), "MMM d")}
                 </span>
+                {inv.status === "pending" && inv.email && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={() => setResendTarget(inv)}
+                        disabled={resendInvitation.isPending}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground disabled:opacity-50"
+                      >
+                        <RotateCw className={cn("h-3.5 w-3.5", resendInvitation.isPending && "animate-spin")} />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>Resend invite</TooltipContent>
+                  </Tooltip>
+                )}
                 {inv.status === "pending" && (
                   <button
                     onClick={() => setRevokeTarget(inv)}
@@ -855,22 +895,22 @@ function MembersTab() {
         })
       )}
 
-      {/* Delete user dialog */}
+      {/* Deactivate user dialog */}
       <AlertDialog open={!!deleteTarget} onOpenChange={(v) => !v && setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete this user?</AlertDialogTitle>
+            <AlertDialogTitle>Deactivate this user?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action is permanent and cannot be undone. The user will lose access immediately.
+              The user will lose access immediately and be hidden from member lists. You can reactivate them later.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={handleDelete}
+              onClick={handleDeactivate}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Delete
+              Deactivate
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -898,6 +938,32 @@ function MembersTab() {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Revoke
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Resend invitation dialog */}
+      <AlertDialog open={!!resendTarget} onOpenChange={(v) => !v && setResendTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Resend invitation?</AlertDialogTitle>
+            <AlertDialogDescription>
+              A new invitation email will be sent to <span className="font-medium">{resendTarget?.email}</span>.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (!resendTarget) return
+                resendInvitation.mutate(resendTarget.id, {
+                  onSuccess: () => { toast.success("Invitation resent"); setResendTarget(null) },
+                  onError: () => toast.error("Failed to resend invitation"),
+                })
+              }}
+            >
+              Resend
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

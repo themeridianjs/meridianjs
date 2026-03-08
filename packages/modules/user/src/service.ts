@@ -43,6 +43,11 @@ export class UserModuleService extends MeridianService({ User: UserModel, Team: 
     return (this as any).updateUser(userId, { is_active: false })
   }
 
+  /** Reactivate a previously deactivated user account. */
+  async reactivateUser(userId: string): Promise<any> {
+    return (this as any).updateUser(userId, { is_active: true })
+  }
+
   /**
    * Restore a soft-deleted user account.
    * Bypasses UPDATE_RESERVED to clear deleted_at directly via the repository.
@@ -59,10 +64,15 @@ export class UserModuleService extends MeridianService({ User: UserModel, Team: 
    * Fetch multiple users by ID in a single query.
    * Returns a Map keyed by user ID for O(1) lookup.
    */
-  async listUsersByIds(ids: string[]): Promise<Map<string, any>> {
+  async listUsersByIds(ids: string[], options?: { includeInactive?: boolean }): Promise<Map<string, any>> {
     if (!ids.length) return new Map()
     const userRepository = this.container.resolve<any>("userRepository")
-    const users = await userRepository.find({ id: { $in: ids } })
+    const filters: Record<string, any> = { id: { $in: ids } }
+    if (!options?.includeInactive) {
+      filters.is_active = true
+      filters.deleted_at = null
+    }
+    const users = await userRepository.find(filters)
     return new Map(users.map((u: any) => [u.id, u]))
   }
 

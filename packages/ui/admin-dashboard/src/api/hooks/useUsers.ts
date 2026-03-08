@@ -8,6 +8,7 @@ export interface User {
   last_name: string
   role: string
   app_role_id: string | null
+  is_active: boolean
 }
 
 interface UsersResponse {
@@ -63,6 +64,12 @@ export function useRevokeOrgInvitation() {
   })
 }
 
+export function useResendOrgInvitation() {
+  return useMutation({
+    mutationFn: (inviteId: string) => api.post(`/admin/users/invitations/${inviteId}/resend`),
+  })
+}
+
 export function useInviteOrgMember() {
   const qc = useQueryClient()
   return useMutation({
@@ -81,10 +88,18 @@ export function useUpdateUserGlobalRole() {
   })
 }
 
-export function useDeleteUser() {
+export function useDeactivateUser() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (userId: string) => api.delete(`/admin/users/${userId}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: userKeys.list() }),
+  })
+}
+
+export function useReactivateUser() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (userId: string) => api.post(`/admin/users/${userId}/reactivate`),
     onSuccess: () => qc.invalidateQueries({ queryKey: userKeys.list() }),
   })
 }

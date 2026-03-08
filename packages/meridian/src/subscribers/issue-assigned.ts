@@ -15,11 +15,16 @@ export default async function handler({ event, container }: SubscriberArgs<Issue
   if (!data.assignee_ids?.length) return
 
   const notifService = container.resolve("notificationModuleService") as any
+  const userService = container.resolve("userModuleService") as any
+
+  // Filter out deactivated users
+  const candidateIds = data.assignee_ids.filter(id => id !== data.actor_id)
+  const activeUserMap = await userService.listUsersByIds(candidateIds)
+  const activeAssignees = candidateIds.filter(id => activeUserMap.has(id))
 
   try {
     await Promise.all(
-      data.assignee_ids
-        .filter(id => id !== data.actor_id)
+      activeAssignees
         .map(userId =>
           notifService.createNotification({
             user_id: userId, entity_type: "issue", entity_id: data.issue_id,

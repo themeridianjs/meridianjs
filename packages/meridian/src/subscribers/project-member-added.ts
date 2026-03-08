@@ -15,6 +15,11 @@ export default async function handler({ event, container }: SubscriberArgs<Proje
   if (!data.user_id || data.user_id === data.actor_id) return
 
   const notifService = container.resolve("notificationModuleService") as any
+  const userService = container.resolve("userModuleService") as any
+
+  // Skip notification if user is deactivated
+  const activeUserMap = await userService.listUsersByIds([data.user_id])
+  if (!activeUserMap.has(data.user_id)) return
 
   try {
     await notifService.createNotification({

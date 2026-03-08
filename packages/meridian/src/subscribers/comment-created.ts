@@ -21,13 +21,19 @@ export default async function handler({ event, container }: SubscriberArgs<Comme
     return
   }
 
+  const userService = container.resolve("userModuleService") as any
+
   const recipients = new Set<string>()
   if (issue.assignee_ids) issue.assignee_ids.forEach((id: string) => recipients.add(id))
   if (issue.reporter_id) recipients.add(issue.reporter_id)
   recipients.delete(data.author_id)
 
+  // Filter out deactivated users
+  const activeUserMap = await userService.listUsersByIds([...recipients])
+  const activeRecipients = [...recipients].filter(id => activeUserMap.has(id))
+
   try {
-    await Promise.all([...recipients].map(userId =>
+    await Promise.all(activeRecipients.map(userId =>
       notifService.createNotification({
         user_id: userId, entity_type: "issue", entity_id: data.issue_id,
         action: "commented", message: "Someone commented on an issue you're involved with",
@@ -42,7 +48,12 @@ export default async function handler({ event, container }: SubscriberArgs<Comme
 
   // Notify mentioned users (skip those already notified above)
   const mentionedIds = data.mentioned_user_ids ?? []
-  const newMentions = mentionedIds.filter(id => id !== data.author_id && !recipients.has(id))
+  const newMentionCandidates = mentionedIds.filter(id => id !== data.author_id && !recipients.has(id))
+  // Filter out deactivated mentioned users
+  const activeMentionMap = newMentionCandidates.length > 0
+    ? await userService.listUsersByIds(newMentionCandidates)
+    : new Map()
+  const newMentions = newMentionCandidates.filter(id => activeMentionMap.has(id))
 
   try {
     await Promise.all(newMentions.map(userId =>

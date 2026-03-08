@@ -124,6 +124,13 @@ export function useRevokeInvitation(workspaceId: string) {
   })
 }
 
+export function useResendInvitation(workspaceId: string) {
+  return useMutation({
+    mutationFn: (inviteId: string) =>
+      api.post(`/admin/workspaces/${workspaceId}/invitations/${inviteId}/resend`),
+  })
+}
+
 // ── Workspace Members ─────────────────────────────────────────────────────────
 
 export interface WorkspaceMember {

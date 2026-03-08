@@ -8,6 +8,7 @@ import {
   useInvitations,
   useCreateInvitation,
   useRevokeInvitation,
+  useResendInvitation,
   useWorkspaceMembers,
   useAddWorkspaceMember,
   useRemoveWorkspaceMember,
@@ -48,6 +49,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
 import { toast } from "sonner"
 import { format } from "date-fns"
 import { WidgetZone } from "@/components/WidgetZone"
@@ -65,6 +67,7 @@ import {
   ChevronLeft,
   ChevronRight,
   UserPlus,
+  RotateCw,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -213,7 +216,7 @@ function InviteMemberDialog({ open, onClose, workspaceId }: InviteMemberDialogPr
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="sm:max-w-[520px]">
+      <DialogContent className="sm:max-w-[520px] bg-white dark:bg-card">
         <DialogHeader>
           <DialogTitle>Add member</DialogTitle>
         </DialogHeader>
@@ -417,6 +420,8 @@ function InviteMemberDialog({ open, onClose, workspaceId }: InviteMemberDialogPr
 
 function InvitationRow({ invitation, workspaceId }: { invitation: Invitation; workspaceId: string }) {
   const revoke = useRevokeInvitation(workspaceId)
+  const resend = useResendInvitation(workspaceId)
+  const [resendOpen, setResendOpen] = useState(false)
   const inviteUrl = `${window.location.origin}/invite/${invitation.token}`
 
   return (
@@ -434,8 +439,8 @@ function InvitationRow({ invitation, workspaceId }: { invitation: Invitation; wo
             invitation.role === "super-admin"
               ? "bg-purple-50 text-purple-700 dark:bg-purple-950/30 dark:text-purple-300"
               : invitation.role === "admin"
-              ? "bg-indigo/10 text-indigo"
-              : "bg-muted text-muted-foreground"
+                ? "bg-indigo/10 text-indigo"
+                : "bg-muted text-muted-foreground"
           )}>
             {invitation.role === "super-admin" ? "Super Admin" : invitation.role === "admin" ? "Admin" : "Member"}
           </span>
@@ -451,6 +456,20 @@ function InvitationRow({ invitation, workspaceId }: { invitation: Invitation; wo
         <span className="text-xs text-muted-foreground hidden sm:block">
           {format(new Date(invitation.created_at), "MMM d")}
         </span>
+        {invitation.email && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={() => setResendOpen(true)}
+                disabled={resend.isPending}
+                className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground disabled:opacity-50"
+              >
+                <RotateCw className={cn("h-3.5 w-3.5", resend.isPending && "animate-spin")} />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>Resend invite</TooltipContent>
+          </Tooltip>
+        )}
         <button
           onClick={() =>
             revoke.mutate(invitation.id, {
@@ -465,6 +484,21 @@ function InvitationRow({ invitation, workspaceId }: { invitation: Invitation; wo
           <X className="h-3.5 w-3.5" />
         </button>
       </div>
+
+      <ConfirmDialog
+        open={resendOpen}
+        onClose={() => setResendOpen(false)}
+        onConfirm={() =>
+          resend.mutate(invitation.id, {
+            onSuccess: () => { toast.success("Invitation resent"); setResendOpen(false) },
+            onError: () => toast.error("Failed to resend invitation"),
+          })
+        }
+        title="Resend invitation?"
+        description={`A new invitation email will be sent to ${invitation.email}.`}
+        confirmLabel="Resend"
+        loading={resend.isPending}
+      />
     </div>
   )
 }
@@ -706,120 +740,120 @@ function MembersTab({ workspaceId, onInvite }: { workspaceId: string; onInvite: 
         </div>
       ) : (
         <>
-        <div className="divide-y divide-border">
-          {(members ?? []).slice(page * WS_PAGE_SIZE, (page + 1) * WS_PAGE_SIZE).map((m) => {
-            const u = m.user
-            const first = u?.first_name ?? ""
-            const last = u?.last_name ?? ""
-            const displayName = `${first} ${last}`.trim() || u?.email || "Unknown"
-            const initials = (first[0] ?? last[0] ?? u?.email?.[0] ?? "U").toUpperCase()
-            const isCurrentUser = u?.id === user?.id
+          <div className="divide-y divide-border">
+            {(members ?? []).slice(page * WS_PAGE_SIZE, (page + 1) * WS_PAGE_SIZE).map((m) => {
+              const u = m.user
+              const first = u?.first_name ?? ""
+              const last = u?.last_name ?? ""
+              const displayName = `${first} ${last}`.trim() || u?.email || "Unknown"
+              const initials = (first[0] ?? last[0] ?? u?.email?.[0] ?? "U").toUpperCase()
+              const isCurrentUser = u?.id === user?.id
 
-            return (
-              <div key={m.id} className="flex items-center gap-3 px-6 py-3.5 hover:bg-[#f9fafb] dark:hover:bg-muted/30 transition-colors group">
-                <Avatar className="h-7 w-7 shrink-0">
-                  <AvatarFallback className="text-[11px] font-medium">
-                    {initials}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-medium truncate">{displayName}</p>
-                    {isCurrentUser && (
-                      <span className="text-[11px] text-muted-foreground">(you)</span>
+              return (
+                <div key={m.id} className="flex items-center gap-3 px-6 py-3.5 hover:bg-[#f9fafb] dark:hover:bg-muted/30 transition-colors group">
+                  <Avatar className="h-7 w-7 shrink-0">
+                    <AvatarFallback className="text-[11px] font-medium">
+                      {initials}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium truncate">{displayName}</p>
+                      {isCurrentUser && (
+                        <span className="text-[11px] text-muted-foreground">(you)</span>
+                      )}
+                    </div>
+                    {u?.email && (
+                      <p className="text-xs text-muted-foreground truncate">{u.email}</p>
                     )}
                   </div>
-                  {u?.email && (
-                    <p className="text-xs text-muted-foreground truncate">{u.email}</p>
+
+                  {/* Role select */}
+                  {appRoles && appRoles.length > 0 && (
+                    <Select
+                      value={m.app_role_id ?? "none"}
+                      onValueChange={(v) =>
+                        assignUserRole.mutate(
+                          { userId: m.user_id, appRoleId: v === "none" ? null : v },
+                          {
+                            onSuccess: () => toast.success("Custom role updated"),
+                            onError: () => toast.error("Failed to update custom role"),
+                          }
+                        )
+                      }
+                    >
+                      <SelectTrigger className="h-7 text-[11px] w-32 shrink-0">
+                        <SelectValue placeholder="Custom role" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">
+                          <span className="text-muted-foreground">No custom role</span>
+                        </SelectItem>
+                        {appRoles.map((r) => (
+                          <SelectItem key={r.id} value={r.id}>
+                            {r.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+
+                  {/* Actions */}
+                  {!isCurrentUser && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-44">
+                        <DropdownMenuItem
+                          onClick={() => {
+                            fetch(`/admin/users/${m.user_id}/sessions`, {
+                              method: "DELETE",
+                              headers: {
+                                Authorization: `Bearer ${localStorage.getItem("meridian_token")}`,
+                              },
+                            })
+                              .then(() => toast.success("Sessions revoked — user will be signed out"))
+                              .catch(() => toast.error("Failed to revoke sessions"))
+                          }}
+                        >
+                          Revoke sessions
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          className="text-destructive focus:text-destructive"
+                          onClick={() => setConfirmRemove(m)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5 mr-2" />
+                          Remove
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   )}
                 </div>
-
-                {/* Role select */}
-                {appRoles && appRoles.length > 0 && (
-                  <Select
-                    value={m.app_role_id ?? "none"}
-                    onValueChange={(v) =>
-                      assignUserRole.mutate(
-                        { userId: m.user_id, appRoleId: v === "none" ? null : v },
-                        {
-                          onSuccess: () => toast.success("Custom role updated"),
-                          onError: () => toast.error("Failed to update custom role"),
-                        }
-                      )
-                    }
-                  >
-                    <SelectTrigger className="h-7 text-[11px] w-32 shrink-0">
-                      <SelectValue placeholder="Custom role" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">
-                        <span className="text-muted-foreground">No custom role</span>
-                      </SelectItem>
-                      {appRoles.map((r) => (
-                        <SelectItem key={r.id} value={r.id}>
-                          {r.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-
-                {/* Actions */}
-                {!isCurrentUser && (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-44">
-                      <DropdownMenuItem
-                        onClick={() => {
-                          fetch(`/admin/users/${m.user_id}/sessions`, {
-                            method: "DELETE",
-                            headers: {
-                              Authorization: `Bearer ${localStorage.getItem("meridian_token")}`,
-                            },
-                          })
-                            .then(() => toast.success("Sessions revoked — user will be signed out"))
-                            .catch(() => toast.error("Failed to revoke sessions"))
-                        }}
-                      >
-                        Revoke sessions
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        className="text-destructive focus:text-destructive"
-                        onClick={() => setConfirmRemove(m)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5 mr-2" />
-                        Remove
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                )}
-              </div>
-            )
-          })}
-        </div>
-        {(members?.length ?? 0) > WS_PAGE_SIZE && (
-          <div className="flex items-center justify-between px-4 md:px-6 py-3 border-t border-border">
-            <span className="text-xs text-muted-foreground">
-              {page * WS_PAGE_SIZE + 1}–{Math.min((page + 1) * WS_PAGE_SIZE, members!.length)} of {members!.length}
-            </span>
-            <div className="flex items-center gap-1">
-              <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setPage((p) => p - 1)} disabled={page === 0}>
-                <ChevronLeft className="h-3.5 w-3.5" />
-              </Button>
-              <span className="text-xs text-muted-foreground tabular-nums w-12 text-center">
-                {page + 1} / {Math.ceil(members!.length / WS_PAGE_SIZE)}
-              </span>
-              <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setPage((p) => p + 1)} disabled={(page + 1) * WS_PAGE_SIZE >= members!.length}>
-                <ChevronRight className="h-3.5 w-3.5" />
-              </Button>
-            </div>
+              )
+            })}
           </div>
-        )}
+          {(members?.length ?? 0) > WS_PAGE_SIZE && (
+            <div className="flex items-center justify-between px-4 md:px-6 py-3 border-t border-border">
+              <span className="text-xs text-muted-foreground">
+                {page * WS_PAGE_SIZE + 1}–{Math.min((page + 1) * WS_PAGE_SIZE, members!.length)} of {members!.length}
+              </span>
+              <div className="flex items-center gap-1">
+                <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setPage((p) => p - 1)} disabled={page === 0}>
+                  <ChevronLeft className="h-3.5 w-3.5" />
+                </Button>
+                <span className="text-xs text-muted-foreground tabular-nums w-12 text-center">
+                  {page + 1} / {Math.ceil(members!.length / WS_PAGE_SIZE)}
+                </span>
+                <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setPage((p) => p + 1)} disabled={(page + 1) * WS_PAGE_SIZE >= members!.length}>
+                  <ChevronRight className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </div>
+          )}
         </>
       )}
 
