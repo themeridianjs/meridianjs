@@ -28,8 +28,10 @@ import type { GanttFeature, Range } from "@/components/kibo-ui/gantt"
 import { Button } from "@/components/ui/button"
 import { IssueDetail } from "@/components/issues/IssueDetail"
 import { CreateIssueDialog } from "@/components/issues/CreateIssueDialog"
-import { Plus } from "lucide-react"
+import { Plus, Download } from "lucide-react"
 import { toast } from "sonner"
+import { useUserMap } from "@/api/hooks/useUsers"
+import { exportGanttToExcel } from "@/lib/exportGanttToExcel"
 import { WidgetZone } from "@/components/WidgetZone"
 
 function issueToFeature(issue: Issue, statusColor: string): GanttFeature {
@@ -104,6 +106,9 @@ export function ProjectTimelinePage() {
   const { data: sprints = [] } = useSprints(projectId || undefined)
   const { data: orgCalendar } = useOrgCalendar()
   const { data: holidays = [] } = useHolidays(new Date().getFullYear())
+  const { data: userMap = new Map() } = useUserMap()
+
+  const [exporting, setExporting] = useState(false)
 
   const updateMutation = useMutation({
     mutationFn: ({ id, start_date, due_date }: { id: string; start_date: string | null; due_date: string | null }) =>
@@ -142,6 +147,28 @@ export function ProjectTimelinePage() {
       sprintMap[issue.sprint_id].push(issue)
     } else {
       noSprintIssues.push(issue)
+    }
+  }
+
+  const handleExport = async () => {
+    if (!project || exporting) return
+    setExporting(true)
+    try {
+      await exportGanttToExcel({
+        project,
+        issues,
+        statuses,
+        sprints,
+        userMap,
+        workingDays: orgCalendar?.working_days ?? { mon: true, tue: true, wed: true, thu: true, fri: true, sat: false, sun: false },
+        holidays,
+      })
+      toast.success("Gantt chart exported")
+    } catch (err) {
+      toast.error("Failed to export Gantt chart")
+      console.error(err)
+    } finally {
+      setExporting(false)
     }
   }
 
@@ -186,15 +213,27 @@ export function ProjectTimelinePage() {
             </button>
           ))}
         </div>
-        <Button
-          size="sm"
-          variant="outline"
-          className="h-7 text-xs gap-1"
-          onClick={() => setCreateOpen(true)}
-        >
-          <Plus className="h-3.5 w-3.5" />
-          Issue
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 text-xs gap-1"
+            onClick={handleExport}
+            disabled={exporting || issues.length === 0}
+          >
+            <Download className="h-3.5 w-3.5" />
+            {exporting ? "Exporting..." : "Export"}
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 text-xs gap-1"
+            onClick={() => setCreateOpen(true)}
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Issue
+          </Button>
+        </div>
       </div>
 
       {/* Gantt chart fills remaining height */}
