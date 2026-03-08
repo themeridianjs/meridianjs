@@ -2,7 +2,7 @@
 
 declare global {
   interface Window {
-    __MERIDIAN_CONFIG__?: { apiUrl?: string }
+    __MERIDIAN_CONFIG__?: { apiUrl?: string; appName?: string; logoUrl?: string }
   }
 }
 

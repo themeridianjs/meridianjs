@@ -1,9 +1,39 @@
 import { defineConfig } from "vite"
 import react from "@vitejs/plugin-react"
 import path from "path"
+import type { Plugin } from "vite"
+
+/**
+ * Injects window.__MERIDIAN_CONFIG__ into index.html during Vite dev mode,
+ * mirroring what serve-dashboard.ts does in production.
+ * Reads VITE_APP_NAME and VITE_LOGO_URL from env (or .env).
+ */
+function injectMeridianConfig(): Plugin {
+  return {
+    name: "meridian-config-inject",
+    transformIndexHtml: {
+      order: "pre",
+      handler(_html, ctx) {
+        // Only inject during dev; production uses serve-dashboard.ts
+        if (!ctx.server) return []
+        const config: Record<string, string> = {}
+        if (process.env.VITE_APP_NAME) config.appName = process.env.VITE_APP_NAME
+        if (process.env.VITE_LOGO_URL) config.logoUrl = process.env.VITE_LOGO_URL
+        if (Object.keys(config).length === 0) return []
+        return [
+          {
+            tag: "script",
+            children: `window.__MERIDIAN_CONFIG__ = Object.assign(window.__MERIDIAN_CONFIG__ || {}, ${JSON.stringify(config)});`,
+            injectTo: "head-prepend",
+          },
+        ]
+      },
+    },
+  }
+}
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), injectMeridianConfig()],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

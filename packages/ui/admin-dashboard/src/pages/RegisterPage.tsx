@@ -6,6 +6,8 @@ import { Input } from "@/components/ui/input"
 import { GoogleSignInButton } from "@/components/ui/GoogleSignInButton"
 import { toast } from "sonner"
 import { Eye, EyeOff } from "lucide-react"
+import { AppLogo } from "@/components/AppLogo"
+import { getAppName } from "@/lib/branding"
 
 export function RegisterPage() {
   const [firstName, setFirstName] = useState("")
@@ -34,13 +36,7 @@ export function RegisterPage() {
       <div className="w-full max-w-[360px]">
         {/* Logo */}
         <div className="flex flex-col items-center gap-4 mb-8">
-          <div className="relative h-16 w-16 rounded-2xl bg-white dark:bg-card border border-border shadow-sm flex items-center justify-center">
-            <div className="h-10 w-10 rounded-full bg-foreground flex items-center justify-center">
-              <div className="h-5 w-5 rounded-full bg-background/20 flex items-center justify-center">
-                <div className="h-2 w-2 rounded-full bg-background/60" />
-              </div>
-            </div>
-          </div>
+          <AppLogo />
           <div className="text-center">
             <h1 className="text-lg font-semibold text-foreground">
               {isFirstSetup ? "Set up your account" : "Create your account"}
@@ -48,7 +44,7 @@ export function RegisterPage() {
             <p className="text-sm text-muted-foreground mt-0.5">
               {isFirstSetup
                 ? "You're the first user — you'll be the super admin."
-                : "Get started with Meridian"}
+                : `Get started with ${getAppName()}`}
             </p>
           </div>
         </div>

@@ -85,6 +85,10 @@ export interface AdminConfig {
   path?: string
   /** Port for the admin dashboard static server (default: 5174) */
   port?: number
+  /** Custom app name shown on login/register pages (default: "Meridian") */
+  appName?: string
+  /** URL for a custom logo image shown on login/register pages */
+  logoUrl?: string
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

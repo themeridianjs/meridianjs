@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input"
 import { GoogleSignInButton } from "@/components/ui/GoogleSignInButton"
 import { toast } from "sonner"
 import { Eye, EyeOff } from "lucide-react"
+import { AppLogo } from "@/components/AppLogo"
+import { getAppName } from "@/lib/branding"
 
 export function LoginPage() {
   const [email, setEmail] = useState("")
@@ -33,16 +35,9 @@ export function LoginPage() {
         <WidgetZone zone="login.before" props={{}} />
         {/* Logo */}
         <div className="flex flex-col items-center gap-4 mb-8">
-          <div className="relative h-16 w-16 rounded-2xl bg-white dark:bg-card border border-border shadow-sm flex items-center justify-center">
-            {/* Concentric design like Medusa */}
-            <div className="h-10 w-10 rounded-full bg-foreground flex items-center justify-center">
-              <div className="h-5 w-5 rounded-full bg-background/20 flex items-center justify-center">
-                <div className="h-2 w-2 rounded-full bg-background/60" />
-              </div>
-            </div>
-          </div>
+          <AppLogo />
           <div className="text-center">
-            <h1 className="text-lg font-semibold text-foreground">Welcome to Meridian</h1>
+            <h1 className="text-lg font-semibold text-foreground">Welcome to {getAppName()}</h1>
             <p className="text-sm text-muted-foreground mt-0.5">Sign in to access the admin area</p>
           </div>
         </div>
