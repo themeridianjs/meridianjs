@@ -14,7 +14,7 @@ function Hero() {
         <div className={styles.heroLeft}>
           <span className={styles.badge}>
             <span className={styles.badgeDot} />
-            v0.1.9 · open source
+            v1.1.0 · open source
           </span>
 
           <h1 className={styles.heroTitle}>
