@@ -72,6 +72,37 @@ Colors are defined in `tailwind.config.ts` using CSS custom properties. Dark mod
 
 ---
 
+## Custom Branding
+
+You can replace the default "Meridian" name and concentric-circle logo on the login, register, and invite pages by adding `appName` and `logoUrl` to the `admin` section of your `meridian.config.ts`:
+
+```typescript
+import { defineConfig } from "@meridianjs/framework"
+
+export default defineConfig({
+  // ...
+  admin: {
+    appName: "My PM Tool",
+    logoUrl: "/uploads/logo.png",
+  },
+})
+```
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `appName` | `string` | `"Meridian"` | Displayed in headings like "Welcome to **My PM Tool**" |
+| `logoUrl` | `string` | *(built-in SVG)* | URL for a logo image. Can be a relative path (e.g. `/uploads/logo.png`) or a full URL (e.g. `https://cdn.example.com/logo.png`) |
+
+The branding is injected into the HTML at serve time via `window.__MERIDIAN_CONFIG__`, so it appears instantly on auth pages without an API call.
+
+When running the dashboard via Vite dev server directly (during dashboard development), you can set the branding via environment variables instead:
+
+```bash
+VITE_APP_NAME="My PM Tool" VITE_LOGO_URL="/uploads/logo.png" npm run dev
+```
+
+---
+
 ## Building for Production
 
 ```bash
