@@ -49,7 +49,7 @@ export function NotificationsPage() {
   }
 
   return (
-    <div className="p-2">
+    <div className="p-2 pb-24 md:pb-2">
       <div className="bg-white dark:bg-card border border-border rounded-xl overflow-hidden">
 
         {/* Card header */}

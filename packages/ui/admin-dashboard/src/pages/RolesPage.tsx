@@ -385,7 +385,7 @@ export function RolesPage() {
   const selectedRole = roles?.find((r) => r.id === selectedId) ?? null
 
   return (
-    <div className="p-2 h-full">
+    <div className="p-2 pb-24 md:pb-2 h-full">
       <div className="bg-white dark:bg-card border border-border rounded-xl overflow-hidden flex flex-col h-full">
         {/* Page header */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">

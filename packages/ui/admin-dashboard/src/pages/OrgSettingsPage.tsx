@@ -992,7 +992,7 @@ export function OrgSettingsPage() {
   ]
 
   return (
-    <div className="p-2 h-full">
+    <div className="p-2 pb-24 md:pb-2 h-full">
       <div className="bg-white dark:bg-card border border-border rounded-xl overflow-hidden flex flex-col h-full">
 
         {/* Page header */}

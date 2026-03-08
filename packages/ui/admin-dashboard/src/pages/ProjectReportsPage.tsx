@@ -124,7 +124,7 @@ export function ProjectReportsPage() {
   const hasData = timeLogs.length > 0
 
   return (
-    <div className="p-2 space-y-2">
+    <div className="p-2 pb-24 md:pb-2 space-y-2">
       {/* Filters bar */}
       <div className="bg-white dark:bg-card border border-border rounded-xl px-4 py-3 flex flex-col gap-3 md:flex-row md:items-center md:flex-wrap">
         <div className="flex items-center gap-2">
@@ -161,12 +161,12 @@ export function ProjectReportsPage() {
           { label: "Contributors", value: byUser.size > 0 ? String(byUser.size) : "—", icon: Users },
           { label: "Issues tracked", value: byIssue.size > 0 ? String(byIssue.size) : "—", icon: GitBranch },
         ].map(({ label, value, icon: Icon }) => (
-          <div key={label} className="bg-white dark:bg-card border border-border rounded-xl px-5 py-4">
+          <div key={label} className="bg-white dark:bg-card border border-border rounded-xl px-3 md:px-5 py-3 md:py-4 min-w-0">
             <div className="flex items-center gap-1.5 mb-2">
-              <Icon className="h-3.5 w-3.5 text-muted-foreground" />
-              <p className="text-[11px] text-muted-foreground uppercase tracking-wider font-medium">{label}</p>
+              <Icon className="h-3.5 w-3.5 text-muted-foreground hidden md:block shrink-0" />
+              <p className="text-[11px] text-muted-foreground uppercase tracking-wider font-medium break-all">{label}</p>
             </div>
-            <p className="text-2xl font-bold tabular-nums">{value}</p>
+            <p className="text-xl md:text-2xl font-bold tabular-nums">{value}</p>
           </div>
         ))}
       </div>

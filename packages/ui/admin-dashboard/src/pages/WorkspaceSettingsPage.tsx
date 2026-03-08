@@ -567,7 +567,7 @@ function GeneralTab({ workspaceId }: { workspaceId: string }) {
         </span>
       </div>
 
-      <div className="grid grid-cols-[180px_1fr] items-center gap-4 px-6 py-3.5 border-b border-border">
+      <div className="grid grid-cols-1 md:grid-cols-[180px_1fr] items-start md:items-center gap-1 md:gap-4 px-4 md:px-6 py-3.5 border-b border-border">
         <span className="text-sm text-muted-foreground">Logo</span>
         {isLoading ? (
           <div className="flex items-center gap-3">
@@ -619,7 +619,7 @@ function GeneralTab({ workspaceId }: { workspaceId: string }) {
         )}
       </div>
 
-      <div className="grid grid-cols-[180px_1fr] items-center gap-4 px-6 py-3.5 border-b border-border">
+      <div className="grid grid-cols-1 md:grid-cols-[180px_1fr] items-start md:items-center gap-1 md:gap-4 px-4 md:px-6 py-3.5 border-b border-border">
         <span className="text-sm text-muted-foreground">Name</span>
         {isLoading ? (
           <Skeleton className="h-8 w-64" />
@@ -628,7 +628,7 @@ function GeneralTab({ workspaceId }: { workspaceId: string }) {
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="h-8 w-64 text-sm bg-transparent"
+              className="h-8 w-full max-w-64 text-sm bg-transparent"
               placeholder="Workspace name"
             />
             {isDirty && (
@@ -645,7 +645,7 @@ function GeneralTab({ workspaceId }: { workspaceId: string }) {
         )}
       </div>
 
-      <div className="grid grid-cols-[180px_1fr] items-center gap-4 px-6 py-3.5 border-b border-border">
+      <div className="grid grid-cols-1 md:grid-cols-[180px_1fr] items-start md:items-center gap-1 md:gap-4 px-4 md:px-6 py-3.5 border-b border-border">
         <span className="text-sm text-muted-foreground">URL slug</span>
         {isLoading ? (
           <Skeleton className="h-4 w-40" />
@@ -657,7 +657,7 @@ function GeneralTab({ workspaceId }: { workspaceId: string }) {
         )}
       </div>
 
-      <div className="grid grid-cols-[180px_1fr] items-center gap-4 px-6 py-3.5 border-b border-border">
+      <div className="grid grid-cols-1 md:grid-cols-[180px_1fr] items-start md:items-center gap-1 md:gap-4 px-4 md:px-6 py-3.5 border-b border-border">
         <span className="text-sm text-muted-foreground">Plan</span>
         {isLoading ? (
           <Skeleton className="h-4 w-16" />
@@ -666,7 +666,7 @@ function GeneralTab({ workspaceId }: { workspaceId: string }) {
         )}
       </div>
 
-      <div className="grid grid-cols-[180px_1fr] items-center gap-4 px-6 py-3.5">
+      <div className="grid grid-cols-1 md:grid-cols-[180px_1fr] items-start md:items-center gap-1 md:gap-4 px-4 md:px-6 py-3.5">
         <span className="text-sm text-muted-foreground">Created</span>
         {isLoading ? (
           <Skeleton className="h-4 w-28" />
@@ -1285,7 +1285,7 @@ export function WorkspaceSettingsPage() {
   const [inviteOpen, setInviteOpen] = useState(false)
 
   return (
-    <div className="p-2">
+    <div className="p-2 pb-24 md:pb-2">
       <WidgetZone zone="workspace.settings.before" props={{ workspaceId }} />
       <div className="bg-white dark:bg-card border border-border rounded-xl overflow-hidden">
 

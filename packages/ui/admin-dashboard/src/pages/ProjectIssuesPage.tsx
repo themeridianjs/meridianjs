@@ -697,7 +697,7 @@ export function ProjectIssuesPage() {
   }
 
   return (
-    <div className="p-2">
+    <div className="p-2 pb-24 md:pb-2">
       <WidgetZone zone="project.issues.before" props={{ projectId }} />
       <div className="bg-white dark:bg-card border border-border rounded-xl overflow-hidden">
 

@@ -191,8 +191,8 @@ export function ProfilePage() {
   }
 
   return (
-    <div className="p-2 h-full">
-      <div className="bg-white dark:bg-card border border-border rounded-xl overflow-hidden flex flex-col h-full">
+    <div className="p-2 md:h-full">
+      <div className="bg-white dark:bg-card border border-border rounded-xl overflow-hidden flex flex-col md:h-full">
 
         {/* ── Page header ── */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
@@ -211,8 +211,8 @@ export function ProfilePage() {
         <div className="flex-1 overflow-y-auto">
 
           {/* ── Avatar section ── */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-            <span className="text-sm text-muted-foreground w-44 shrink-0">Profile photo</span>
+          <div className="flex flex-col md:flex-row md:items-center justify-between px-4 md:px-6 py-4 border-b border-border gap-3">
+            <span className="text-sm text-muted-foreground shrink-0">Profile photo</span>
             <div className="flex flex-1 items-center gap-4">
               <div className="relative">
                 <Avatar className="h-14 w-14 rounded-xl">
@@ -271,7 +271,7 @@ export function ProfilePage() {
           </div>
 
           {/* First name */}
-          <div className="grid grid-cols-[180px_1fr] items-center gap-4 px-6 py-3.5 border-b border-border">
+          <div className="grid grid-cols-1 md:grid-cols-[180px_1fr] items-start md:items-center gap-1 md:gap-4 px-4 md:px-6 py-3.5 border-b border-border">
             <span className="text-sm text-muted-foreground">First name</span>
             {isLoading ? (
               <Skeleton className="h-8 w-56" />
@@ -279,14 +279,14 @@ export function ProfilePage() {
               <Input
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
-                className="h-8 w-64 text-sm bg-transparent"
+                className="h-8 w-full max-w-64 text-sm bg-transparent"
                 placeholder="First name"
               />
             )}
           </div>
 
           {/* Last name */}
-          <div className="grid grid-cols-[180px_1fr] items-center gap-4 px-6 py-3.5 border-b border-border">
+          <div className="grid grid-cols-1 md:grid-cols-[180px_1fr] items-start md:items-center gap-1 md:gap-4 px-4 md:px-6 py-3.5 border-b border-border">
             <span className="text-sm text-muted-foreground">Last name</span>
             {isLoading ? (
               <Skeleton className="h-8 w-56" />
@@ -294,14 +294,14 @@ export function ProfilePage() {
               <Input
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
-                className="h-8 w-64 text-sm bg-transparent"
+                className="h-8 w-full max-w-64 text-sm bg-transparent"
                 placeholder="Last name"
               />
             )}
           </div>
 
           {/* Email (read-only) */}
-          <div className="grid grid-cols-[180px_1fr] items-center gap-4 px-6 py-3.5 border-b border-border">
+          <div className="grid grid-cols-1 md:grid-cols-[180px_1fr] items-start md:items-center gap-1 md:gap-4 px-4 md:px-6 py-3.5 border-b border-border">
             <span className="text-sm text-muted-foreground">Email</span>
             {isLoading ? (
               <Skeleton className="h-4 w-48" />
@@ -311,7 +311,7 @@ export function ProfilePage() {
           </div>
 
           {/* Designation */}
-          <div className="grid grid-cols-[180px_1fr] items-center gap-4 px-6 py-3.5 border-b border-border">
+          <div className="grid grid-cols-1 md:grid-cols-[180px_1fr] items-start md:items-center gap-1 md:gap-4 px-4 md:px-6 py-3.5 border-b border-border">
             <span className="text-sm text-muted-foreground">Designation</span>
             {isLoading ? (
               <Skeleton className="h-8 w-56" />
@@ -319,14 +319,14 @@ export function ProfilePage() {
               <Input
                 value={designation}
                 onChange={(e) => setDesignation(e.target.value)}
-                className="h-8 w-64 text-sm bg-transparent"
+                className="h-8 w-full max-w-64 text-sm bg-transparent"
                 placeholder="e.g. Software Engineer"
               />
             )}
           </div>
 
           {/* Phone */}
-          <div className="grid grid-cols-[180px_1fr] items-center gap-4 px-6 py-3.5 border-b border-border">
+          <div className="grid grid-cols-1 md:grid-cols-[180px_1fr] items-start md:items-center gap-1 md:gap-4 px-4 md:px-6 py-3.5 border-b border-border">
             <span className="text-sm text-muted-foreground">Phone number</span>
             {isLoading ? (
               <Skeleton className="h-8 w-56" />
@@ -334,7 +334,7 @@ export function ProfilePage() {
               <Input
                 value={phoneNumber}
                 onChange={(e) => setPhoneNumber(e.target.value)}
-                className="h-8 w-64 text-sm bg-transparent"
+                className="h-8 w-full max-w-64 text-sm bg-transparent"
                 placeholder="+1 555 000 0000"
               />
             )}
@@ -353,33 +353,34 @@ export function ProfilePage() {
           </div>
 
           {/* Google account row */}
-          <div className="grid grid-cols-[180px_1fr] items-center gap-4 px-6 py-3.5 border-b border-border">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <GoogleIcon className="size-3.5 shrink-0" />
-              Google
-            </div>
+          <div className="px-4 md:px-6 py-3.5 border-b border-border">
             {isLoading ? (
               <Skeleton className="h-8 w-48" />
             ) : profile?.google_id ? (
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-1.5 text-sm">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm">
+                  <GoogleIcon className="size-3.5 shrink-0" />
+                  <span className="text-foreground font-medium">Google</span>
                   <CheckCircle2 className="size-3.5 text-emerald-500 shrink-0" />
                   <span className="text-foreground font-medium">Connected</span>
-                  <span className="text-muted-foreground">· {profile.email}</span>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 gap-1.5 text-muted-foreground hover:text-destructive ml-auto"
-                  onClick={handleUnlinkGoogle}
-                  disabled={unlinkGoogle.isPending}
-                >
-                  <XCircle className="size-3.5" />
-                  Disconnect
-                </Button>
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-muted-foreground truncate flex-1">{profile.email}</span>
+                  <Button
+                    size="sm"
+                    className="h-7 gap-1.5 bg-red-600 hover:bg-red-700 text-white shrink-0"
+                    onClick={handleUnlinkGoogle}
+                    disabled={unlinkGoogle.isPending}
+                  >
+                    <XCircle className="size-3.5" />
+                    Disconnect
+                  </Button>
+                </div>
               </div>
             ) : (
               <div className="flex items-center gap-3">
+                <GoogleIcon className="size-3.5 shrink-0" />
+                <span className="text-sm font-medium">Google</span>
                 <span className="text-sm text-muted-foreground">Not connected</span>
                 <Button
                   variant="outline"
@@ -387,7 +388,6 @@ export function ProfilePage() {
                   className="h-7 gap-1.5"
                   onClick={handleConnectGoogle}
                 >
-                  <GoogleIcon className="size-3.5" />
                   Connect
                 </Button>
               </div>
@@ -399,7 +399,7 @@ export function ProfilePage() {
             <p className="text-xs text-muted-foreground">Security</p>
           </div>
 
-          <div className="grid grid-cols-[180px_1fr] items-center gap-4 px-6 py-4 border-b border-border">
+          <div className="grid grid-cols-1 md:grid-cols-[180px_1fr] items-start md:items-center gap-1 md:gap-4 px-4 md:px-6 py-4 border-b border-border">
             <span className="text-sm text-muted-foreground">Password</span>
             <div className="flex items-center gap-3">
               <span className="text-sm text-muted-foreground">

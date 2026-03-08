@@ -209,9 +209,10 @@ function SprintRow({ sprint, projectId, issueCount, workingDays, holidays = [] }
 
       {/* Mobile card */}
       <div className="md:hidden px-4 py-3 hover:bg-muted/30 transition-colors">
-        <div className="flex items-start gap-3">
+        {/* Row 1: Icon + name + badge */}
+        <div className="flex items-center gap-3 mb-2">
           <div className={cn(
-            "flex h-7 w-7 items-center justify-center rounded-full shrink-0 mt-0.5",
+            "flex h-7 w-7 items-center justify-center rounded-full shrink-0",
             sprint.status === "active" ? "bg-emerald-100 dark:bg-emerald-900/30" :
             sprint.status === "completed" ? "bg-blue-100 dark:bg-blue-900/30" :
             "bg-zinc-100 dark:bg-zinc-800"
@@ -222,22 +223,24 @@ function SprintRow({ sprint, projectId, issueCount, workingDays, holidays = [] }
               "text-zinc-500"
             )} />
           </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <p className="text-sm font-medium truncate flex-1">{sprint.name}</p>
-              <Badge className={cn("shrink-0 text-[11px] border-0", cfg.badge)}>{cfg.label}</Badge>
-            </div>
-            {sprint.goal && (
-              <p className="text-xs text-muted-foreground line-clamp-2 mb-1.5 flex items-center gap-1">
-                <Target className="h-3 w-3 shrink-0" />
-                {sprint.goal}
-              </p>
-            )}
-            <div className="flex items-center gap-3 text-xs text-muted-foreground">
-              {dateRangeEl}
-              <span>·</span>
-              <span>{issueCount} issue{issueCount !== 1 ? "s" : ""}</span>
-            </div>
+          <p className="text-sm font-medium truncate flex-1 min-w-0">{sprint.name}</p>
+          <Badge className={cn("shrink-0 text-[11px] border-0", cfg.badge)}>{cfg.label}</Badge>
+        </div>
+
+        {/* Goal (if any) */}
+        {sprint.goal && (
+          <p className="text-xs text-muted-foreground line-clamp-2 mb-2 ml-10 flex items-center gap-1">
+            <Target className="h-3 w-3 shrink-0" />
+            {sprint.goal}
+          </p>
+        )}
+
+        {/* Row 2: Date + issue count + actions */}
+        <div className="flex items-center gap-2 ml-10">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground flex-1 min-w-0 flex-wrap">
+            {dateRangeEl}
+            <span>·</span>
+            <span className="shrink-0">{issueCount} issue{issueCount !== 1 ? "s" : ""}</span>
           </div>
           <div className="flex items-center gap-1 shrink-0">
             {sprint.status === "planned" && (
@@ -295,7 +298,7 @@ export function SprintsPage() {
   ] as const
 
   return (
-    <div className="p-2">
+    <div className="p-2 pb-24 md:pb-2">
       <WidgetZone zone="project.sprints.before" props={{ projectId }} />
       <div className="bg-white dark:bg-card border border-border rounded-xl overflow-hidden">
 

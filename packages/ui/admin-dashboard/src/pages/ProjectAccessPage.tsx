@@ -169,7 +169,7 @@ export function ProjectAccessPage() {
   }
 
   return (
-    <div className="p-2">
+    <div className="p-2 pb-24 md:pb-2">
       <div className="bg-white dark:bg-card border border-border rounded-xl overflow-hidden">
         <div className="flex items-center justify-between px-6 py-3 border-b border-border">
           <div>
