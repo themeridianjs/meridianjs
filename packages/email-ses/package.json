@@ -1,6 +1,6 @@
 {
   "name": "@meridianjs/email-ses",
-  "version": "0.1.2",
+  "version": "1.0.0",
   "description": "AWS SES email provider module for Meridian",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -26,7 +26,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-ses": "^3.0.0",
-    "@meridianjs/types": "^0.1.0"
+    "@meridianjs/types": "^1.0.0"
   },
   "devDependencies": {
     "tsup": "^8.3.5",

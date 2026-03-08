@@ -1,6 +1,6 @@
 {
   "name": "@meridianjs/project",
-  "version": "0.1.3",
+  "version": "1.0.0",
   "description": "Meridian project module — Project, Label, Milestone domain models",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -25,8 +25,8 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@meridianjs/framework-utils": "^0.1.0",
-    "@meridianjs/types": "^0.1.0",
+    "@meridianjs/framework-utils": "^1.0.0",
+    "@meridianjs/types": "^1.0.0",
     "@mikro-orm/core": "^6.4.3",
     "@mikro-orm/postgresql": "^6.4.3"
   },

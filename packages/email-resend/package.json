@@ -1,6 +1,6 @@
 {
   "name": "@meridianjs/email-resend",
-  "version": "0.1.1",
+  "version": "1.0.0",
   "description": "Resend email provider module for Meridian",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -26,7 +26,7 @@
   },
   "dependencies": {
     "resend": "^4.0.0",
-    "@meridianjs/types": "^0.1.0"
+    "@meridianjs/types": "^1.0.0"
   },
   "devDependencies": {
     "tsup": "^8.3.5",

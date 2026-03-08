@@ -1,6 +1,6 @@
 {
   "name": "@meridianjs/storage-s3",
-  "version": "0.1.1",
+  "version": "1.0.0",
   "description": "S3-compatible storage module for Meridian file uploads",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -26,8 +26,8 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.0.0",
-    "@meridianjs/framework-utils": "^0.1.0",
-    "@meridianjs/types": "^0.1.0"
+    "@meridianjs/framework-utils": "^1.0.0",
+    "@meridianjs/types": "^1.0.0"
   },
   "devDependencies": {
     "tsup": "^8.3.5",
