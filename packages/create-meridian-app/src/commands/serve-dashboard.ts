@@ -106,16 +106,25 @@ export async function buildAdminExtensions(
  * calls the API at the correct host:port directly from the browser.
  * If adminExtensionsBuf is provided it is served at /admin-extensions.js.
  */
+export interface DashboardBranding {
+  appName?: string
+  logoUrl?: string
+}
+
 export function startDashboardServer(
   distDir: string,
   port: number,
   apiPort: number,
   apiHost = "localhost",
   adminExtensionsBuf: Buffer | null = null,
-  apiUrlOverride?: string
+  apiUrlOverride?: string,
+  branding?: DashboardBranding
 ): Promise<http.Server> {
   const resolvedApiUrl = apiUrlOverride ?? `http://${apiHost}:${apiPort}`
-  const configScript = `<script>window.__MERIDIAN_CONFIG__ = { apiUrl: "${resolvedApiUrl}" };</script>`
+  const configObj: Record<string, string> = { apiUrl: resolvedApiUrl }
+  if (branding?.appName) configObj.appName = branding.appName
+  if (branding?.logoUrl) configObj.logoUrl = branding.logoUrl
+  const configScript = `<script>window.__MERIDIAN_CONFIG__ = ${JSON.stringify(configObj)};</script>`
 
   return new Promise((resolve, reject) => {
     const server = http.createServer((req, res) => {
@@ -201,7 +210,8 @@ export async function runServeDashboard(portOverride?: number): Promise<void> {
     process.exit(1)
   }
 
-  const { apiPort, dashboardPort } = await readProjectPorts(rootDir)
+  const projectConfig = await readProjectPorts(rootDir)
+  const { apiPort, dashboardPort } = projectConfig
   const port = portOverride ?? dashboardPort
 
   // Allow full API URL override via env var (required for production deployments
@@ -225,7 +235,8 @@ export async function runServeDashboard(portOverride?: number): Promise<void> {
     }
   }
 
-  const server = await startDashboardServer(distDir, port, apiPort, "localhost", adminExtensionsBuf, apiUrl)
+  const branding = { appName: projectConfig.appName, logoUrl: projectConfig.logoUrl }
+  const server = await startDashboardServer(distDir, port, apiPort, "localhost", adminExtensionsBuf, apiUrl, branding)
 
   console.log(chalk.green("  ✔ Admin dashboard: ") + chalk.cyan(`http://localhost:${port}`))
   console.log(chalk.dim(`     → API: ${apiUrl}`))

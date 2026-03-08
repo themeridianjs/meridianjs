@@ -25,7 +25,8 @@ export async function runStart(): Promise<void> {
   const hasDashboard = existsSync(dashboardDist)
 
   // Read ports from meridian.config.ts (falls back to 9000 / 5174)
-  const { apiPort, dashboardPort } = await readProjectPorts(rootDir)
+  const ports = await readProjectPorts(rootDir)
+  const { apiPort, dashboardPort } = ports
   const apiUrl = process.env.API_URL ?? `http://localhost:${apiPort}`
 
   let dashServer: import("node:http").Server | null = null
@@ -41,7 +42,8 @@ export async function runStart(): Promise<void> {
       }
     }
 
-    dashServer = await startDashboardServer(dashboardDist, dashboardPort, apiPort, "localhost", adminExtensionsBuf, apiUrl)
+    const branding = { appName: ports.appName, logoUrl: ports.logoUrl }
+    dashServer = await startDashboardServer(dashboardDist, dashboardPort, apiPort, "localhost", adminExtensionsBuf, apiUrl, branding)
     console.log(
       chalk.dim("  → API: ") + chalk.cyan(`http://localhost:${apiPort}`) +
       chalk.dim("  dashboard: ") + chalk.cyan(`http://localhost:${dashboardPort}`)

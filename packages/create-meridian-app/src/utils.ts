@@ -53,8 +53,15 @@ export function findProjectRoot(startDir: string = process.cwd()): string | null
  * Reads httpPort and admin.port from the project's meridian.config.ts by
  * spawning a tiny inline script (avoids bootstrapping the full framework).
  */
-export async function readProjectPorts(rootDir: string): Promise<{ apiPort: number; dashboardPort: number }> {
-  const defaults = { apiPort: 9000, dashboardPort: 5174 }
+export interface ProjectConfig {
+  apiPort: number
+  dashboardPort: number
+  appName?: string
+  logoUrl?: string
+}
+
+export async function readProjectPorts(rootDir: string): Promise<ProjectConfig> {
+  const defaults: ProjectConfig = { apiPort: 9000, dashboardPort: 5174 }
   const configPath = path.join(rootDir, "meridian.config.ts")
   if (!existsSync(configPath)) return defaults
 
@@ -64,6 +71,8 @@ const c = cfg.default ?? cfg
 process.stdout.write(JSON.stringify({
   apiPort: c?.projectConfig?.httpPort ?? 9000,
   dashboardPort: c?.admin?.port ?? 5174,
+  appName: c?.admin?.appName,
+  logoUrl: c?.admin?.logoUrl,
 }))
 `
   // Script must live in rootDir so Node.js resolves config imports from the

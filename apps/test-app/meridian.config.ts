@@ -7,6 +7,10 @@ export default defineConfig({
     httpPort: 9000,
     maxChildIssueDepth: 3
   },
+  admin: {
+    appName: "Meridian PM Tool",
+    logoUrl: "/uploads/logo.jpeg",
+  },
   modules: [
     // Infrastructure (optional — swap for @meridianjs/event-bus-redis in production)
     { resolve: "@meridianjs/event-bus-local" },

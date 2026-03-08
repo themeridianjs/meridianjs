@@ -14,5 +14,7 @@ export const GET = async (req: any, res: Response) => {
   res.json({
     maxChildIssueDepth: config?.projectConfig?.maxChildIssueDepth ?? 1,
     googleOAuthEnabled,
+    appName: config?.admin?.appName,
+    logoUrl: config?.admin?.logoUrl,
   })
 }

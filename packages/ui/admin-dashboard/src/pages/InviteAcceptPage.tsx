@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { GoogleSignInButton } from "@/components/ui/GoogleSignInButton"
 import { ShieldCheck, UserRound, Building2, Eye, EyeOff } from "lucide-react"
+import { AppLogo } from "@/components/AppLogo"
 import { toast } from "sonner"
 
 interface InviteDetails {
@@ -72,13 +73,7 @@ export function InviteAcceptPage() {
 
         {/* Logo */}
         <div className="flex justify-center mb-8">
-          <div className="relative h-16 w-16 rounded-2xl bg-white dark:bg-card border border-border shadow-sm flex items-center justify-center">
-            <div className="h-10 w-10 rounded-full bg-foreground flex items-center justify-center">
-              <div className="h-5 w-5 rounded-full bg-background/20 flex items-center justify-center">
-                <div className="h-2 w-2 rounded-full bg-background/60" />
-              </div>
-            </div>
-          </div>
+          <AppLogo />
         </div>
 
         {isLoading ? (
