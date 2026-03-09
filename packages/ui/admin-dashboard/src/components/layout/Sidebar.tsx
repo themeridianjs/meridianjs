@@ -6,6 +6,7 @@ import {
   Settings2,
   Search,
   Check,
+  CheckSquare,
   ChevronsUpDown,
   LogOut,
   Shield,
@@ -209,6 +210,7 @@ export function AppSidebar({ ...props }: SidebarProps) {
   const ws = workspaceSlug ?? ""
 
   const isProjectsActive = location.pathname === `/${ws}/projects`
+  const isMyTasksActive = location.pathname === `/${ws}/my-tasks`
   const isNotificationsActive = location.pathname.includes("/notifications")
   const isSettingsActive = location.pathname.includes("/settings")
   const isRolesActive = location.pathname.includes("/roles")
@@ -240,6 +242,16 @@ export function AppSidebar({ ...props }: SidebarProps) {
                   <kbd className="ml-auto hidden text-[10px] text-sidebar-foreground/40 font-mono sm:inline-flex">
                     ⌘K
                   </kbd>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+
+              {/* My Tasks */}
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={isMyTasksActive} tooltip="My Tasks">
+                  <NavLink to={`/${ws}/my-tasks`}>
+                    <CheckSquare />
+                    <span>My Tasks</span>
+                  </NavLink>
                 </SidebarMenuButton>
               </SidebarMenuItem>
 

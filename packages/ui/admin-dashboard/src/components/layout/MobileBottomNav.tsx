@@ -1,5 +1,5 @@
 import { Link, useLocation, useParams } from "react-router-dom"
-import { LayoutGrid, Bell, Search, Settings, User } from "lucide-react"
+import { LayoutGrid, Bell, Search, CheckSquare, User } from "lucide-react"
 import { useUnreadCount } from "@/api/hooks/useNotifications"
 import { useCommandPalette } from "@/stores/command-palette"
 import { cn } from "@/lib/utils"
@@ -28,11 +28,11 @@ export function MobileBottomNav() {
       badge: unreadCount > 0 ? (unreadCount > 9 ? "9+" : String(unreadCount)) : null,
     },
     {
-      key: "settings",
-      label: "Settings",
-      icon: Settings,
-      to: `/${ws}/settings`,
-      match: /\/settings/,
+      key: "my-tasks",
+      label: "My Tasks",
+      icon: CheckSquare,
+      to: `/${ws}/my-tasks`,
+      match: /\/my-tasks/,
     },
     {
       key: "profile",

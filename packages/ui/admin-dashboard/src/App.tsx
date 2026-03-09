@@ -20,6 +20,7 @@ import { ProjectIssuesPage } from "@/pages/ProjectIssuesPage"
 import { ProjectAccessPage } from "@/pages/ProjectAccessPage"
 import { IssueDetailPage } from "@/pages/IssueDetailPage"
 import { IssueNewPage } from "@/pages/IssueNewPage"
+import { MyTasksPage } from "@/pages/MyTasksPage"
 import { NotificationsPage } from "@/pages/NotificationsPage"
 import { SprintsPage } from "@/pages/SprintsPage"
 import { WorkspaceSettingsPage } from "@/pages/WorkspaceSettingsPage"
@@ -288,6 +289,7 @@ export function App() {
           <Route path="reports" element={<ProjectReportsPage />} />
           <Route path="activity" element={<ProjectActivityPage />} />
         </Route>
+        <Route path="my-tasks" element={<MyTasksPage />} />
         <Route path="notifications" element={<NotificationsPage />} />
         <Route path="reporting" element={<Suspense fallback={<div className="flex items-center justify-center h-full text-sm text-muted-foreground">Loading…</div>}><WorkspaceReportingPage /></Suspense>} />
         <Route path="settings" element={<WorkspaceSettingsPage />} />
