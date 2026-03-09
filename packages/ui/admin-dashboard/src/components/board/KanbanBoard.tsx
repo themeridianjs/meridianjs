@@ -9,7 +9,8 @@ import {
   type DragEndEvent,
   type DragOverEvent,
   type CollisionDetection,
-  closestCorners,
+  closestCenter,
+  pointerWithin,
   rectIntersection,
 } from "@dnd-kit/core"
 import { SortableContext, arrayMove, horizontalListSortingStrategy } from "@dnd-kit/sortable"
@@ -167,7 +168,12 @@ export function KanbanBoard({
         )
         return rectIntersection({ ...args, droppableContainers: columnContainers })
       }
-      return closestCorners(args)
+      // pointerWithin prevents oscillation when dragging cards to adjacent
+      // columns (closestCorners would bounce the card back to the source column).
+      // Fall back to closestCenter for gaps between columns.
+      const within = pointerWithin(args)
+      if (within.length > 0) return within
+      return closestCenter(args)
     },
     [draggingColumnId, columnOrder]
   )

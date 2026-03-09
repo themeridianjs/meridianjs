@@ -1,5 +1,13 @@
 # @meridianjs/admin-dashboard
 
+## 1.4.0
+
+## 1.3.0
+
+### Minor Changes
+
+- Added my tasks page, and few other UI fixes
+
 ## 1.2.0
 
 ### Minor Changes
