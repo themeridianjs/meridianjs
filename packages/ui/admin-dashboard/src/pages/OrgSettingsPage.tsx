@@ -67,6 +67,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
 import { toast } from "sonner"
+import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 
 // ── Constants ──────────────────────────────────────────────────────────────────
@@ -512,6 +513,11 @@ function MembersTab() {
   const [inviteRole, setInviteRole] = useState("member")
   const [page, setPage] = useState(0)
 
+  const pendingInvitations = useMemo(
+    () => invitations.filter((inv) => inv.status === "pending"),
+    [invitations]
+  )
+
   const sortedUsers = useMemo(
     () => [...users].sort((a, b) => {
       const nameA = `${a.first_name ?? ""} ${a.last_name ?? ""}`.trim() || a.email
@@ -550,8 +556,13 @@ function MembersTab() {
     <>
       {/* Section header */}
       <div className="flex items-center justify-between px-6 py-2 border-b border-border bg-muted/20">
-        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-2">
           All users
+          {!usersLoading && users.length > 0 && (
+            <Badge variant="secondary" className="h-5 min-w-[20px] px-1.5 text-[11px] font-medium rounded-full">
+              {users.length}
+            </Badge>
+          )}
         </span>
         <Button size="sm" className="h-7 text-xs gap-1.5" onClick={() => setInviteOpen(true)}>
           <Plus className="h-3.5 w-3.5" />
@@ -661,7 +672,7 @@ function MembersTab() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {GLOBAL_ROLES.filter((r) => (ROLE_RANK[r] ?? 0) < myRank).map((r) => (
+                  {GLOBAL_ROLES.filter((r) => (ROLE_RANK[r] ?? 0) <= myRank).map((r) => (
                     <SelectItem key={r} value={r} className="text-xs">
                       <span className={cn("inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium", ROLE_BADGE[r])}>
                         {r}
@@ -807,8 +818,13 @@ function MembersTab() {
 
       {/* ── Invitations section ────────────────────────────────────────────── */}
       <div className="px-6 py-2 border-b border-border bg-muted/20 mt-2">
-        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-2">
           Invitations
+          {!invitationsLoading && pendingInvitations.length > 0 && (
+            <Badge variant="secondary" className="h-5 min-w-[20px] px-1.5 text-[11px] font-medium rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+              {pendingInvitations.length}
+            </Badge>
+          )}
         </span>
       </div>
 
@@ -816,12 +832,12 @@ function MembersTab() {
         <div className="px-6 py-4 space-y-3">
           {[1, 2, 3].map((i) => <Skeleton key={i} className="h-8 w-full" />)}
         </div>
-      ) : invitations.filter((inv) => inv.status === "pending").length === 0 ? (
+      ) : pendingInvitations.length === 0 ? (
         <div className="px-6 py-6 text-center">
           <p className="text-xs text-muted-foreground">No pending invitations.</p>
         </div>
       ) : (
-        invitations.filter((inv) => inv.status === "pending").map((inv) => {
+        pendingInvitations.map((inv) => {
           const inviteUrl = `${window.location.origin}/invite/${inv.token}`
           return (
             <div

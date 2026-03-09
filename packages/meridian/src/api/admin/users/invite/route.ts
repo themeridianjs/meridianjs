@@ -2,7 +2,7 @@ import type { Response, NextFunction } from "express"
 import { requireRoles } from "@meridianjs/auth"
 
 export const POST = async (req: any, res: Response, next: NextFunction) => {
-  requireRoles("super-admin")(req, res, async () => {
+  requireRoles("super-admin", "admin")(req, res, async () => {
     try {
       const invitationService = req.scope.resolve("invitationModuleService") as any
       const { email, role = "member" } = req.body

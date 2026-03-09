@@ -219,8 +219,16 @@ export function ProjectAccessPage() {
           <div>
             <div>
               <div className="px-6 py-2 border-b border-border bg-muted/20 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-2">
                   People
+                  {memberCount > 0 && (
+                    <Badge
+                      variant="secondary"
+                      className="h-5 min-w-[20px] px-1.5 text-[11px] font-medium rounded-full"
+                    >
+                      {memberCount}
+                    </Badge>
+                  )}
                 </span>
                 {availableUsers.length > 0 && (
                   <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -305,8 +313,16 @@ export function ProjectAccessPage() {
 
             <div className="border-t border-border">
               <div className="px-6 py-2 border-b border-border bg-muted/20 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-2">
                   Teams
+                  {teamCount > 0 && (
+                    <Badge
+                      variant="secondary"
+                      className="h-5 min-w-[20px] px-1.5 text-[11px] font-medium rounded-full"
+                    >
+                      {teamCount}
+                    </Badge>
+                  )}
                 </span>
                 {availableTeams.length > 0 && (
                   <div className="flex items-center gap-2 w-full sm:w-auto">

@@ -1,6 +1,6 @@
 {
   "name": "@meridianjs/admin-dashboard",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -40,6 +40,7 @@
     "@tiptap/suggestion": "3.20.0",
     "@types/dompurify": "3.0.5",
     "@uidotdev/usehooks": "2.4.1",
+    "canvas-confetti": "1.9.4",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "1.0.4",
@@ -62,6 +63,7 @@
     "vaul": "1.1.2"
   },
   "devDependencies": {
+    "@types/canvas-confetti": "1.9.0",
     "@types/lodash.throttle": "4.1.9",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",

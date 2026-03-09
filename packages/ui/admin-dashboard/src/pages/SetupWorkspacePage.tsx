@@ -5,6 +5,8 @@ import { useAuth } from "@/stores/auth"
 import type { WorkspaceRef } from "@/stores/auth"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { AppLogo } from "@/components/AppLogo"
+import { getAppName } from "@/lib/branding"
 import { toast } from "sonner"
 
 export function SetupWorkspacePage() {
@@ -34,15 +36,9 @@ export function SetupWorkspacePage() {
       <div className="w-full max-w-[380px]">
         {/* Logo */}
         <div className="flex flex-col items-center gap-4 mb-8">
-          <div className="relative h-16 w-16 rounded-2xl bg-white dark:bg-card border border-border shadow-sm flex items-center justify-center">
-            <div className="h-10 w-10 rounded-full bg-foreground flex items-center justify-center">
-              <div className="h-5 w-5 rounded-full bg-background/20 flex items-center justify-center">
-                <div className="h-2 w-2 rounded-full bg-background/60" />
-              </div>
-            </div>
-          </div>
+          <AppLogo />
           <div className="text-center">
-            <h1 className="text-lg font-semibold text-foreground">Create your workspace</h1>
+            <h1 className="text-lg font-semibold text-foreground">Create your {getAppName()} workspace</h1>
             <p className="text-sm text-muted-foreground mt-0.5">
               A workspace is where your team's projects and issues live.
             </p>

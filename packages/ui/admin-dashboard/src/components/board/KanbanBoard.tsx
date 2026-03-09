@@ -25,6 +25,7 @@ import { AddStatusColumn } from "./AddStatusColumn"
 import { DeleteStatusDialog } from "./DeleteStatusDialog"
 import { api } from "@/api/client"
 import { toast } from "sonner"
+import confetti from "canvas-confetti"
 
 interface KanbanBoardProps {
   issues: Issue[]
@@ -352,6 +353,15 @@ export function KanbanBoard({
         .put(`/admin/issues/${activeId}`, { status: overColKey })
         .then(() => {
           qc.invalidateQueries({ queryKey: cacheKey })
+
+          const targetStatus = statuses.find((s) => s.key === overColKey)
+          if (targetStatus?.category === "completed") {
+            confetti({
+              particleCount: 80,
+              spread: 60,
+              origin: { y: 0.6 },
+            })
+          }
         })
         .catch(() => {
           if (prevData) qc.setQueryData(cacheKey, prevData)

@@ -2,7 +2,7 @@ import type { Response } from "express"
 import { requireRoles } from "@meridianjs/auth"
 
 export const POST = async (req: any, res: Response) => {
-  requireRoles("super-admin")(req, res, async () => {
+  requireRoles("super-admin", "admin")(req, res, async () => {
     const svc = req.scope.resolve("invitationModuleService") as any
     const invitation = await svc.retrieveInvitation(req.params.inviteId).catch(() => null)
 

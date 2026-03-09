@@ -2,7 +2,7 @@ import type { Response } from "express"
 import { requireRoles } from "@meridianjs/auth"
 
 export const GET = async (req: any, res: Response) => {
-  requireRoles("super-admin")(req, res, async () => {
+  requireRoles("super-admin", "admin")(req, res, async () => {
     const invitationService = req.scope.resolve("invitationModuleService") as any
     const workspaceService  = req.scope.resolve("workspaceModuleService") as any
 
