@@ -842,69 +842,136 @@ function MembersTab() {
           return (
             <div
               key={inv.id}
-              className="flex items-center gap-3 px-6 py-3.5 border-b border-border hover:bg-muted/20 transition-colors group"
+              className="px-6 py-3.5 border-b border-border hover:bg-muted/20 transition-colors group"
             >
-              <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center shrink-0">
-                <Link2 className="h-3.5 w-3.5 text-muted-foreground" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="text-sm font-medium truncate">
-                    {inv.email ?? "Shareable link"}
-                  </p>
-                  <span className={cn(
-                    "inline-flex items-center text-[11px] px-1.5 py-0.5 rounded font-medium",
-                    inv.role === "super-admin"
-                      ? "bg-purple-50 text-purple-700 dark:bg-purple-950/30 dark:text-purple-300"
-                      : inv.role === "admin"
-                        ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300"
-                        : "bg-muted text-muted-foreground"
-                  )}>
-                    {inv.role === "super-admin" ? "Super Admin" : inv.role === "admin" ? "Admin" : "Member"}
-                  </span>
-                  {inv.workspace_name && (
-                    <span className="text-[11px] text-muted-foreground truncate">
-                      · {inv.workspace_name}
+              {/* Desktop: single row */}
+              <div className="hidden md:flex items-center gap-3">
+                <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center shrink-0">
+                  <Link2 className="h-3.5 w-3.5 text-muted-foreground" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-medium truncate">
+                      {inv.email ?? "Shareable link"}
+                    </p>
+                    <span className={cn(
+                      "inline-flex items-center text-[11px] px-1.5 py-0.5 rounded font-medium",
+                      inv.role === "super-admin"
+                        ? "bg-purple-50 text-purple-700 dark:bg-purple-950/30 dark:text-purple-300"
+                        : inv.role === "admin"
+                          ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300"
+                          : "bg-muted text-muted-foreground"
+                    )}>
+                      {inv.role === "super-admin" ? "Super Admin" : inv.role === "admin" ? "Admin" : "Member"}
                     </span>
+                    {inv.workspace_name && (
+                      <span className="text-[11px] text-muted-foreground truncate">
+                        · {inv.workspace_name}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-xs font-mono text-muted-foreground truncate max-w-[320px]">
+                      {inviteUrl}
+                    </span>
+                    <CopyButton value={inviteUrl} />
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <span className={cn("inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium", STATUS_BADGE[inv.status] ?? STATUS_BADGE.revoked)}>
+                    {inv.status}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    {format(new Date(inv.created_at), "MMM d")}
+                  </span>
+                  {inv.status === "pending" && inv.email && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => setResendTarget(inv)}
+                          disabled={resendInvitation.isPending}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground disabled:opacity-50"
+                        >
+                          <RotateCw className={cn("h-3.5 w-3.5", resendInvitation.isPending && "animate-spin")} />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>Resend invite</TooltipContent>
+                    </Tooltip>
+                  )}
+                  {inv.status === "pending" && (
+                    <button
+                      onClick={() => setRevokeTarget(inv)}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
+                      title="Revoke invitation"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
                   )}
                 </div>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <span className="text-xs font-mono text-muted-foreground truncate max-w-[320px]">
-                    {inviteUrl}
-                  </span>
-                  <CopyButton value={inviteUrl} />
-                </div>
               </div>
-              <div className="flex items-center gap-3 shrink-0">
-                <span className={cn("inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium", STATUS_BADGE[inv.status] ?? STATUS_BADGE.revoked)}>
-                  {inv.status}
-                </span>
-                <span className="text-xs text-muted-foreground hidden sm:block">
-                  {format(new Date(inv.created_at), "MMM d")}
-                </span>
-                {inv.status === "pending" && inv.email && (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
+
+              {/* Mobile: two rows */}
+              <div className="md:hidden space-y-2">
+                {/* Row 1: avatar + email + role badge + actions */}
+                <div className="flex items-center gap-3">
+                  <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center shrink-0">
+                    <Link2 className="h-3.5 w-3.5 text-muted-foreground" />
+                  </div>
+                  <div className="flex-1 min-w-0 flex items-center gap-2">
+                    <p className="text-sm font-medium truncate">
+                      {inv.email ?? "Shareable link"}
+                    </p>
+                    <span className={cn(
+                      "inline-flex items-center text-[11px] px-1.5 py-0.5 rounded font-medium shrink-0",
+                      inv.role === "super-admin"
+                        ? "bg-purple-50 text-purple-700 dark:bg-purple-950/30 dark:text-purple-300"
+                        : inv.role === "admin"
+                          ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300"
+                          : "bg-muted text-muted-foreground"
+                    )}>
+                      {inv.role === "super-admin" ? "Super Admin" : inv.role === "admin" ? "Admin" : "Member"}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className={cn("inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium", STATUS_BADGE[inv.status] ?? STATUS_BADGE.revoked)}>
+                      {inv.status}
+                    </span>
+                    {inv.status === "pending" && inv.email && (
                       <button
                         onClick={() => setResendTarget(inv)}
                         disabled={resendInvitation.isPending}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground disabled:opacity-50"
+                        className="text-muted-foreground hover:text-foreground disabled:opacity-50"
                       >
                         <RotateCw className={cn("h-3.5 w-3.5", resendInvitation.isPending && "animate-spin")} />
                       </button>
-                    </TooltipTrigger>
-                    <TooltipContent>Resend invite</TooltipContent>
-                  </Tooltip>
-                )}
-                {inv.status === "pending" && (
-                  <button
-                    onClick={() => setRevokeTarget(inv)}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
-                    title="Revoke invitation"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                )}
+                    )}
+                    {inv.status === "pending" && (
+                      <button
+                        onClick={() => setRevokeTarget(inv)}
+                        className="text-muted-foreground hover:text-destructive"
+                        title="Revoke invitation"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Row 2: invite URL + workspace + date */}
+                <div className="flex items-center gap-2 pl-10">
+                  <span className="text-xs font-mono text-muted-foreground truncate flex-1 min-w-0">
+                    {inviteUrl}
+                  </span>
+                  <CopyButton value={inviteUrl} />
+                  {inv.workspace_name && (
+                    <span className="text-[11px] text-muted-foreground truncate shrink-0 max-w-[80px]">
+                      {inv.workspace_name}
+                    </span>
+                  )}
+                  <span className="text-[11px] text-muted-foreground shrink-0">
+                    {format(new Date(inv.created_at), "MMM d")}
+                  </span>
+                </div>
               </div>
             </div>
           )
@@ -1008,7 +1075,7 @@ export function OrgSettingsPage() {
   ]
 
   return (
-    <div className="p-2 pb-24 md:pb-2 h-full">
+    <div className="p-2 md:pb-2 h-full">
       <div className="bg-white dark:bg-card border border-border rounded-xl overflow-hidden flex flex-col h-full">
 
         {/* Page header */}

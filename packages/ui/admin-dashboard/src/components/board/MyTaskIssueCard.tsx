@@ -1,11 +1,9 @@
-import { useSortable } from "@dnd-kit/sortable"
-import { CSS } from "@dnd-kit/utilities"
-import type { Issue } from "@/api/hooks/useIssues"
+import type { MyTaskIssue } from "@/api/hooks/useMyTasks"
 import { useUserMap } from "@/api/hooks/useUsers"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { ISSUE_PRIORITY_COLORS } from "@/lib/constants"
 import { cn } from "@/lib/utils"
-import { Circle, Zap, ArrowUp, ArrowDown, Minus, ListTree, Calendar } from "lucide-react"
+import { Circle, Zap, ArrowUp, ArrowDown, Minus, Calendar } from "lucide-react"
 import { format } from "date-fns"
 
 const PriorityIcon = ({ priority }: { priority: string }) => {
@@ -19,44 +17,26 @@ const PriorityIcon = ({ priority }: { priority: string }) => {
   }
 }
 
-interface IssueCardProps {
-  issue: Issue
-  childCount?: number
+interface MyTaskIssueCardProps {
+  issue: MyTaskIssue
   onClick?: () => void
 }
 
-export function IssueCard({ issue, childCount = 0, onClick }: IssueCardProps) {
+export function MyTaskIssueCard({ issue, onClick }: MyTaskIssueCardProps) {
   const { data: userMap } = useUserMap()
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: issue.id })
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  }
 
   return (
     <div
-      ref={setNodeRef}
-      style={style}
-      {...attributes}
-      {...listeners}
       onClick={onClick}
       className={cn(
         "bg-white dark:bg-card border border-border rounded-lg px-3 py-2.5 cursor-pointer select-none",
-        "hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors",
-        isDragging && "opacity-40 shadow-lg ring-2 ring-indigo/30"
+        "hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors"
       )}
     >
       <p className="text-[13px] text-foreground leading-snug line-clamp-2 mb-2">
         {issue.title}
       </p>
+
       {/* Dates */}
       <div className="flex items-center gap-1 text-[10px] text-muted-foreground mb-2">
         <Calendar className="h-2.5 w-2.5 shrink-0" />
@@ -70,17 +50,18 @@ export function IssueCard({ issue, childCount = 0, onClick }: IssueCardProps) {
           <span className="text-[11px] font-mono text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/50 px-1 py-0.5 rounded shrink-0">
             {issue.identifier}
           </span>
-          {issue.parent_id && (
-            <span className="flex items-center text-zinc-400 dark:text-zinc-500 shrink-0" title="Child issue">
-              <ListTree className="h-3 w-3" />
+          {issue._project && (
+            <span className="text-[10px] font-medium text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded shrink-0">
+              {issue._project.identifier}
             </span>
           )}
-          {childCount > 0 && (
-            <span className="flex items-center gap-0.5 text-[10px] font-medium text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/50 px-1 py-0.5 rounded shrink-0">
-              <ListTree className="h-2.5 w-2.5" />
-              {childCount}
-            </span>
-          )}
+          <span
+            className="h-2 w-2 rounded-full shrink-0"
+            style={{ backgroundColor: issue._status.color }}
+          />
+          <span className="text-[11px] text-muted-foreground truncate">
+            {issue._status.name}
+          </span>
         </div>
         <div className="flex items-center gap-1.5">
           {(issue.assignee_ids ?? []).length > 0 && (
