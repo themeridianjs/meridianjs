@@ -19,8 +19,8 @@ export function requireRoles(...roles: string[]) {
 
 /**
  * Permission guard — allows the request if `req.user.roles` includes "super-admin"
- * (full bypass) or if `req.user.permissions` contains at least one of the listed
- * permissions.
+ * or "admin" (full bypass), or if `req.user.permissions` contains at least one of
+ * the listed permissions.
  *
  * Must be used after `authenticateJWT` so that `req.user` is populated.
  *
@@ -32,7 +32,7 @@ export function requireRoles(...roles: string[]) {
 export function requirePermission(...permissions: string[]) {
   return (req: any, res: Response, next: NextFunction) => {
     const userRoles: string[] = req.user?.roles ?? []
-    if (userRoles.includes("super-admin")) return next()
+    if (userRoles.includes("super-admin") || userRoles.includes("admin")) return next()
     const userPermissions: string[] = req.user?.permissions ?? []
     if (permissions.some((p) => userPermissions.includes(p))) return next()
     res.status(403).json({ error: { message: "Forbidden — insufficient permissions" } })

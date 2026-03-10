@@ -1,5 +1,21 @@
 # @meridianjs/meridian
 
+## 1.6.0
+
+### Minor Changes
+
+- Added private workspaces, and workspace access check fix
+
+### Patch Changes
+
+- Updated dependencies
+  - @meridianjs/workspace@1.1.0
+  - @meridianjs/auth@1.6.0
+  - @meridianjs/types@1.6.0
+  - @meridianjs/framework-utils@1.6.0
+  - @meridianjs/framework@1.6.0
+  - @meridianjs/workflow-engine@1.6.0
+
 ## 1.5.0
 
 ### Patch Changes

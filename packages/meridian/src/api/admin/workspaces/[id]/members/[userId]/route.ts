@@ -13,9 +13,29 @@ function actorRank(req: any): number {
   return Math.max(...roles.map((r) => ROLE_RANK[r] ?? 0), 0)
 }
 
+async function assertWorkspaceAccess(req: any, res: Response): Promise<boolean> {
+  const workspaceService = req.scope.resolve("workspaceModuleService") as any
+  const workspaceMemberService = req.scope.resolve("workspaceMemberModuleService") as any
+
+  const workspace = await workspaceService.retrieveWorkspace(req.params.id)
+  const roles: string[] = req.user?.roles ?? []
+  const isPrivileged = roles.includes("super-admin") || roles.includes("admin")
+
+  if (workspace?.is_private || !isPrivileged) {
+    const membership = await workspaceMemberService.getMembership(req.params.id, req.user?.id)
+    if (!membership) {
+      res.status(403).json({ error: { message: "Forbidden — not a member of this workspace" } })
+      return false
+    }
+  }
+  return true
+}
+
 export const PATCH = async (req: any, res: Response, next: NextFunction) => {
   requirePermission("member:update_role")(req, res, async () => {
     try {
+      if (!await assertWorkspaceAccess(req, res)) return
+
       const workspaceMemberService = req.scope.resolve("workspaceMemberModuleService") as any
       const { role } = req.body
 
@@ -54,6 +74,8 @@ export const PATCH = async (req: any, res: Response, next: NextFunction) => {
 export const DELETE = async (req: any, res: Response, next: NextFunction) => {
   requirePermission("member:remove")(req, res, async () => {
     try {
+      if (!await assertWorkspaceAccess(req, res)) return
+
       const workspaceMemberService = req.scope.resolve("workspaceMemberModuleService") as any
       const projectService = req.scope.resolve("projectModuleService") as any
       const projectMemberService = req.scope.resolve("projectMemberModuleService") as any

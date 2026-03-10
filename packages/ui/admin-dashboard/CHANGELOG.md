@@ -1,5 +1,11 @@
 # @meridianjs/admin-dashboard
 
+## 1.6.0
+
+### Minor Changes
+
+- Added private workspaces, and workspace access check fix
+
 ## 1.5.0
 
 ### Minor Changes
