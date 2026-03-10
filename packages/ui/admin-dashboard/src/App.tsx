@@ -83,25 +83,33 @@ function RedirectIfAuth({ children }: { children: ReactNode }) {
 function WorkspaceRedirect() {
   const { workspace, setWorkspace, user } = useAuth()
   const navigate = useNavigate()
-  const { data: workspaces, isLoading } = useWorkspaces(!workspace)
+  // Always fetch workspaces to validate the stored workspace is still accessible
+  const { data: workspaces, isLoading } = useWorkspaces()
 
   useEffect(() => {
-    if (workspace) {
-      navigate(`/${workspace.slug}/projects`, { replace: true })
-      return
-    }
     if (isLoading) return
-    if (workspaces !== undefined) {
-      if (workspaces.length > 0) {
-        const w = workspaces[0]
-        setWorkspace({ id: w.id, name: w.name, slug: w.slug })
-        navigate(`/${w.slug}/projects`, { replace: true })
-      } else {
-        const isPrivileged = user?.roles?.includes("super-admin") || user?.roles?.includes("admin")
-        navigate(isPrivileged ? "/setup" : "/awaiting-access", { replace: true })
+    if (workspaces === undefined) return
+
+    // If we have a stored workspace, validate it's still in the accessible list
+    if (workspace) {
+      const stillAccessible = workspaces.some((w) => w.id === workspace.id)
+      if (stillAccessible) {
+        navigate(`/${workspace.slug}/projects`, { replace: true })
+        return
       }
+      // Stored workspace is no longer accessible — clear it and fall through
+      setWorkspace(null)
     }
-  }, [workspace, workspaces, isLoading, navigate, setWorkspace, user])
+
+    if (workspaces.length > 0) {
+      const w = workspaces[0]
+      setWorkspace({ id: w.id, name: w.name, slug: w.slug })
+      navigate(`/${w.slug}/projects`, { replace: true })
+    } else {
+      const isPrivileged = user?.roles?.includes("super-admin") || user?.roles?.includes("admin")
+      navigate(isPrivileged ? "/setup" : "/awaiting-access", { replace: true })
+    }
+  }, [workspaces, isLoading, navigate, setWorkspace, user, workspace])
 
   return (
     <div className="min-h-screen flex items-center justify-center">
@@ -113,7 +121,7 @@ function WorkspaceRedirect() {
 /** Reads :workspace slug from URL, validates it, sets it in auth store, renders AppShell. */
 function WorkspaceLayout() {
   const { workspace: slugParam } = useParams<{ workspace: string }>()
-  const { workspace, setWorkspace } = useAuth()
+  const { workspace, setWorkspace, user } = useAuth()
   useRealtimeEvents()
   const navigate = useNavigate()
   const { data: workspaces, isLoading, isFetching } = useWorkspaces()
@@ -125,15 +133,20 @@ function WorkspaceLayout() {
       if (found.id !== workspace?.id) {
         setWorkspace({ id: found.id, name: found.name, slug: found.slug })
       }
+    } else if (isFetching) {
+      // Still refetching — wait for fresh data before redirecting
+      return
     } else if (workspaces.length > 0) {
+      // Current workspace not accessible, switch to first available
+      setWorkspace({ id: workspaces[0].id, name: workspaces[0].name, slug: workspaces[0].slug })
       navigate(`/${workspaces[0].slug}/projects`, { replace: true })
-    } else if (!workspace && !isFetching) {
-      // Only redirect to /setup when no workspace is in context AND we're not
-      // mid-refetch. Guards against the race where stale empty data arrives
-      // during query refetch immediately after workspace creation.
-      navigate("/setup", { replace: true })
+    } else {
+      // No accessible workspaces at all — clear stale ref and redirect
+      setWorkspace(null)
+      const isPrivileged = user?.roles?.includes("super-admin") || user?.roles?.includes("admin")
+      navigate(isPrivileged ? "/setup" : "/awaiting-access", { replace: true })
     }
-  }, [workspaces, slugParam, isLoading, isFetching, workspace?.id, navigate, setWorkspace])
+  }, [workspaces, slugParam, isLoading, isFetching, workspace?.id, navigate, setWorkspace, user])
 
   if (isLoading || !workspace || workspace.slug !== slugParam) {
     return (

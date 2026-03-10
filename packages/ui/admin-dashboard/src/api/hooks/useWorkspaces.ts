@@ -8,6 +8,7 @@ export interface Workspace {
   slug: string
   plan: string
   logo_url: string | null
+  is_private: boolean
   created_at: string
   updated_at: string
 }
@@ -29,7 +30,7 @@ export function useWorkspaces(enabled = true) {
 export function useCreateWorkspace() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (data: { name: string }) =>
+    mutationFn: (data: { name: string; is_private?: boolean }) =>
       api.post<{ workspace: Workspace }>("/admin/workspaces", data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["workspaces"] })
@@ -40,7 +41,7 @@ export function useCreateWorkspace() {
 export function useUpdateWorkspace(id: string) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (data: { name: string }) =>
+    mutationFn: (data: { name?: string; is_private?: boolean }) =>
       api.put<{ workspace: Workspace }>(`/admin/workspaces/${id}`, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["workspaces"] })
@@ -164,6 +165,7 @@ export function useAddWorkspaceMember(workspaceId: string) {
       api.post<{ member: WorkspaceMember }>(`/admin/workspaces/${workspaceId}/members`, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: memberKeys.list(workspaceId) })
+      qc.invalidateQueries({ queryKey: ["workspaces"] })
     },
   })
 }
@@ -186,6 +188,7 @@ export function useRemoveWorkspaceMember(workspaceId: string) {
       api.delete(`/admin/workspaces/${workspaceId}/members/${userId}`),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: memberKeys.list(workspaceId) })
+      qc.invalidateQueries({ queryKey: ["workspaces"] })
     },
   })
 }

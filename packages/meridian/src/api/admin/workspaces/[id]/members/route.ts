@@ -1,17 +1,26 @@
 import type { Response, NextFunction } from "express"
 import { requirePermission } from "@meridianjs/auth"
 
-export const GET = async (req: any, res: Response) => {
-  // Authorization: super-admin/admin see all; members must belong to this workspace
+async function assertWorkspaceAccess(req: any, res: Response): Promise<boolean> {
+  const workspaceService = req.scope.resolve("workspaceModuleService") as any
+  const workspaceMemberService = req.scope.resolve("workspaceMemberModuleService") as any
+
+  const workspace = await workspaceService.retrieveWorkspace(req.params.id)
   const roles: string[] = req.user?.roles ?? []
-  if (!roles.includes("super-admin") && !roles.includes("admin")) {
-    const workspaceMemberService0 = req.scope.resolve("workspaceMemberModuleService") as any
-    const membership = await workspaceMemberService0.getMembership(req.params.id, req.user?.id)
+  const isPrivileged = roles.includes("super-admin") || roles.includes("admin")
+
+  if (workspace?.is_private || !isPrivileged) {
+    const membership = await workspaceMemberService.getMembership(req.params.id, req.user?.id)
     if (!membership) {
       res.status(403).json({ error: { message: "Forbidden — not a member of this workspace" } })
-      return
+      return false
     }
   }
+  return true
+}
+
+export const GET = async (req: any, res: Response) => {
+  if (!await assertWorkspaceAccess(req, res)) return
 
   const workspaceMemberService = req.scope.resolve("workspaceMemberModuleService") as any
   const userService = req.scope.resolve("userModuleService") as any
@@ -42,6 +51,8 @@ export const GET = async (req: any, res: Response) => {
 export const POST = async (req: any, res: Response, next: NextFunction) => {
   requirePermission("member:invite")(req, res, async () => {
     try {
+      if (!await assertWorkspaceAccess(req, res)) return
+
       const workspaceMemberService = req.scope.resolve("workspaceMemberModuleService") as any
       const { user_id, role, app_role_id } = req.body
 

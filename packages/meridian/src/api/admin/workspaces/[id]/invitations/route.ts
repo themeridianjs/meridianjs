@@ -2,13 +2,20 @@ import type { Response } from "express"
 import { createInvitationWorkflow } from "../../../../../workflows/create-invitation.js"
 
 async function assertWorkspaceMembership(req: any, res: Response): Promise<boolean> {
-  const roles: string[] = req.user?.roles ?? []
-  if (roles.includes("super-admin") || roles.includes("admin")) return true
+  const workspaceService = req.scope.resolve("workspaceModuleService") as any
   const workspaceMemberService = req.scope.resolve("workspaceMemberModuleService") as any
-  const membership = await workspaceMemberService.getMembership(req.params.id, req.user?.id)
-  if (!membership) {
-    res.status(403).json({ error: { message: "Forbidden — not a member of this workspace" } })
-    return false
+
+  const workspace = await workspaceService.retrieveWorkspace(req.params.id)
+  const roles: string[] = req.user?.roles ?? []
+  const isPrivileged = roles.includes("super-admin") || roles.includes("admin")
+
+  // Private workspaces: always require membership regardless of role
+  if (workspace?.is_private || !isPrivileged) {
+    const membership = await workspaceMemberService.getMembership(req.params.id, req.user?.id)
+    if (!membership) {
+      res.status(403).json({ error: { message: "Forbidden — not a member of this workspace" } })
+      return false
+    }
   }
   return true
 }

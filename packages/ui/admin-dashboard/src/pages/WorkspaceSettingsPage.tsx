@@ -68,6 +68,7 @@ import {
   ChevronRight,
   UserPlus,
   RotateCw,
+  Lock,
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
@@ -727,6 +728,39 @@ function GeneralTab({ workspaceId }: { workspaceId: string }) {
           <Skeleton className="h-4 w-16" />
         ) : (
           <span className="text-sm capitalize">{workspace?.plan ?? "free"}</span>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-[180px_1fr] items-start md:items-center gap-1 md:gap-4 px-4 md:px-6 py-3.5 border-b border-border">
+        <span className="text-sm text-muted-foreground">Visibility</span>
+        {isLoading ? (
+          <Skeleton className="h-4 w-28" />
+        ) : (
+          <div className="flex items-center gap-3">
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={workspace?.is_private ?? false}
+                onChange={(e) => {
+                  updateWorkspace.mutate(
+                    { is_private: e.target.checked },
+                    {
+                      onSuccess: () => toast.success(e.target.checked ? "Workspace is now private" : "Workspace is now public"),
+                      onError: () => toast.error("Failed to update visibility"),
+                    }
+                  )
+                }}
+                className="size-4 rounded border-border accent-indigo-600"
+              />
+              <Lock className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="text-sm">Private</span>
+            </label>
+            <span className="text-xs text-muted-foreground">
+              {workspace?.is_private
+                ? "Only members can see this workspace"
+                : "Admins can see this workspace without being a member"}
+            </span>
+          </div>
         )}
       </div>
 

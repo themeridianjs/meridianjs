@@ -37,9 +37,9 @@ export const PATCH = async (req: any, res: Response, next: NextFunction) => {
         return
       }
 
-      // Cannot promote someone to your level or above
-      if ((ROLE_RANK[role] ?? 0) >= actor) {
-        res.status(403).json({ error: { message: "You cannot assign a role equal to or above your own" } })
+      // Cannot promote someone above your level
+      if ((ROLE_RANK[role] ?? 0) > actor) {
+        res.status(403).json({ error: { message: "You cannot assign a role above your own" } })
         return
       }
 

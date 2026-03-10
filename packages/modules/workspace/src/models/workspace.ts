@@ -6,6 +6,7 @@ const Workspace = model.define("workspace", {
   slug: model.text(),
   logo_url: model.text().nullable(),
   plan: model.enum(["free", "pro", "enterprise"]).default("free"),
+  is_private: model.boolean().default(false),
   settings: model.json().nullable(),
 })
 
