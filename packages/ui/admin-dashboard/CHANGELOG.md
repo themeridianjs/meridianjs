@@ -1,5 +1,11 @@
 # @meridianjs/admin-dashboard
 
+## 1.5.0
+
+### Minor Changes
+
+- Fixed the race condition for kanban board
+
 ## 1.4.0
 
 ## 1.3.0

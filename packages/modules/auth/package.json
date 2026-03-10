@@ -1,6 +1,6 @@
 {
   "name": "@meridianjs/auth",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "Meridian auth module — JWT authentication and middleware",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -26,8 +26,8 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@meridianjs/types": "^1.4.0",
-    "@meridianjs/framework-utils": "^1.4.0",
+    "@meridianjs/types": "^1.5.0",
+    "@meridianjs/framework-utils": "^1.5.0",
     "jsonwebtoken": "^9.0.2",
     "bcrypt": "^5.1.1"
   },

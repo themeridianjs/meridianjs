@@ -1,6 +1,6 @@
 {
   "name": "@meridianjs/framework-utils",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "Utilities for building Meridian modules: DML, service factory, defineModule, defineLink",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -26,7 +26,7 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@meridianjs/types": "^1.4.0"
+    "@meridianjs/types": "^1.5.0"
   },
   "peerDependencies": {
     "@mikro-orm/core": "^6.0.0",

@@ -262,10 +262,10 @@ export function KanbanBoard({
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
     setActiveIssue(null)
-    isDraggingRef.current = false
 
     if (draggingColumnId) {
       setDraggingColumnId(null)
+      isDraggingRef.current = false
       if (!over || active.id === over.id) return
 
       const oldIndex = columnOrder.indexOf(active.id as string)
@@ -279,6 +279,7 @@ export function KanbanBoard({
     }
 
     if (!over) {
+      isDraggingRef.current = false
       const originalCol = dragSourceColRef.current
       dragSourceColRef.current = null
       if (originalCol) {
@@ -295,9 +296,13 @@ export function KanbanBoard({
     const overStatus = statuses.find((s) => s.key === overId || s.id === overId)
     const overColKey = overStatus?.key ?? findColumn(overId)
 
-    if (!originalCol || !overColKey) return
+    if (!originalCol || !overColKey) {
+      isDraggingRef.current = false
+      return
+    }
 
     if (originalCol === overColKey) {
+      isDraggingRef.current = false
       setColumns((prev) => {
         const items = prev[originalCol] ?? []
         const oldIndex = items.findIndex((i) => i.id === activeId)
@@ -345,6 +350,10 @@ export function KanbanBoard({
 
       const prevData = qc.getQueryData<{ issues: Issue[]; count: number }>(cacheKey)
 
+      // Cancel any in-flight refetches so stale server data doesn't
+      // overwrite the optimistic update and snap the card back.
+      qc.cancelQueries({ queryKey: cacheKey })
+
       qc.setQueryData<IssuesResponse>(cacheKey, (old) => {
         if (!old) return old
         return {
@@ -358,6 +367,7 @@ export function KanbanBoard({
       api
         .put(`/admin/issues/${activeId}`, { status: overColKey })
         .then(() => {
+          isDraggingRef.current = false
           qc.invalidateQueries({ queryKey: cacheKey })
 
           const targetStatus = statuses.find((s) => s.key === overColKey)
@@ -370,6 +380,7 @@ export function KanbanBoard({
           }
         })
         .catch(() => {
+          isDraggingRef.current = false
           if (prevData) qc.setQueryData(cacheKey, prevData)
           setColumns(groupByStatus(prevData?.issues ?? issues, statuses))
           toast.error("Failed to update issue status")
