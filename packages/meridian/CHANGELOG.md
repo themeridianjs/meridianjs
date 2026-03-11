@@ -1,5 +1,43 @@
 # @meridianjs/meridian
 
+## 1.9.0
+
+### Minor Changes
+
+- Fixed the dynamic filtering of options
+
+### Patch Changes
+
+- @meridianjs/types@1.9.0
+- @meridianjs/framework-utils@1.9.0
+- @meridianjs/framework@1.9.0
+- @meridianjs/workflow-engine@1.9.0
+- @meridianjs/auth@1.9.0
+
+## 1.8.0
+
+### Patch Changes
+
+- @meridianjs/types@1.8.0
+- @meridianjs/framework-utils@1.8.0
+- @meridianjs/framework@1.8.0
+- @meridianjs/workflow-engine@1.8.0
+- @meridianjs/auth@1.8.0
+
+## 1.7.0
+
+### Minor Changes
+
+- Fixed the user report page "Unknown values"
+
+### Patch Changes
+
+- @meridianjs/types@1.7.0
+- @meridianjs/framework-utils@1.7.0
+- @meridianjs/framework@1.7.0
+- @meridianjs/workflow-engine@1.7.0
+- @meridianjs/auth@1.7.0
+
 ## 1.6.0
 
 ### Minor Changes

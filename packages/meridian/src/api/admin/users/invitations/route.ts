@@ -6,7 +6,16 @@ export const GET = async (req: any, res: Response) => {
     const invitationService = req.scope.resolve("invitationModuleService") as any
     const workspaceService  = req.scope.resolve("workspaceModuleService") as any
 
-    const [invitations] = await invitationService.listAndCountInvitations({}, { limit: 500 })
+    const limit = Math.min(Number(req.query.limit) || 20, 100)
+    const offset = Number(req.query.offset) || 0
+    const q = typeof req.query.q === "string" ? req.query.q.trim() : ""
+
+    const filters: Record<string, unknown> = { status: "pending" }
+    if (q) {
+      filters.email = { $ilike: `%${q}%` }
+    }
+
+    const [invitations, totalCount] = await invitationService.listAndCountInvitations(filters, { limit, offset })
 
     // Enrich with workspace name where applicable
     const workspaceCache = new Map<string, string>()
@@ -38,6 +47,6 @@ export const GET = async (req: any, res: Response) => {
       })
     )
 
-    res.json({ invitations: enriched, count: enriched.length })
+    res.json({ invitations: enriched, count: totalCount, limit, offset })
   })
 }

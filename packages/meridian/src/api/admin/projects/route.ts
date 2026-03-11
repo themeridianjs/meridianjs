@@ -7,7 +7,13 @@ export const GET = async (req: any, res: Response) => {
   const limit = Math.min(Number(req.query.limit) || 20, 100)
   const offset = Number(req.query.offset) || 0
   const filters: Record<string, unknown> = {}
-  if (req.query.workspace_id) filters.workspace_id = req.query.workspace_id
+  if (req.query.workspace_id) {
+    filters.workspace_id = req.query.workspace_id
+  } else if (req.query.workspace_ids) {
+    const ids = (req.query.workspace_ids as string).split(",").filter(Boolean)
+    if (ids.length === 1) filters.workspace_id = ids[0]
+    else if (ids.length > 1) filters.workspace_id = ids
+  }
   if (req.query.status) filters.status = req.query.status
 
   const roles: string[] = req.user?.roles ?? []
