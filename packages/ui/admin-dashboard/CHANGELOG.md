@@ -1,5 +1,11 @@
 # @meridianjs/admin-dashboard
 
+## 1.10.0
+
+### Minor Changes
+
+- Added attachment count, and show attachments along with comment
+
 ## 1.9.0
 
 ### Minor Changes
