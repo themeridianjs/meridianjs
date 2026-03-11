@@ -203,6 +203,7 @@ export function IssueActivity({
           const count =
             tab === "comments" ? (comments?.length ?? 0) :
             tab === "activity" ? (activities?.length ?? 0) :
+            tab === "attachments" ? (allAttachments?.length ?? 0) :
             undefined
           const label =
             tab === "comments" ? "Comments" :
@@ -266,14 +267,14 @@ export function IssueActivity({
                       </div>
                       <div className="rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 px-3 py-2.5">
                         <CommentBody body={c.body} />
+                        {commentAttachments.length > 0 && (
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {commentAttachments.map((a) => (
+                              <InlineAttachment key={a.id} attachment={a} />
+                            ))}
+                          </div>
+                        )}
                       </div>
-                      {commentAttachments.length > 0 && (
-                        <div className="mt-2 flex flex-wrap gap-2">
-                          {commentAttachments.map((a) => (
-                            <InlineAttachment key={a.id} attachment={a} />
-                          ))}
-                        </div>
-                      )}
                     </div>
                   </div>
                 )
