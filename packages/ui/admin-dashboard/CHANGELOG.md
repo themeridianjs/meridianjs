@@ -1,5 +1,23 @@
 # @meridianjs/admin-dashboard
 
+## 1.9.0
+
+### Minor Changes
+
+- Fixed the dynamic filtering of options
+
+## 1.8.0
+
+### Minor Changes
+
+- Fixed the reporting page issues
+
+## 1.7.0
+
+### Minor Changes
+
+- Fixed the user report page "Unknown values"
+
 ## 1.6.0
 
 ### Minor Changes

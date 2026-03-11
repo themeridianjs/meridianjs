@@ -13,7 +13,7 @@ import {
 } from "recharts"
 import { useProjectByKey } from "@/api/hooks/useProjects"
 import { useReportingTimeLogs } from "@/api/hooks/useReporting"
-import { useUserMap, useUsers } from "@/api/hooks/useUsers"
+import { useUserMap, useAllUsers } from "@/api/hooks/useUsers"
 import { DatePicker } from "@/components/ui/date-picker"
 import { MultiSelect } from "@/components/ui/multi-select"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -44,7 +44,7 @@ export function ProjectReportsPage() {
 
   const { data: project } = useProjectByKey(projectKey ?? "")
   const { data: userMap } = useUserMap()
-  const { data: users = [] } = useUsers()
+  const { data: users = [] } = useAllUsers()
 
   const fromStr = from ? format(from, "yyyy-MM-dd") : undefined
   const toStr = to ? format(to, "yyyy-MM-dd") : undefined

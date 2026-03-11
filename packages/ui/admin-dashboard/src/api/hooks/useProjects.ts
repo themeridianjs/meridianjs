@@ -52,16 +52,22 @@ export const projectKeys = {
   activities: (id: string) => [...projectKeys.all, id, "activities"] as const,
 }
 
-export function useProjects() {
+export function useProjects(options?: { allWorkspaces?: boolean; workspaceIds?: string[] }) {
   const { workspace } = useAuth()
+  const wsIds = options?.workspaceIds
+  const scopeToWorkspace = !options?.allWorkspaces && !wsIds?.length
+  const wsId = scopeToWorkspace ? workspace?.id : undefined
   return useQuery({
-    queryKey: [...projectKeys.list(), workspace?.id],
+    queryKey: [...projectKeys.list(), wsId ?? wsIds ?? "all"],
     queryFn: () => {
-      const qs = workspace?.id ? `?workspace_id=${workspace.id}` : ""
+      const params = new URLSearchParams()
+      if (wsId) params.set("workspace_id", wsId)
+      else if (wsIds?.length) params.set("workspace_ids", wsIds.join(","))
+      const qs = params.toString() ? `?${params}` : ""
       return api.get<ProjectsResponse>(`/admin/projects${qs}`)
     },
     select: (data) => data.projects,
-    enabled: !!workspace?.id,
+    enabled: scopeToWorkspace ? !!workspace?.id : true,
   })
 }
 

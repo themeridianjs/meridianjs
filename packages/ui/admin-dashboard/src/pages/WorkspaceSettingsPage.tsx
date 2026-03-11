@@ -151,7 +151,8 @@ function InviteMemberDialog({ open, onClose, workspaceId }: InviteMemberDialogPr
   const [inviteAppRoleId, setInviteAppRoleId] = useState<string>("")
   const [createdInvitation, setCreatedInvitation] = useState<Invitation | null>(null)
 
-  const { data: allUsers = [] } = useUsers()
+  const { data: allUsersData } = useUsers()
+  const allUsers = allUsersData?.users ?? []
   const { data: members = [] } = useWorkspaceMembers(workspaceId)
   const addMember = useAddWorkspaceMember(workspaceId)
   const createInvitation = useCreateInvitation(workspaceId)
@@ -745,7 +746,7 @@ function GeneralTab({ workspaceId }: { workspaceId: string }) {
                   updateWorkspace.mutate(
                     { is_private: e.target.checked },
                     {
-                      onSuccess: () => toast.success(e.target.checked ? "Workspace is now private" : "Workspace is now public"),
+                      onSuccess: () => toast.success(e.target.checked ? "Workspace is now public" : "Workspace is now private"),
                       onError: () => toast.error("Failed to update visibility"),
                     }
                   )

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect } from "react"
 import { useSearchParams } from "react-router-dom"
 import { format } from "date-fns"
 import {
@@ -495,8 +495,39 @@ const PAGE_SIZE = 20
 function MembersTab() {
   const { data: me } = useMe()
   const myRank = ROLE_RANK[me?.role ?? "member"] ?? 0
-  const { data: users = [], isLoading: usersLoading } = useUsers()
-  const { data: invitations = [], isLoading: invitationsLoading } = useOrgInvitations()
+
+  // Search + pagination state
+  const [searchInput, setSearchInput] = useState("")
+  const [searchQuery, setSearchQuery] = useState("")
+  const [usersPage, setUsersPage] = useState(0)
+  const [invitationsPage, setInvitationsPage] = useState(0)
+
+  // Debounce search: commit after 400ms of inactivity
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearchQuery(searchInput.trim())
+      setUsersPage(0)
+      setInvitationsPage(0)
+    }, 400)
+    return () => clearTimeout(timer)
+  }, [searchInput])
+
+  const { data: usersData, isLoading: usersLoading } = useUsers({
+    limit: PAGE_SIZE,
+    offset: usersPage * PAGE_SIZE,
+    q: searchQuery,
+  })
+  const users = usersData?.users ?? []
+  const usersCount = usersData?.count ?? 0
+
+  const { data: invitationsData, isLoading: invitationsLoading } = useOrgInvitations({
+    limit: PAGE_SIZE,
+    offset: invitationsPage * PAGE_SIZE,
+    q: searchQuery,
+  })
+  const invitations = invitationsData?.invitations ?? []
+  const invitationsCount = invitationsData?.count ?? 0
+
   const { data: roles = [] } = useRoles()
   const assignRole = useAssignUserRole()
   const updateGlobalRole = useUpdateUserGlobalRole()
@@ -511,21 +542,7 @@ function MembersTab() {
   const [inviteOpen, setInviteOpen] = useState(false)
   const [inviteEmail, setInviteEmail] = useState("")
   const [inviteRole, setInviteRole] = useState("member")
-  const [page, setPage] = useState(0)
 
-  const pendingInvitations = useMemo(
-    () => invitations.filter((inv) => inv.status === "pending"),
-    [invitations]
-  )
-
-  const sortedUsers = useMemo(
-    () => [...users].sort((a, b) => {
-      const nameA = `${a.first_name ?? ""} ${a.last_name ?? ""}`.trim() || a.email
-      const nameB = `${b.first_name ?? ""} ${b.last_name ?? ""}`.trim() || b.email
-      return nameA.localeCompare(nameB)
-    }),
-    [users]
-  )
 
   const handleInvite = (e: React.FormEvent) => {
     e.preventDefault()
@@ -558,9 +575,9 @@ function MembersTab() {
       <div className="flex items-center justify-between px-6 py-2 border-b border-border bg-muted/20">
         <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-2">
           All users
-          {!usersLoading && users.length > 0 && (
+          {!usersLoading && (
             <Badge variant="secondary" className="h-5 min-w-[20px] px-1.5 text-[11px] font-medium rounded-full">
-              {users.length}
+              {usersCount}
             </Badge>
           )}
         </span>
@@ -570,10 +587,16 @@ function MembersTab() {
         </Button>
       </div>
 
-      <div className="px-6 py-2 border-b border-border bg-muted/10">
-        <p className="text-xs text-muted-foreground">
+      <div className="px-6 py-2 border-b border-border bg-muted/10 flex items-center gap-3">
+        <p className="text-xs text-muted-foreground flex-1">
           View and manage all platform users. Change a user's custom role or remove them from the system.
         </p>
+        <Input
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+          placeholder="Search by email or name…"
+          className="h-8 text-xs w-56 shrink-0"
+        />
       </div>
 
       {/* Invite dialog */}
@@ -638,11 +661,18 @@ function MembersTab() {
       ) : users.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 text-center">
           <Users className="h-8 w-8 text-muted-foreground/40 mb-3" />
-          <p className="text-sm font-medium">No users found</p>
+          <p className="text-sm font-medium">
+            {searchQuery ? "No users match your search" : "No users found"}
+          </p>
+          {searchQuery && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Try a different search term.
+            </p>
+          )}
         </div>
       ) : (
         <>
-          {sortedUsers.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE).map((user) => {
+          {users.map((user) => {
             const first = user.first_name ?? ""
             const last = user.last_name ?? ""
             const name = `${first} ${last}`.trim() || user.email
@@ -795,19 +825,19 @@ function MembersTab() {
           })}
 
           {/* Pagination */}
-          {sortedUsers.length > PAGE_SIZE && (
+          {usersCount > PAGE_SIZE && (
             <div className="flex items-center justify-between px-4 md:px-6 py-3 border-t border-border">
               <span className="text-xs text-muted-foreground">
-                {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, sortedUsers.length)} of {sortedUsers.length}
+                {usersPage * PAGE_SIZE + 1}–{Math.min((usersPage + 1) * PAGE_SIZE, usersCount)} of {usersCount}
               </span>
               <div className="flex items-center gap-1">
-                <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setPage((p) => p - 1)} disabled={page === 0}>
+                <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setUsersPage((p) => p - 1)} disabled={usersPage === 0}>
                   <ChevronLeft className="h-3.5 w-3.5" />
                 </Button>
                 <span className="text-xs text-muted-foreground tabular-nums w-12 text-center">
-                  {page + 1} / {Math.ceil(sortedUsers.length / PAGE_SIZE)}
+                  {usersPage + 1} / {Math.ceil(usersCount / PAGE_SIZE)}
                 </span>
-                <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setPage((p) => p + 1)} disabled={(page + 1) * PAGE_SIZE >= sortedUsers.length}>
+                <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setUsersPage((p) => p + 1)} disabled={(usersPage + 1) * PAGE_SIZE >= usersCount}>
                   <ChevronRight className="h-3.5 w-3.5" />
                 </Button>
               </div>
@@ -820,9 +850,9 @@ function MembersTab() {
       <div className="px-6 py-2 border-b border-border bg-muted/20 mt-2">
         <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-2">
           Invitations
-          {!invitationsLoading && pendingInvitations.length > 0 && (
+          {!invitationsLoading && invitationsCount > 0 && (
             <Badge variant="secondary" className="h-5 min-w-[20px] px-1.5 text-[11px] font-medium rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
-              {pendingInvitations.length}
+              {invitationsCount}
             </Badge>
           )}
         </span>
@@ -832,12 +862,14 @@ function MembersTab() {
         <div className="px-6 py-4 space-y-3">
           {[1, 2, 3].map((i) => <Skeleton key={i} className="h-8 w-full" />)}
         </div>
-      ) : pendingInvitations.length === 0 ? (
+      ) : invitations.length === 0 ? (
         <div className="px-6 py-6 text-center">
-          <p className="text-xs text-muted-foreground">No pending invitations.</p>
+          <p className="text-xs text-muted-foreground">
+            {searchQuery ? "No invitations match your search." : "No pending invitations."}
+          </p>
         </div>
       ) : (
-        pendingInvitations.map((inv) => {
+        invitations.map((inv) => {
           const inviteUrl = `${window.location.origin}/invite/${inv.token}`
           return (
             <div
@@ -976,6 +1008,26 @@ function MembersTab() {
             </div>
           )
         })
+      )}
+
+      {/* Invitations pagination */}
+      {invitationsCount > PAGE_SIZE && (
+        <div className="flex items-center justify-between px-4 md:px-6 py-3 border-t border-border">
+          <span className="text-xs text-muted-foreground">
+            {invitationsPage * PAGE_SIZE + 1}–{Math.min((invitationsPage + 1) * PAGE_SIZE, invitationsCount)} of {invitationsCount}
+          </span>
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setInvitationsPage((p) => p - 1)} disabled={invitationsPage === 0}>
+              <ChevronLeft className="h-3.5 w-3.5" />
+            </Button>
+            <span className="text-xs text-muted-foreground tabular-nums w-12 text-center">
+              {invitationsPage + 1} / {Math.ceil(invitationsCount / PAGE_SIZE)}
+            </span>
+            <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setInvitationsPage((p) => p + 1)} disabled={(invitationsPage + 1) * PAGE_SIZE >= invitationsCount}>
+              <ChevronRight className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        </div>
       )}
 
       {/* Deactivate user dialog */}

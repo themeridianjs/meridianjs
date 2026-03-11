@@ -1,7 +1,7 @@
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { Link } from "react-router-dom"
 import { format } from "date-fns"
-import { BarChart2, Clock, Users, Layers, CalendarRange } from "lucide-react"
+import { BarChart2, Clock, Users, Layers, CalendarRange, Building2 } from "lucide-react"
 import {
   BarChart,
   Bar,
@@ -12,8 +12,10 @@ import {
   ResponsiveContainer,
 } from "recharts"
 import { useReportingTimeLogs } from "@/api/hooks/useReporting"
-import { useUsers, useUserMap } from "@/api/hooks/useUsers"
+import { useUserMap } from "@/api/hooks/useUsers"
 import { useProjects } from "@/api/hooks/useProjects"
+import { useReportingMembers } from "@/api/hooks/useReportingFilters"
+import { useWorkspaces } from "@/api/hooks/useWorkspaces"
 import { useAuth } from "@/stores/auth"
 import { DatePicker } from "@/components/ui/date-picker"
 import { MultiSelect } from "@/components/ui/multi-select"
@@ -42,21 +44,56 @@ export function ReportingPage({ workspaceId }: { workspaceId?: string }) {
   const [to, setTo] = useState<Date | undefined>(undefined)
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([])
   const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>([])
+  const [selectedWorkspaceIds, setSelectedWorkspaceIds] = useState<string[]>([])
 
   const { workspace } = useAuth()
   const ws = workspace?.slug ?? ""
 
-  const { data: users = [], isLoading: usersLoading } = useUsers()
-  const { data: projects = [], isLoading: projectsLoading } = useProjects()
+  // Cascading: workspace → project → employee
+  const { data: projects = [], isLoading: projectsLoading } = useProjects(
+    workspaceId
+      ? undefined
+      : selectedWorkspaceIds.length > 0
+        ? { workspaceIds: selectedWorkspaceIds }
+        : { allWorkspaces: true }
+  )
+  const { data: members = [], isLoading: membersLoading } = useReportingMembers(
+    workspaceId ? [workspaceId] : selectedWorkspaceIds,
+    selectedProjectIds
+  )
+  const { data: workspaces = [], isLoading: workspacesLoading } = useWorkspaces()
   const { data: userMap } = useUserMap()
+
+  // Prune stale child selections when parent options change
+  useEffect(() => {
+    const validProjectIds = new Set(projects.map((p) => p.id))
+    setSelectedProjectIds((prev) => {
+      const pruned = prev.filter((id) => validProjectIds.has(id))
+      return pruned.length === prev.length ? prev : pruned
+    })
+  }, [projects])
+
+  useEffect(() => {
+    const validUserIds = new Set(members.map((m) => m.id))
+    setSelectedUserIds((prev) => {
+      const pruned = prev.filter((id) => validUserIds.has(id))
+      return pruned.length === prev.length ? prev : pruned
+    })
+  }, [members])
 
   const fromStr = from ? format(from, "yyyy-MM-dd") : undefined
   const toStr = to ? format(to, "yyyy-MM-dd") : undefined
 
   const projectMap = useMemo(() => new Map(projects.map((p) => [p.id, p])), [projects])
 
+  const effectiveWsIds = workspaceId
+    ? [workspaceId]
+    : selectedWorkspaceIds.length > 0
+      ? selectedWorkspaceIds
+      : undefined
+
   const { data, isLoading } = useReportingTimeLogs(
-    { from: fromStr, to: toStr, workspace_id: workspaceId },
+    { from: fromStr, to: toStr, workspace_id: workspaceId, workspace_ids: effectiveWsIds },
     { enabled: true }
   )
 
@@ -119,11 +156,16 @@ export function ReportingPage({ workspaceId }: { workspaceId?: string }) {
 
   const userOptions = useMemo(
     () =>
-      users.map((u) => ({
+      members.map((u) => ({
         value: u.id,
         label: [u.first_name, u.last_name].filter(Boolean).join(" ") || u.email,
       })),
-    [users]
+    [members]
+  )
+
+  const workspaceOptions = useMemo(
+    () => workspaces.map((w) => ({ value: w.id, label: w.name })),
+    [workspaces]
   )
 
   const projectOptions = useMemo(
@@ -158,6 +200,30 @@ export function ReportingPage({ workspaceId }: { workspaceId?: string }) {
           <DatePicker value={to} onChange={setTo} placeholder="To" />
         </div>
 
+        {!workspaceId && (
+          <>
+            <div className="hidden md:block w-px h-5 bg-border mx-1 shrink-0" />
+
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0">
+                <Building2 className="h-3.5 w-3.5" />
+                <span className="font-medium">Workspaces</span>
+              </div>
+              {workspacesLoading ? (
+                <Skeleton className="h-8 w-40" />
+              ) : (
+                <MultiSelect
+                  options={workspaceOptions}
+                  selected={selectedWorkspaceIds}
+                  onSelectionChange={setSelectedWorkspaceIds}
+                  placeholder="All workspaces"
+                  className="w-44"
+                />
+              )}
+            </div>
+          </>
+        )}
+
         <div className="hidden md:block w-px h-5 bg-border mx-1 shrink-0" />
 
         <div className="flex items-center gap-2">
@@ -165,7 +231,7 @@ export function ReportingPage({ workspaceId }: { workspaceId?: string }) {
             <Users className="h-3.5 w-3.5" />
             <span className="font-medium">Employees</span>
           </div>
-          {usersLoading ? (
+          {membersLoading ? (
             <Skeleton className="h-8 w-40" />
           ) : (
             <MultiSelect
@@ -216,7 +282,7 @@ export function ReportingPage({ workspaceId }: { workspaceId?: string }) {
           </div>
           <p className="text-sm font-medium mb-1">No time logs found</p>
           <p className="text-sm text-muted-foreground">
-            {fromStr || toStr || selectedUserIds.length > 0 || selectedProjectIds.length > 0
+            {fromStr || toStr || selectedUserIds.length > 0 || selectedProjectIds.length > 0 || selectedWorkspaceIds.length > 0
               ? "Try adjusting your filters."
               : "No time has been logged yet."}
           </p>

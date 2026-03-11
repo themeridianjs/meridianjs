@@ -11,6 +11,7 @@ export interface ReportingFilters {
   user_id?: string
   project_id?: string
   workspace_id?: string
+  workspace_ids?: string[]
   from?: string
   to?: string
 }
@@ -26,7 +27,12 @@ export function useReportingTimeLogs(filters: ReportingFilters, options?: { enab
     queryFn: () => {
       const params = new URLSearchParams()
       Object.entries(filters).forEach(([k, v]) => {
-        if (v) params.set(k, v)
+        if (!v) return
+        if (k === "workspace_ids" && Array.isArray(v)) {
+          if (v.length > 0) params.set("workspace_ids", v.join(","))
+        } else if (typeof v === "string") {
+          params.set(k, v)
+        }
       })
       return api.get<ReportingTimeLogsResponse>(`/admin/reporting/time-logs?${params}`)
     },

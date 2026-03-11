@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { useUsers, type User } from "@/api/hooks/useUsers"
+import { useAllUsers, type User } from "@/api/hooks/useUsers"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
@@ -26,7 +26,7 @@ function getUserName(firstName: string, lastName: string, email: string) {
 export function AssigneeSelector({ value, onChange, disabled, users: usersProp }: AssigneeSelectorProps) {
   const [open, setOpen] = useState(false)
   const [localValue, setLocalValue] = useState<string[]>(value)
-  const { data: fetchedUsers } = useUsers()
+  const { data: fetchedUsers } = useAllUsers()
   const users = usersProp ?? fetchedUsers ?? []
 
   // Sync local state when the prop changes from outside (e.g. after API refetch or
