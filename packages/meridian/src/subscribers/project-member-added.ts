@@ -40,6 +40,7 @@ export default async function handler({ event, container }: SubscriberArgs<Proje
     project_id: data.project_id,
     user_id: data.user_id,
   })
+  sseManager.broadcast(data.workspace_id, "notification.created", {})
 
   // ── Email ──────────────────────────────────────────────────────────────────
   try {

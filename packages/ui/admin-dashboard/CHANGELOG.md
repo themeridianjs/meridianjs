@@ -1,5 +1,13 @@
 # @meridianjs/admin-dashboard
 
+## 1.18.0
+
+## 1.17.0
+
+### Minor Changes
+
+- Converted polling of active timers and notifications to SSE
+
 ## 1.16.0
 
 ### Minor Changes

@@ -36,7 +36,6 @@ export function useUnreadCount() {
     queryKey: [...notificationKeys.list(), "unread"],
     queryFn: () => api.get<NotificationsResponse>("/admin/notifications?unread=true"),
     select: (data) => data.count,
-    refetchInterval: 30_000,
   })
 }
 

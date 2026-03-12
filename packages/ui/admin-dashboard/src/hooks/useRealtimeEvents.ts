@@ -44,6 +44,18 @@ export function useRealtimeEvents(): void {
       invalidate([["notifications"]])
     })
 
+    es.addEventListener("timer.started", () => {
+      invalidate([["time-logs"]])
+    })
+
+    es.addEventListener("timer.stopped", () => {
+      invalidate([["time-logs"]])
+    })
+
+    es.addEventListener("notification.created", () => {
+      invalidate([["notifications"]])
+    })
+
     es.onerror = () => {
       // EventSource auto-reconnects on error; nothing to do here
     }

@@ -43,6 +43,9 @@ export default async function handler({ event, container }: SubscriberArgs<Issue
     issue_id: data.issue_id,
     assignee_ids: data.assignee_ids,
   })
+  if (activeAssignees.length > 0) {
+    sseManager.broadcast(data.workspace_id, "notification.created", {})
+  }
 
   // ── Email ──────────────────────────────────────────────────────────────────
   try {

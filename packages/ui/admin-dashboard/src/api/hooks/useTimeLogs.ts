@@ -59,7 +59,6 @@ export function useActiveTimer(issueId: string) {
       api.get<{ active_timer: TimeLog | null }>(`/admin/issues/${issueId}/time-logs/timer`),
     select: (data) => data.active_timer,
     enabled: !!issueId,
-    refetchInterval: 10_000,
   })
 }
 
@@ -137,7 +136,6 @@ export function useGlobalActiveTimer() {
     queryFn: () =>
       api.get<{ active_timer: TimeLog | null }>(`/admin/time-logs/active-timer`),
     select: (data) => data.active_timer,
-    refetchInterval: 10_000,
   })
 }
 
