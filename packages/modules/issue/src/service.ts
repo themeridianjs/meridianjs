@@ -357,6 +357,12 @@ export class IssueModuleService extends MeridianService({
     }
   }
 
+  /** Retrieve a single time log entry by ID, or null if not found. */
+  async retrieveTimeLog(id: string): Promise<any | null> {
+    const repo = this.container.resolve<any>("timeLogRepository")
+    return repo.findOne({ id }) ?? null
+  }
+
   /** Update a time log entry (duration, description, logged_date). Rejects edits on running timers. */
   async updateTimeLog(id: string, data: { duration_minutes?: number; description?: string; logged_date?: Date }): Promise<any> {
     const repo = this.container.resolve<any>("timeLogRepository")

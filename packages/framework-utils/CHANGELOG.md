@@ -1,5 +1,16 @@
 # @meridianjs/framework-utils
 
+## 1.13.0
+
+### Minor Changes
+
+- Fixed the time log update error
+
+### Patch Changes
+
+- Updated dependencies
+  - @meridianjs/types@1.13.0
+
 ## 1.12.0
 
 ### Patch Changes

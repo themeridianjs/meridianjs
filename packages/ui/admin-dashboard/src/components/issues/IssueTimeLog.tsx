@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { formatMinutes, formatElapsed } from "@/lib/time-utils"
 import {
   Clock, Play, Square, Plus, Trash2, Timer, ClipboardList, Pencil, X, Check,
@@ -320,6 +321,7 @@ interface IssueTimeLogProps {
 export function IssueTimeLog({ issueId, className }: IssueTimeLogProps) {
   const [showForm, setShowForm] = useState(false)
   const [editingLogId, setEditingLogId] = useState<string | null>(null)
+  const [deletingLogId, setDeletingLogId] = useState<string | null>(null)
 
   const { data: timeLogsData, isLoading } = useTimeLogs(issueId)
   const { data: activeTimer } = useActiveTimer(issueId)
@@ -368,9 +370,13 @@ export function IssueTimeLog({ issueId, className }: IssueTimeLogProps) {
     })
   }
 
-  const handleDelete = (id: string) => {
-    deleteTimeLog.mutate(id, {
-      onSuccess: () => toast.success("Time entry removed"),
+  const handleDeleteConfirm = () => {
+    if (!deletingLogId) return
+    deleteTimeLog.mutate(deletingLogId, {
+      onSuccess: () => {
+        setDeletingLogId(null)
+        toast.success("Time entry removed")
+      },
       onError: () => toast.error("Failed to remove entry"),
     })
   }
@@ -473,7 +479,7 @@ export function IssueTimeLog({ issueId, className }: IssueTimeLogProps) {
                 entry={entry}
                 userName={userMap?.get(entry.user_id)?.name}
                 isOwnEntry={entry.user_id === user?.id}
-                onDelete={handleDelete}
+                onDelete={setDeletingLogId}
                 isDeleting={deleteTimeLog.isPending}
                 onEdit={setEditingLogId}
                 isEditing={editingLogId === entry.id}
@@ -494,6 +500,17 @@ export function IssueTimeLog({ issueId, className }: IssueTimeLogProps) {
           No time logged yet.
         </p>
       )}
+
+      <ConfirmDialog
+        open={deletingLogId !== null}
+        onClose={() => setDeletingLogId(null)}
+        onConfirm={handleDeleteConfirm}
+        title="Delete time entry"
+        description="This time entry will be permanently removed. This action cannot be undone."
+        confirmLabel="Delete"
+        variant="destructive"
+        loading={deleteTimeLog.isPending}
+      />
     </div>
   )
 }
