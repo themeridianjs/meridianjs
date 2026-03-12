@@ -16,7 +16,12 @@ export interface RegisterInput {
   password: string
   first_name?: string
   last_name?: string
-  role?: UserRole
+  /**
+   * @internal — Only used by the invite flow. Public registration always
+   * derives the role automatically (first user → super-admin, else member).
+   * Callers must never expose this to untrusted input.
+   */
+  _inviteRole?: UserRole
 }
 
 export interface LoginInput {
@@ -79,10 +84,12 @@ export class AuthModuleService extends MeridianService({}) {
 
     const password_hash = await bcrypt.hash(input.password, BCRYPT_ROUNDS)
 
-    // If no role is specified, the first registered user becomes super-admin;
-    // all subsequent users default to member.
-    let role: UserRole = input.role ?? "member"
-    if (!input.role) {
+    // Role is determined internally: first user → super-admin, else member.
+    // The _inviteRole field is only used by the controlled invite acceptance flow.
+    let role: UserRole = "member"
+    if (input._inviteRole) {
+      role = input._inviteRole
+    } else {
       const [, userCount] = await userService.listAndCountUsers({}, { limit: 1 })
       if (userCount === 0) role = "super-admin"
     }
@@ -275,12 +282,16 @@ export class AuthModuleService extends MeridianService({}) {
     const userService = this.container.resolve<any>("userModuleService")
     const config = this.container.resolve<MeridianConfig>("config")
 
+    // Validate that the role is one of the known roles — prevent injection
+    const allowedRoles: UserRole[] = ["super-admin", "admin", "moderator", "member"]
+    const role: UserRole = (input.role && allowedRoles.includes(input.role)) ? input.role : "member"
+
     const password_hash = await bcrypt.hash(input.password, BCRYPT_ROUNDS)
     const user = await userService.restoreUser(userId, {
       password_hash,
       first_name: input.first_name ?? null,
       last_name: input.last_name ?? null,
-      role: input.role ?? "member",
+      role,
     })
 
     const permissions = await this.resolvePermissions(user.app_role_id)

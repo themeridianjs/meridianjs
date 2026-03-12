@@ -44,10 +44,13 @@ export function requirePermission(...permissions: string[]) {
  * param, body field, or URL path param (:id on /workspaces/:id sub-routes)
  * does not match the authenticated user's workspace.
  *
- * Allows the request through when no workspace identifier is present (so
- * general listing endpoints that omit workspace_id are not blocked).
+ * **WARNING:** This guard is currently inert because JWTs are always issued
+ * with `workspaceId: null` (multi-workspace users don't have a single
+ * workspace in their token). Workspace isolation is enforced per-route
+ * via `assertWorkspaceAccess` helpers instead. This function is kept for
+ * backwards compatibility but should not be relied upon.
  *
- * Must be used after `authenticateJWT`.
+ * @deprecated Use per-route `assertWorkspaceAccess` instead.
  */
 export function requireWorkspace(req: any, res: Response, next: NextFunction) {
   // Check explicit workspace_id in query / body

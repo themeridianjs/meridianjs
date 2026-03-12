@@ -286,45 +286,85 @@ export class IssueModuleService extends MeridianService({
   }
 
   /** Query time logs for reporting — supports filtering by user, project, workspace, and date range.
-   *  Each returned entry is enriched with `issue_identifier` and `issue_title`. */
+   *  Each returned entry is enriched with `issue_identifier` and `issue_title`.
+   *  Returns paginated results plus aggregates computed over the full filtered set. */
   async listTimeLogsForReporting(filters: {
-    user_id?: string
-    workspace_id?: string
-    project_id?: string
+    user_id?: string | string[]
+    workspace_id?: string | string[]
+    project_id?: string | string[]
     logged_date?: Record<string, unknown>
-  }): Promise<any[]> {
+    limit?: number
+    offset?: number
+  }): Promise<{
+    time_logs: any[]
+    count: number
+    total_minutes: number
+    total_employees: number
+    total_projects: number
+  }> {
     const repo = this.container.resolve<any>("timeLogRepository")
     const issueRepo = this.container.resolve<any>("issueRepository")
     const where: Record<string, unknown> = {}
 
-    if (filters.user_id) where.user_id = filters.user_id
+    if (filters.user_id) {
+      where.user_id = Array.isArray(filters.user_id) ? { $in: filters.user_id } : filters.user_id
+    }
     if (filters.workspace_id) where.workspace_id = filters.workspace_id
     if (filters.logged_date) where.logged_date = filters.logged_date
 
     // For project filtering, resolve via issue IDs to catch logs without denormalized project_id
     let issueCache: Map<string, any> | null = null
     if (filters.project_id) {
-      const issues = await issueRepo.find({ project_id: filters.project_id })
-      if ((issues as any[]).length === 0) return []
+      const projectIds = Array.isArray(filters.project_id) ? filters.project_id : [filters.project_id]
+      const issues = await issueRepo.find({ project_id: { $in: projectIds } })
+      if ((issues as any[]).length === 0) {
+        return { time_logs: [], count: 0, total_minutes: 0, total_employees: 0, total_projects: 0 }
+      }
       issueCache = new Map((issues as any[]).map((i: any) => [i.id, i]))
       where.issue_id = { $in: [...issueCache.keys()] }
     }
 
-    const logs = await repo.find(where, { orderBy: { logged_date: "DESC" } })
-    if ((logs as any[]).length === 0) return []
+    // Fetch all matching logs for aggregation
+    const allLogs: any[] = await repo.find(where, { orderBy: { logged_date: "DESC" } })
+    if (allLogs.length === 0) {
+      return { time_logs: [], count: 0, total_minutes: 0, total_employees: 0, total_projects: 0 }
+    }
+
+    // Compute aggregates over the full result set
+    let totalMinutes = 0
+    const employeeSet = new Set<string>()
+    const projectSet = new Set<string>()
+    for (const l of allLogs) {
+      totalMinutes += l.duration_minutes ?? 0
+      employeeSet.add(l.user_id)
+      if (l.project_id) projectSet.add(l.project_id)
+    }
+
+    // Apply pagination
+    const limit = filters.limit ?? 200
+    const offset = filters.offset ?? 0
+    const paginatedLogs = allLogs.slice(offset, offset + limit)
 
     // Enrich with issue identifier + title (reuse cache if already loaded above)
     if (!issueCache) {
-      const uniqueIssueIds = [...new Set((logs as any[]).map((l: any) => l.issue_id))]
+      const uniqueIssueIds = [...new Set(paginatedLogs.map((l: any) => l.issue_id))]
       const issues = await issueRepo.find({ id: { $in: uniqueIssueIds } })
       issueCache = new Map((issues as any[]).map((i: any) => [i.id, i]))
     }
 
-    return (logs as any[]).map((l: any) => ({
+    const enrichedLogs = paginatedLogs.map((l: any) => ({
       ...l,
       issue_identifier: issueCache!.get(l.issue_id)?.identifier ?? null,
       issue_title: issueCache!.get(l.issue_id)?.title ?? null,
     }))
+
+    return {
+      time_logs: enrichedLogs,
+      count: allLogs.length,
+      total_minutes: totalMinutes,
+      total_employees: employeeSet.size,
+      total_projects: projectSet.size,
+    }
   }
 
   /** Delete a time log entry by ID. */

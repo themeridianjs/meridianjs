@@ -36,22 +36,48 @@ export class ProjectMemberModuleService extends MeridianService({
     return members.map((m: any) => ({ id: m.id, user_id: m.user_id, role: m.role }))
   }
 
+  /** Batch: list project members for multiple projects in a single query. */
+  async listProjectMembersForProjects(projectIds: string[]): Promise<Array<{ id: string; user_id: string; project_id: string; role: string }>> {
+    if (projectIds.length === 0) return []
+    const repo = this.container.resolve<any>("projectMemberRepository")
+    const members = await repo.find({ project_id: { $in: projectIds } })
+    return members.map((m: any) => ({ id: m.id, user_id: m.user_id, project_id: m.project_id, role: m.role }))
+  }
+
   async listProjectTeamIds(projectId: string): Promise<Array<{ id: string; team_id: string }>> {
     const repo = this.container.resolve<any>("projectTeamRepository")
     const teams = await repo.find({ project_id: projectId })
     return teams.map((t: any) => ({ id: t.id, team_id: t.team_id }))
   }
 
+  /** Batch: list project team associations for multiple projects in a single query. */
+  async listProjectTeamIdsForProjects(projectIds: string[]): Promise<Array<{ id: string; team_id: string; project_id: string }>> {
+    if (projectIds.length === 0) return []
+    const repo = this.container.resolve<any>("projectTeamRepository")
+    const teams = await repo.find({ project_id: { $in: projectIds } })
+    return teams.map((t: any) => ({ id: t.id, team_id: t.team_id, project_id: t.project_id }))
+  }
+
   async ensureProjectMember(projectId: string, userId: string, role: "manager" | "member" | "viewer" = "member") {
     const repo = this.container.resolve<any>("projectMemberRepository")
     if (await repo.findOne({ project_id: projectId, user_id: userId })) return
-    return this.createProjectMember({ project_id: projectId, user_id: userId, role })
+    try {
+      return await this.createProjectMember({ project_id: projectId, user_id: userId, role })
+    } catch (err: any) {
+      if (err.code === "23505" || err.name === "UniqueConstraintViolationException") return
+      throw err
+    }
   }
 
   async ensureProjectTeam(projectId: string, teamId: string) {
     const repo = this.container.resolve<any>("projectTeamRepository")
     if (await repo.findOne({ project_id: projectId, team_id: teamId })) return
-    return this.createProjectTeam({ project_id: projectId, team_id: teamId })
+    try {
+      return await this.createProjectTeam({ project_id: projectId, team_id: teamId })
+    } catch (err: any) {
+      if (err.code === "23505" || err.name === "UniqueConstraintViolationException") return
+      throw err
+    }
   }
 
   async removeProjectMember(projectId: string, userId: string) {

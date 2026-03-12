@@ -16,6 +16,15 @@ export class TeamMemberModuleService extends MeridianService({ TeamMember: TeamM
     return members.map((m: any) => m.user_id)
   }
 
+  /** Batch: get user IDs for multiple teams in a single query. */
+  async getTeamMemberUserIdsForTeams(teamIds: string[]): Promise<string[]> {
+    if (teamIds.length === 0) return []
+    const repo = this.container.resolve<any>("teamMemberRepository")
+    const members = await repo.find({ team_id: { $in: teamIds } })
+    const userIds: string[] = members.map((m: any) => m.user_id)
+    return [...new Set(userIds)]
+  }
+
   async getUserTeamIds(userId: string): Promise<string[]> {
     const repo = this.container.resolve<any>("teamMemberRepository")
     const members = await repo.find({ user_id: userId })
