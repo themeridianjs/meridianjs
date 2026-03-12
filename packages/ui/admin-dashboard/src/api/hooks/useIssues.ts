@@ -107,14 +107,32 @@ export const issueKeys = {
 export function useIssues(projectId?: string, filters?: BoardFilters) {
   return useQuery({
     queryKey: projectId ? issueKeys.byProject(projectId, filters) : issueKeys.all,
-    queryFn: () => {
+    queryFn: async () => {
       const params = new URLSearchParams()
-      if (projectId) params.set("project_id", projectId)
+      if (projectId) {
+        params.set("project_id", projectId)
+        params.set("limit", "1000")
+      }
       if (filters?.priority?.length) params.set("priority", filters.priority.join(","))
       if (filters?.assignee_id) params.set("assignee_id", filters.assignee_id)
       if (filters?.type?.length) params.set("type", filters.type.join(","))
       if (filters?.status?.length) params.set("status", filters.status.join(","))
-      return api.get<IssuesResponse>(`/admin/issues?${params}`)
+
+      const first = await api.get<IssuesResponse>(`/admin/issues?${params}`)
+      if (first.count <= first.issues.length) return first
+
+      // Fetch remaining pages in parallel
+      const pageSize = first.issues.length
+      const remaining = first.count - pageSize
+      const pages = Math.ceil(remaining / pageSize)
+      const fetches = Array.from({ length: pages }, (_, i) => {
+        const p = new URLSearchParams(params)
+        p.set("offset", String(pageSize * (i + 1)))
+        return api.get<IssuesResponse>(`/admin/issues?${p}`)
+      })
+      const results = await Promise.all(fetches)
+      const allIssues = first.issues.concat(...results.map((r) => r.issues))
+      return { issues: allIssues, count: first.count } as IssuesResponse
     },
     select: (data) => data.issues,
     enabled: projectId !== undefined ? !!projectId : true,

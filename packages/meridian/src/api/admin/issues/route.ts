@@ -5,7 +5,8 @@ import { hasProjectAccess } from "../../utils/project-access.js"
 
 export const GET = async (req: any, res: Response) => {
   const issueService = req.scope.resolve("issueModuleService") as any
-  const limit = Math.min(Number(req.query.limit) || 50, 200)
+  const maxLimit = req.query.project_id ? 1000 : 200
+  const limit = Math.min(Number(req.query.limit) || 50, maxLimit)
   const offset = Number(req.query.offset) || 0
   const filters: Record<string, unknown> = {}
 

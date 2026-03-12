@@ -1,5 +1,19 @@
 # @meridianjs/meridian
 
+## 1.15.0
+
+### Minor Changes
+
+- Updated the limit of issues, and fixed the UI issues
+
+### Patch Changes
+
+- @meridianjs/types@1.15.0
+- @meridianjs/framework-utils@1.15.0
+- @meridianjs/framework@1.15.0
+- @meridianjs/workflow-engine@1.15.0
+- @meridianjs/auth@1.15.0
+
 ## 1.14.0
 
 ### Patch Changes
