@@ -1,5 +1,11 @@
 # @meridianjs/admin-dashboard
 
+## 1.14.0
+
+### Minor Changes
+
+- Fixed the user search
+
 ## 1.13.0
 
 ### Minor Changes
