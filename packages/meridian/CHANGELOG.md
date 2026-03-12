@@ -1,5 +1,26 @@
 # @meridianjs/meridian
 
+## 1.11.0
+
+### Minor Changes
+
+- Code optimisation and route security improvements
+
+### Patch Changes
+
+- Updated dependencies
+  - @meridianjs/auth@1.11.0
+  - @meridianjs/invitation@1.1.0
+  - @meridianjs/issue@1.1.0
+  - @meridianjs/project@1.1.0
+  - @meridianjs/project-member@1.1.0
+  - @meridianjs/workspace@1.2.0
+  - @meridianjs/workspace-member@1.1.0
+  - @meridianjs/workflow-engine@1.11.0
+  - @meridianjs/types@1.11.0
+  - @meridianjs/framework-utils@1.11.0
+  - @meridianjs/framework@1.11.0
+
 ## 1.10.0
 
 ### Patch Changes

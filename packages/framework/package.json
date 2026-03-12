@@ -1,6 +1,6 @@
 {
   "name": "@meridianjs/framework",
-  "version": "1.10.0",
+  "version": "1.11.0",
   "description": "Core Meridian framework: bootstrap, DI container, module/route/subscriber/job loaders",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -23,8 +23,8 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@meridianjs/framework-utils": "^1.10.0",
-    "@meridianjs/types": "^1.10.0",
+    "@meridianjs/framework-utils": "^1.11.0",
+    "@meridianjs/types": "^1.11.0",
     "awilix": "^12.0.5",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
