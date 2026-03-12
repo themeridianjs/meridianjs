@@ -22,6 +22,7 @@ import {
   type WorkspaceMember,
 } from "@/api/hooks/useWorkspaces"
 import { useUsers } from "@/api/hooks/useUsers"
+import { useDebounce } from "@/lib/hooks/use-debounce"
 import { useRoles, useAssignUserRole, type AppRole } from "@/api/hooks/useRoles"
 import { useAuth } from "@/stores/auth"
 import { Button } from "@/components/ui/button"
@@ -151,7 +152,8 @@ function InviteMemberDialog({ open, onClose, workspaceId }: InviteMemberDialogPr
   const [inviteAppRoleId, setInviteAppRoleId] = useState<string>("")
   const [createdInvitation, setCreatedInvitation] = useState<Invitation | null>(null)
 
-  const { data: allUsersData } = useUsers()
+  const debouncedSearch = useDebounce(search, 300)
+  const { data: allUsersData, isFetching: isSearching } = useUsers({ q: debouncedSearch })
   const allUsers = allUsersData?.users ?? []
   const { data: members = [] } = useWorkspaceMembers(workspaceId)
   const addMember = useAddWorkspaceMember(workspaceId)
@@ -163,15 +165,6 @@ function InviteMemberDialog({ open, onClose, workspaceId }: InviteMemberDialogPr
     () => allUsers.filter((u) => !memberUserIds.has(u.id)),
     [allUsers, memberUserIds]
   )
-  const filtered = useMemo(() => {
-    const q = search.toLowerCase().trim()
-    if (!q) return nonMembers
-    return nonMembers.filter(
-      (u) =>
-        u.email.toLowerCase().includes(q) ||
-        `${u.first_name} ${u.last_name}`.toLowerCase().includes(q)
-    )
-  }, [nonMembers, search])
 
   useEffect(() => {
     if (open) {
@@ -266,7 +259,15 @@ function InviteMemberDialog({ open, onClose, workspaceId }: InviteMemberDialogPr
             />
 
             <div className="rounded-lg border border-border overflow-hidden">
-              {nonMembers.length === 0 ? (
+              {isSearching && search !== debouncedSearch ? (
+                <div className="py-6 text-center">
+                  <p className="text-sm text-muted-foreground">Searching…</p>
+                </div>
+              ) : nonMembers.length === 0 && search.trim() ? (
+                <div className="py-6 text-center">
+                  <p className="text-sm text-muted-foreground">No users match "{search}"</p>
+                </div>
+              ) : nonMembers.length === 0 ? (
                 <div className="py-8 text-center px-4">
                   <p className="text-sm text-muted-foreground">All users are already members.</p>
                   <button
@@ -276,13 +277,9 @@ function InviteMemberDialog({ open, onClose, workspaceId }: InviteMemberDialogPr
                     Send an invite instead
                   </button>
                 </div>
-              ) : filtered.length === 0 ? (
-                <div className="py-6 text-center">
-                  <p className="text-sm text-muted-foreground">No users match "{search}"</p>
-                </div>
               ) : (
                 <div className="max-h-52 overflow-y-auto divide-y divide-border">
-                  {filtered.map((u) => {
+                  {nonMembers.map((u) => {
                     const first = u.first_name ?? ""
                     const last = u.last_name ?? ""
                     const displayName = `${first} ${last}`.trim() || u.email

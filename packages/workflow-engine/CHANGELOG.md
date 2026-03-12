@@ -1,5 +1,11 @@
 # @meridianjs/workflow-engine
 
+## 1.14.0
+
+### Patch Changes
+
+- @meridianjs/types@1.14.0
+
 ## 1.13.0
 
 ### Minor Changes
