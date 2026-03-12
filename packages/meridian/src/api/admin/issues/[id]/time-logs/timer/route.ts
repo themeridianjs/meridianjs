@@ -1,4 +1,5 @@
 import type { Response } from "express"
+import { sseManager } from "@meridianjs/framework"
 
 export const GET = async (req: any, res: Response) => {
   const issueService = req.scope.resolve("issueModuleService") as any
@@ -17,9 +18,19 @@ export const POST = async (req: any, res: Response) => {
     const issue = await issueService.retrieveIssue(req.params.id).catch(() => null)
     if (!issue) { res.status(404).json({ error: { message: "Issue not found." } }); return }
     const { entry, stoppedEntry } = await issueService.startTimer(req.params.id, req.user?.id ?? "system", issue.workspace_id, issue.project_id ?? undefined)
+    sseManager.broadcast(issue.workspace_id, "timer.started", { issue_id: req.params.id, user_id: req.user?.id ?? "system" })
+    if (stoppedEntry) {
+      sseManager.broadcast(issue.workspace_id, "timer.stopped", { issue_id: stoppedEntry.issue_id, user_id: req.user?.id ?? "system" })
+    }
     res.status(201).json({ time_log: entry, stopped_timer: stoppedEntry ?? null })
     return
   }
   const entry = await issueService.stopTimer(req.params.id, req.user?.id ?? "system")
+  if (entry) {
+    const issue = await issueService.retrieveIssue(req.params.id).catch(() => null)
+    if (issue) {
+      sseManager.broadcast(issue.workspace_id, "timer.stopped", { issue_id: req.params.id, user_id: req.user?.id ?? "system" })
+    }
+  }
   res.json({ time_log: entry })
 }

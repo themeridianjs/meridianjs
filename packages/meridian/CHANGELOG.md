@@ -1,5 +1,30 @@
 # @meridianjs/meridian
 
+## 1.18.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @meridianjs/framework@1.18.0
+  - @meridianjs/types@1.18.0
+  - @meridianjs/framework-utils@1.18.0
+  - @meridianjs/workflow-engine@1.18.0
+  - @meridianjs/auth@1.18.0
+
+## 1.17.0
+
+### Minor Changes
+
+- Converted polling of active timers and notifications to SSE
+
+### Patch Changes
+
+- @meridianjs/types@1.17.0
+- @meridianjs/framework-utils@1.17.0
+- @meridianjs/framework@1.17.0
+- @meridianjs/workflow-engine@1.17.0
+- @meridianjs/auth@1.17.0
+
 ## 1.16.0
 
 ### Minor Changes

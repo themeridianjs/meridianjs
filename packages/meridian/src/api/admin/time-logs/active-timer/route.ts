@@ -1,4 +1,5 @@
 import type { Response } from "express"
+import { sseManager } from "@meridianjs/framework"
 
 export const GET = async (req: any, res: Response) => {
   const issueService = req.scope.resolve("issueModuleService") as any
@@ -47,6 +48,9 @@ export const POST = async (req: any, res: Response) => {
   if (!stopped) {
     res.status(404).json({ error: { message: "No active timer found." } })
     return
+  }
+  if (stopped.workspace_id) {
+    sseManager.broadcast(stopped.workspace_id, "timer.stopped", { issue_id: stopped.issue_id, user_id: userId })
   }
   res.json({ time_log: stopped })
 }
