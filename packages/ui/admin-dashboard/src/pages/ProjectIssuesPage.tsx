@@ -72,7 +72,7 @@ const PriorityIcon = ({ priority, className }: { priority: string; className?: s
   }
 }
 
-const GRID = "grid-cols-[70px_250px_150px_120px_130px_140px_130px_32px]"
+const GRID = "grid-cols-[110px_250px_150px_120px_130px_140px_130px_32px]"
 
 // ─── IssueRow ─────────────────────────────────────────────────────────────────
 
@@ -87,6 +87,7 @@ interface IssueRowProps {
   projectKey: string
   onOpen: (issue: Issue) => void
   isChild?: boolean
+  depth?: number
   children?: Issue[]
   childrenMap?: Record<string, Issue[]>
   onAddChild?: (parentId: string) => void
@@ -103,6 +104,7 @@ function IssueRow({
   projectKey,
   onOpen,
   isChild = false,
+  depth = 0,
   children = [],
   childrenMap,
   onAddChild,
@@ -133,26 +135,31 @@ function IssueRow({
         className={cn(
           `group grid ${GRID} items-center py-3`,
           "hover:bg-[#f9fafb] dark:hover:bg-muted/30 cursor-pointer transition-colors",
-          isChild && "bg-muted/10",
+          isChild && "bg-zinc-50/80 dark:bg-zinc-800/30",
           update.isPending && "opacity-70"
         )}
       >
         {/* ID */}
-        <span className={cn(
-          "text-xs font-mono text-muted-foreground truncate",
-          "sticky left-0 z-10 pl-6 transition-colors",
-          "bg-white dark:bg-card group-hover:bg-[#f9fafb] dark:group-hover:bg-muted/30",
-          isChild && "text-muted-foreground",
-        )}>
+        <span
+          className={cn(
+            "text-xs font-mono text-muted-foreground truncate",
+            "sticky left-0 z-10 transition-colors",
+            isChild
+              ? "bg-zinc-50/80 dark:bg-zinc-800/30 group-hover:bg-[#f9fafb] dark:group-hover:bg-muted/30"
+              : "bg-white dark:bg-card group-hover:bg-[#f9fafb] dark:group-hover:bg-muted/30",
+          )}
+          style={{ paddingLeft: `${1.5 + depth * 1.25}rem` }}
+        >
           {issue.identifier}
         </span>
 
         {/* Title — with expand/collapse for children */}
         <div className={cn(
           "flex items-center gap-1 min-w-0 pr-3",
-          "sticky left-[70px] z-10 transition-colors",
-          "bg-white dark:bg-card group-hover:bg-[#f9fafb] dark:group-hover:bg-muted/30",
-          isChild && "bg-white dark:bg-muted/20",
+          "sticky left-[110px] z-10 transition-colors",
+          isChild
+            ? "bg-zinc-50/80 dark:bg-zinc-800/30 group-hover:bg-[#f9fafb] dark:group-hover:bg-muted/30"
+            : "bg-white dark:bg-card group-hover:bg-[#f9fafb] dark:group-hover:bg-muted/30",
         )}>
           {hasChildren ? (
             <Tooltip>
@@ -401,6 +408,7 @@ function IssueRow({
           projectKey={projectKey}
           onOpen={onOpen}
           isChild
+          depth={depth + 1}
           children={childrenMap?.[child.id] ?? []}
           childrenMap={childrenMap}
           onAddChild={onAddChild}
@@ -641,17 +649,47 @@ export function ProjectIssuesPage() {
       return aNum - bNum
     })
 
-  // ── Build parent→children map from ALL issues (not just filtered) ─────────
+  // ── When a child matches filters, pull in its ancestor chain for context ──
+  const allIssueMap = new Map((issues ?? []).map((i) => [i.id, i]))
+  const filteredIds = new Set(allFiltered.map((i) => i.id))
+  const visibleIds = new Set(filteredIds)
+
+  for (const issue of allFiltered) {
+    let parentId = issue.parent_id
+    while (parentId) {
+      if (visibleIds.has(parentId)) break
+      visibleIds.add(parentId)
+      parentId = allIssueMap.get(parentId)?.parent_id ?? null
+    }
+  }
+
+  // ── Build parent→children map from all visible child issues ─────────────
   const childrenMap: Record<string, Issue[]> = {}
-  for (const issue of issues ?? []) {
-    if (issue.parent_id) {
+  for (const id of visibleIds) {
+    const issue = allIssueMap.get(id)!
+    if (issue.parent_id && visibleIds.has(issue.parent_id)) {
       if (!childrenMap[issue.parent_id]) childrenMap[issue.parent_id] = []
       childrenMap[issue.parent_id].push(issue)
     }
   }
+  // Sort children by identifier number
+  for (const kids of Object.values(childrenMap)) {
+    kids.sort((a, b) => {
+      const aNum = parseInt(a.identifier.split("-")[1] ?? "0", 10)
+      const bNum = parseInt(b.identifier.split("-")[1] ?? "0", 10)
+      return aNum - bNum
+    })
+  }
 
-  // Top-level issues: no parent_id
-  const topLevel = allFiltered.filter((i) => !i.parent_id)
+  // Top-level: visible issues with no parent_id (or whose parent isn't visible)
+  const topLevel = Array.from(visibleIds)
+    .map((id) => allIssueMap.get(id)!)
+    .filter((i) => !i.parent_id || !visibleIds.has(i.parent_id))
+    .sort((a, b) => {
+      const aNum = parseInt(a.identifier.split("-")[1] ?? "0", 10)
+      const bNum = parseInt(b.identifier.split("-")[1] ?? "0", 10)
+      return aNum - bNum
+    })
   const totalCount = allFiltered.length
 
   // ── Group top-level issues by task_list_id ────────────────────────────────
@@ -796,7 +834,7 @@ export function ProjectIssuesPage() {
             {/* Table header */}
             <div className={cn("grid items-center py-2.5 border-b border-border", GRID)}>
               <span className="text-xs font-medium text-[#6b7280] sticky left-0 z-10 bg-white dark:bg-card pl-6">ID</span>
-              <span className="text-xs font-medium text-[#6b7280] sticky left-[70px] z-10 bg-white dark:bg-card">Title</span>
+              <span className="text-xs font-medium text-[#6b7280] sticky left-[110px] z-10 bg-white dark:bg-card">Title</span>
               <span className="text-xs font-medium text-[#6b7280]">Status</span>
               <span className="text-xs font-medium text-[#6b7280]">Priority</span>
               <span className="text-xs font-medium text-[#6b7280]">Sprint</span>

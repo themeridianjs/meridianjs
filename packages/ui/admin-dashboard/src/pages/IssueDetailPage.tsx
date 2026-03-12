@@ -36,7 +36,19 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { useAppConfig } from "@/api/hooks/useAppConfig"
 import { WidgetZone } from "@/components/WidgetZone"
+
+function getIssueDepth(issue: { parent_id?: string | null }, allIssues: { id: string; parent_id?: string | null }[]): number {
+  let depth = 0
+  let current = issue
+  while (current?.parent_id) {
+    depth++
+    current = allIssues.find((i) => i.id === current!.parent_id!) as typeof issue
+    if (!current) break
+  }
+  return depth
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -143,6 +155,11 @@ export function IssueDetailPage() {
   const { data: taskLists } = useTaskLists(projectId || undefined)
   const { data: allIssues } = useIssues(projectId || undefined)
   const activeSprints = (sprints ?? []).filter((s) => s.status !== "completed")
+
+  const { data: appConfig } = useAppConfig()
+  const maxDepth = appConfig?.maxChildIssueDepth ?? 1
+  const issueDepth = issue ? getIssueDepth(issue, allIssues ?? []) : 0
+  const canAddChild = issueDepth < maxDepth
 
   const parentIssue = issue?.parent_id ? allIssues?.find((i) => i.id === issue.parent_id) : null
   const childIssues = allIssues?.filter((i) => i.parent_id === issueId) ?? []
@@ -335,8 +352,8 @@ export function IssueDetailPage() {
               )}
             </div>
 
-            {/* Card 2: Child Issues — only on top-level issues */}
-            {!issue.parent_id && <div className="bg-white dark:bg-card border border-border rounded-xl overflow-hidden shadow-sm">
+            {/* Card 2: Child Issues — depth-aware */}
+            {canAddChild && <div className="bg-white dark:bg-card border border-border rounded-xl overflow-hidden shadow-sm">
               <div className="px-5 py-3 border-b border-border/60 flex items-center justify-between">
                 <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest">
                   Child Issues
