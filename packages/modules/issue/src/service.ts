@@ -213,24 +213,14 @@ export class IssueModuleService extends MeridianService({
 
   /**
    * Start a timer for a user on an issue.
-   * Throws if the user already has an active timer on this issue.
+   * Auto-stops any existing running timer for this user (on any issue).
+   * Returns `{ entry, stoppedEntry }` where `stoppedEntry` is the previously running timer (if any).
    */
-  async startTimer(issueId: string, userId: string, workspaceId: string, projectId?: string): Promise<any> {
+  async startTimer(issueId: string, userId: string, workspaceId: string, projectId?: string): Promise<{ entry: any; stoppedEntry: any | null }> {
+    // Auto-stop any running timer for this user
+    const stoppedEntry = await this.stopTimerForUser(userId)
+
     const repo = this.container.resolve<any>("timeLogRepository")
-
-    const active = await repo.findOne({
-      issue_id: issueId,
-      user_id: userId,
-      started_at: { $ne: null },
-      stopped_at: null,
-    })
-    if (active) {
-      throw Object.assign(
-        new Error("A timer is already running for this issue. Stop it before starting a new one."),
-        { status: 409 }
-      )
-    }
-
     const entry = repo.create({
       issue_id: issueId,
       user_id: userId,
@@ -240,7 +230,7 @@ export class IssueModuleService extends MeridianService({
       started_at: new Date(),
     })
     await repo.persistAndFlush(entry)
-    return entry
+    return { entry, stoppedEntry }
   }
 
   /**
@@ -365,6 +355,54 @@ export class IssueModuleService extends MeridianService({
       total_employees: employeeSet.size,
       total_projects: projectSet.size,
     }
+  }
+
+  /** Update a time log entry (duration, description, logged_date). Rejects edits on running timers. */
+  async updateTimeLog(id: string, data: { duration_minutes?: number; description?: string; logged_date?: Date }): Promise<any> {
+    const repo = this.container.resolve<any>("timeLogRepository")
+    const entry = await repo.findOne({ id })
+    if (!entry) {
+      throw Object.assign(new Error(`Time log entry ${id} not found`), { status: 404 })
+    }
+    if (entry.started_at && !entry.stopped_at) {
+      throw Object.assign(new Error("Cannot edit a running timer. Stop it first."), { status: 400 })
+    }
+    if (data.duration_minutes !== undefined) entry.duration_minutes = data.duration_minutes
+    if (data.description !== undefined) entry.description = data.description
+    if (data.logged_date !== undefined) entry.logged_date = data.logged_date
+    await repo.persistAndFlush(entry)
+    return entry
+  }
+
+  /** Return the running timer for a user across ALL issues, or null if none. */
+  async getActiveTimerForUser(userId: string): Promise<any | null> {
+    const repo = this.container.resolve<any>("timeLogRepository")
+    return repo.findOne({
+      user_id: userId,
+      started_at: { $ne: null },
+      stopped_at: null,
+    }) ?? null
+  }
+
+  /** Stop whatever timer is running for the user (any issue). Returns the stopped entry or null. */
+  async stopTimerForUser(userId: string): Promise<any | null> {
+    const repo = this.container.resolve<any>("timeLogRepository")
+    const active = await repo.findOne({
+      user_id: userId,
+      started_at: { $ne: null },
+      stopped_at: null,
+    })
+    if (!active) return null
+
+    const now = new Date()
+    const durationMs = now.getTime() - new Date(active.started_at).getTime()
+    const durationMinutes = Math.max(1, Math.round(durationMs / 60_000))
+
+    active.stopped_at = now
+    active.duration_minutes = durationMinutes
+    active.logged_date = now
+    await repo.persistAndFlush(active)
+    return active
   }
 
   /** Delete a time log entry by ID. */

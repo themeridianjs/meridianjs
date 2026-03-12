@@ -1,5 +1,11 @@
 # @meridianjs/admin-dashboard
 
+## 1.12.0
+
+### Minor Changes
+
+- CRUD for timelogs, and global timer in the nav header
+
 ## 1.11.0
 
 ### Minor Changes

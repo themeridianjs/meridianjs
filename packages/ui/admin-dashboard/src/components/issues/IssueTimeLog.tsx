@@ -7,39 +7,21 @@ import {
   useStartTimer,
   useStopTimer,
   useDeleteTimeLog,
+  useUpdateTimeLog,
 } from "@/api/hooks/useTimeLogs"
 import type { TimeLog } from "@/api/hooks/useTimeLogs"
 import { useUserMap } from "@/api/hooks/useUsers"
+import { useAuth } from "@/stores/auth"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
+import { formatMinutes, formatElapsed } from "@/lib/time-utils"
 import {
-  Clock, Play, Square, Plus, Trash2, Timer, ClipboardList,
+  Clock, Play, Square, Plus, Trash2, Timer, ClipboardList, Pencil, X, Check,
 } from "lucide-react"
 import { toast } from "sonner"
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-function formatMinutes(minutes: number): string {
-  const h = Math.floor(minutes / 60)
-  const m = minutes % 60
-  if (h === 0) return `${m}m`
-  if (m === 0) return `${h}h`
-  return `${h}h ${m}m`
-}
-
-function formatElapsed(startedAt: string): string {
-  const elapsedMs = Date.now() - new Date(startedAt).getTime()
-  const totalSeconds = Math.floor(elapsedMs / 1000)
-  const h = Math.floor(totalSeconds / 3600)
-  const m = Math.floor((totalSeconds % 3600) / 60)
-  const s = totalSeconds % 60
-  const mm = String(m).padStart(2, "0")
-  const ss = String(s).padStart(2, "0")
-  return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`
-}
 
 // ── Live elapsed counter ──────────────────────────────────────────────────────
 
@@ -154,32 +136,114 @@ function LogTimeForm({ onSubmit, isPending, onCancel }: LogTimeFormProps) {
   )
 }
 
+// ── Inline edit form ──────────────────────────────────────────────────────────
+
+interface EditTimeLogFormProps {
+  entry: TimeLog
+  onSave: (data: { duration_minutes?: number; description?: string; logged_date?: string }) => void
+  onCancel: () => void
+  isPending: boolean
+}
+
+function EditTimeLogForm({ entry, onSave, onCancel, isPending }: EditTimeLogFormProps) {
+  const totalMins = entry.duration_minutes ?? 0
+  const [hours, setHours] = useState(String(Math.floor(totalMins / 60)))
+  const [minutes, setMinutes] = useState(String(totalMins % 60))
+  const [description, setDescription] = useState(entry.description ?? "")
+  const [loggedDate, setLoggedDate] = useState(
+    entry.logged_date ? new Date(entry.logged_date).toISOString().split("T")[0] : new Date().toISOString().split("T")[0]
+  )
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    const h = parseInt(hours || "0", 10)
+    const m = parseInt(minutes || "0", 10)
+    const total = h * 60 + m
+    if (total <= 0) {
+      toast.error("Please enter a duration greater than 0.")
+      return
+    }
+    onSave({
+      duration_minutes: total,
+      description: description.trim() || undefined,
+      logged_date: loggedDate || undefined,
+    })
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="rounded-lg border border-border bg-muted/30 p-3 space-y-2">
+      <div className="flex gap-2">
+        <div className="w-16">
+          <label className="text-[10px] text-muted-foreground mb-0.5 block">Hours</label>
+          <Input type="number" min="0" max="999" value={hours} onChange={(e) => setHours(e.target.value)} className="h-7 text-xs" />
+        </div>
+        <div className="w-16">
+          <label className="text-[10px] text-muted-foreground mb-0.5 block">Min</label>
+          <Input type="number" min="0" max="59" value={minutes} onChange={(e) => setMinutes(e.target.value)} className="h-7 text-xs" />
+        </div>
+        <div className="flex-1">
+          <label className="text-[10px] text-muted-foreground mb-0.5 block">Date</label>
+          <Input type="date" value={loggedDate} onChange={(e) => setLoggedDate(e.target.value)} className="h-7 text-xs" />
+        </div>
+      </div>
+      <div>
+        <label className="text-[10px] text-muted-foreground mb-0.5 block">Description</label>
+        <Input placeholder="What did you work on?" value={description} onChange={(e) => setDescription(e.target.value)} className="h-7 text-xs" />
+      </div>
+      <div className="flex justify-end gap-1.5 pt-0.5">
+        <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={onCancel} disabled={isPending}>
+          <X className="h-3 w-3" />
+        </Button>
+        <Button type="submit" size="icon" className="h-6 w-6" disabled={isPending}>
+          <Check className="h-3 w-3" />
+        </Button>
+      </div>
+    </form>
+  )
+}
+
 // ── Time log row ──────────────────────────────────────────────────────────────
 
 function TimeLogRow({
   entry,
   userName,
+  isOwnEntry,
   onDelete,
   isDeleting,
+  onEdit,
+  isEditing,
+  editForm,
 }: {
   entry: TimeLog
   userName?: string
+  isOwnEntry: boolean
   onDelete: (id: string) => void
   isDeleting: boolean
+  onEdit: (id: string) => void
+  isEditing: boolean
+  editForm: React.ReactNode
 }) {
   const isActive = entry.started_at != null && entry.stopped_at == null
+
+  if (isEditing) {
+    return <div className="py-1.5 px-3">{editForm}</div>
+  }
 
   return (
     <div className="flex items-start gap-3 py-2.5 px-3 rounded-lg hover:bg-muted/50 group transition-colors">
       <div className={cn(
         "flex h-7 w-7 shrink-0 items-center justify-center rounded-full mt-0.5",
-        isActive ? "bg-emerald-50 dark:bg-emerald-950/40" : "bg-muted"
+        isActive
+          ? "bg-emerald-50 dark:bg-emerald-950/40"
+          : entry.source === "timer"
+            ? "bg-sky-50 dark:bg-sky-950/40"
+            : "bg-violet-50 dark:bg-violet-950/40"
       )}>
         {isActive
           ? <Timer className="h-3.5 w-3.5 text-emerald-600" />
           : entry.source === "timer"
-            ? <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-            : <ClipboardList className="h-3.5 w-3.5 text-muted-foreground" />
+            ? <Clock className="h-3.5 w-3.5 text-sky-600 dark:text-sky-400" />
+            : <ClipboardList className="h-3.5 w-3.5 text-violet-600 dark:text-violet-400" />
         }
       </div>
 
@@ -196,13 +260,17 @@ function TimeLogRow({
             variant="muted"
             className={cn(
               "text-[10px] px-1.5 py-0",
-              isActive ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400" : ""
+              isActive
+                ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400"
+                : entry.source === "timer"
+                  ? "bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-400"
+                  : "bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-400"
             )}
           >
             {isActive ? "Running" : entry.source === "timer" ? "Timer" : "Manual"}
           </Badge>
           {userName && (
-            <span className="text-[11px] text-muted-foreground">{userName}</span>
+            <span className="text-[11px] text-foreground">{userName}</span>
           )}
         </div>
 
@@ -217,16 +285,26 @@ function TimeLogRow({
         )}
       </div>
 
-      {!isActive && (
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-7 w-7 shrink-0 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all mt-0.5"
-          onClick={() => onDelete(entry.id)}
-          disabled={isDeleting}
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-        </Button>
+      {!isActive && isOwnEntry && (
+        <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-all mt-0.5">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 text-muted-foreground hover:text-foreground"
+            onClick={() => onEdit(entry.id)}
+          >
+            <Pencil className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 text-muted-foreground hover:text-destructive"
+            onClick={() => onDelete(entry.id)}
+            disabled={isDeleting}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+        </div>
       )}
     </div>
   )
@@ -241,14 +319,17 @@ interface IssueTimeLogProps {
 
 export function IssueTimeLog({ issueId, className }: IssueTimeLogProps) {
   const [showForm, setShowForm] = useState(false)
+  const [editingLogId, setEditingLogId] = useState<string | null>(null)
 
   const { data: timeLogsData, isLoading } = useTimeLogs(issueId)
   const { data: activeTimer } = useActiveTimer(issueId)
   const { data: userMap } = useUserMap()
+  const { user } = useAuth()
   const logTime = useLogTime(issueId)
   const startTimer = useStartTimer(issueId)
   const stopTimer = useStopTimer(issueId)
   const deleteTimeLog = useDeleteTimeLog(issueId)
+  const updateTimeLog = useUpdateTimeLog(issueId)
 
   const timeLogs = timeLogsData?.time_logs ?? []
   const totalMinutes = timeLogsData?.total_minutes ?? 0
@@ -266,7 +347,13 @@ export function IssueTimeLog({ issueId, className }: IssueTimeLogProps) {
 
   const handleStartTimer = () => {
     startTimer.mutate(undefined, {
-      onSuccess: () => toast.success("Timer started"),
+      onSuccess: (data) => {
+        if (data.stopped_timer) {
+          toast.success("Previous timer stopped, new timer started")
+        } else {
+          toast.success("Timer started")
+        }
+      },
       onError: (err: any) => toast.error(err.message ?? "Failed to start timer"),
     })
   }
@@ -285,6 +372,16 @@ export function IssueTimeLog({ issueId, className }: IssueTimeLogProps) {
     deleteTimeLog.mutate(id, {
       onSuccess: () => toast.success("Time entry removed"),
       onError: () => toast.error("Failed to remove entry"),
+    })
+  }
+
+  const handleEditSave = (logId: string, data: { duration_minutes?: number; description?: string; logged_date?: string }) => {
+    updateTimeLog.mutate({ logId, data }, {
+      onSuccess: () => {
+        setEditingLogId(null)
+        toast.success("Time entry updated")
+      },
+      onError: () => toast.error("Failed to update entry"),
     })
   }
 
@@ -375,8 +472,19 @@ export function IssueTimeLog({ issueId, className }: IssueTimeLogProps) {
                 key={entry.id}
                 entry={entry}
                 userName={userMap?.get(entry.user_id)?.name}
+                isOwnEntry={entry.user_id === user?.id}
                 onDelete={handleDelete}
                 isDeleting={deleteTimeLog.isPending}
+                onEdit={setEditingLogId}
+                isEditing={editingLogId === entry.id}
+                editForm={
+                  <EditTimeLogForm
+                    entry={entry}
+                    onSave={(data) => handleEditSave(entry.id, data)}
+                    onCancel={() => setEditingLogId(null)}
+                    isPending={updateTimeLog.isPending}
+                  />
+                }
               />
             ))}
           </div>

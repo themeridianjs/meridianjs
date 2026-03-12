@@ -1,5 +1,26 @@
 import type { Response } from "express"
 
+export const PUT = async (req: any, res: Response) => {
+  const issueService = req.scope.resolve("issueModuleService") as any
+  const repo = req.scope.resolve("timeLogRepository") as any
+  const entry = await repo.findOne({ id: req.params.logId })
+  if (!entry) {
+    res.status(404).json({ error: { message: "Time log not found" } })
+    return
+  }
+  if (entry.user_id !== req.user?.id) {
+    res.status(403).json({ error: { message: "Forbidden" } })
+    return
+  }
+  const { duration_minutes, description, logged_date } = req.body
+  const updated = await issueService.updateTimeLog(req.params.logId, {
+    duration_minutes,
+    description,
+    logged_date: logged_date ? new Date(logged_date) : undefined,
+  })
+  res.json({ time_log: updated })
+}
+
 export const DELETE = async (req: any, res: Response) => {
   const issueService = req.scope.resolve("issueModuleService") as any
   const repo = req.scope.resolve("timeLogRepository") as any
