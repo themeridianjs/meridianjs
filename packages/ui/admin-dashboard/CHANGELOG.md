@@ -1,5 +1,11 @@
 # @meridianjs/admin-dashboard
 
+## 1.16.0
+
+### Minor Changes
+
+- Added functionality to select multiple users
+
 ## 1.15.0
 
 ### Minor Changes

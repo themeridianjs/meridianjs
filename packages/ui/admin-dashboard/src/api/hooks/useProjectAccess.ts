@@ -44,6 +44,17 @@ export function useAddProjectMember(projectId: string) {
   })
 }
 
+export function useAddProjectMembersBatch(projectId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ userIds, role }: { userIds: string[]; role?: string }) =>
+      api.post<{ added: number; skipped: number }>(`/admin/projects/${projectId}/members/batch`, { user_ids: userIds, role }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: accessKeys.project(projectId) })
+    },
+  })
+}
+
 export function useRemoveProjectMember(projectId: string) {
   const qc = useQueryClient()
   return useMutation({
@@ -60,6 +71,17 @@ export function useAddProjectTeam(projectId: string) {
   return useMutation({
     mutationFn: (teamId: string) =>
       api.post(`/admin/projects/${projectId}/teams`, { team_id: teamId }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: accessKeys.project(projectId) })
+    },
+  })
+}
+
+export function useAddProjectTeamsBatch(projectId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (teamIds: string[]) =>
+      api.post<{ added: number; skipped: number }>(`/admin/projects/${projectId}/teams/batch`, { team_ids: teamIds }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: accessKeys.project(projectId) })
     },

@@ -10,7 +10,7 @@ import {
   useRevokeInvitation,
   useResendInvitation,
   useWorkspaceMembers,
-  useAddWorkspaceMember,
+  useAddWorkspaceMembersBatch,
   useRemoveWorkspaceMember,
   useTeams,
   useCreateTeam,
@@ -145,7 +145,7 @@ function InviteMemberDialog({ open, onClose, workspaceId }: InviteMemberDialogPr
   const [mode, setMode] = useState<DialogMode>("existing")
   // Existing-user mode state
   const [search, setSearch] = useState("")
-  const [selectedUserId, setSelectedUserId] = useState("")
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([])
   const [addAppRoleId, setAddAppRoleId] = useState<string>("")
   // Invite mode state
   const [email, setEmail] = useState("")
@@ -156,7 +156,7 @@ function InviteMemberDialog({ open, onClose, workspaceId }: InviteMemberDialogPr
   const { data: allUsersData, isFetching: isSearching } = useUsers({ q: debouncedSearch })
   const allUsers = allUsersData?.users ?? []
   const { data: members = [] } = useWorkspaceMembers(workspaceId)
-  const addMember = useAddWorkspaceMember(workspaceId)
+  const addMembersBatch = useAddWorkspaceMembersBatch(workspaceId)
   const createInvitation = useCreateInvitation(workspaceId)
   const { data: appRoles } = useRoles()
 
@@ -169,7 +169,7 @@ function InviteMemberDialog({ open, onClose, workspaceId }: InviteMemberDialogPr
   useEffect(() => {
     if (open) {
       setSearch("")
-      setSelectedUserId("")
+      setSelectedUserIds([])
       setAddAppRoleId("")
       setEmail("")
       setInviteAppRoleId("")
@@ -179,15 +179,15 @@ function InviteMemberDialog({ open, onClose, workspaceId }: InviteMemberDialogPr
   }, [open])
 
   const handleAddExisting = () => {
-    if (!selectedUserId) return
-    addMember.mutate(
-      { user_id: selectedUserId, role: "member", app_role_id: addAppRoleId || null },
+    if (selectedUserIds.length === 0) return
+    addMembersBatch.mutate(
+      { user_ids: selectedUserIds, role: "member", app_role_id: addAppRoleId || null },
       {
-        onSuccess: () => {
-          toast.success("Member added")
+        onSuccess: (data) => {
+          toast.success(`${data.added} member${data.added === 1 ? "" : "s"} added`)
           onClose()
         },
-        onError: (err: Error) => toast.error(err.message || "Failed to add member"),
+        onError: (err: Error) => toast.error(err.message || "Failed to add members"),
       }
     )
   }
@@ -284,12 +284,16 @@ function InviteMemberDialog({ open, onClose, workspaceId }: InviteMemberDialogPr
                     const last = u.last_name ?? ""
                     const displayName = `${first} ${last}`.trim() || u.email
                     const initials = (first[0] ?? last[0] ?? u.email[0] ?? "U").toUpperCase()
-                    const isSelected = selectedUserId === u.id
+                    const isSelected = selectedUserIds.includes(u.id)
                     return (
                       <button
                         key={u.id}
                         type="button"
-                        onClick={() => setSelectedUserId(isSelected ? "" : u.id)}
+                        onClick={() =>
+                          setSelectedUserIds((prev) =>
+                            isSelected ? prev.filter((id) => id !== u.id) : [...prev, u.id]
+                          )
+                        }
                         className={cn(
                           "w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors",
                           isSelected
@@ -329,10 +333,14 @@ function InviteMemberDialog({ open, onClose, workspaceId }: InviteMemberDialogPr
                   <Button
                     type="button"
                     size="sm"
-                    disabled={!selectedUserId || addMember.isPending}
+                    disabled={selectedUserIds.length === 0 || addMembersBatch.isPending}
                     onClick={handleAddExisting}
                   >
-                    {addMember.isPending ? "Adding…" : "Add to workspace"}
+                    {addMembersBatch.isPending
+                      ? "Adding…"
+                      : selectedUserIds.length <= 1
+                        ? "Add to workspace"
+                        : `Add ${selectedUserIds.length} members`}
                   </Button>
                 </div>
               </>

@@ -1,5 +1,12 @@
 # @meridianjs/framework
 
+## 1.16.0
+
+### Patch Changes
+
+- @meridianjs/types@1.16.0
+- @meridianjs/framework-utils@1.16.0
+
 ## 1.15.0
 
 ### Patch Changes
