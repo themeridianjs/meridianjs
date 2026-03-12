@@ -170,6 +170,18 @@ export function useAddWorkspaceMember(workspaceId: string) {
   })
 }
 
+export function useAddWorkspaceMembersBatch(workspaceId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: { user_ids: string[]; role: "admin" | "member"; app_role_id?: string | null }) =>
+      api.post<{ added: number; skipped: number }>(`/admin/workspaces/${workspaceId}/members/batch`, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: memberKeys.list(workspaceId) })
+      qc.invalidateQueries({ queryKey: ["workspaces"] })
+    },
+  })
+}
+
 export function useUpdateWorkspaceMemberRole(workspaceId: string) {
   const qc = useQueryClient()
   return useMutation({

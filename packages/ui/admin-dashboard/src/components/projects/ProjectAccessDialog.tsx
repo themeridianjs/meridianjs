@@ -5,21 +5,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Skeleton } from "@/components/ui/skeleton"
+import { MultiSelect } from "@/components/ui/multi-select"
 import {
   useProjectAccess,
-  useAddProjectMember,
+  useAddProjectMembersBatch,
   useRemoveProjectMember,
-  useAddProjectTeam,
+  useAddProjectTeamsBatch,
   useRemoveProjectTeam,
 } from "@/api/hooks/useProjectAccess"
 import { useWorkspaceMembers, useTeams } from "@/api/hooks/useWorkspaces"
@@ -48,13 +42,13 @@ export function ProjectAccessDialog({
   const { data: wsMembers } = useWorkspaceMembers(workspaceId)
   const { data: wsTeams } = useTeams(workspaceId)
 
-  const addMember = useAddProjectMember(projectId)
+  const addMembersBatch = useAddProjectMembersBatch(projectId)
   const removeMember = useRemoveProjectMember(projectId)
-  const addTeam = useAddProjectTeam(projectId)
+  const addTeamsBatch = useAddProjectTeamsBatch(projectId)
   const removeTeam = useRemoveProjectTeam(projectId)
 
-  const [addUserId, setAddUserId] = useState("")
-  const [addTeamId, setAddTeamId] = useState("")
+  const [addUserIds, setAddUserIds] = useState<string[]>([])
+  const [addTeamIds, setAddTeamIds] = useState<string[]>([])
 
   const memberUserIds = new Set(access?.members.map((m) => m.user_id) ?? [])
   const teamIds = new Set(access?.teams.map((t) => t.team_id) ?? [])
@@ -125,47 +119,41 @@ export function ProjectAccessDialog({
               </div>
             )}
 
-            {/* Add person */}
+            {/* Add person(s) */}
             {availableUsers.length > 0 && (
               <div className="flex items-center gap-2 mt-2">
                 <UserPlus className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                <Select value={addUserId} onValueChange={setAddUserId}>
-                  <SelectTrigger className="h-8 text-xs flex-1">
-                    <SelectValue placeholder="Add person…" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableUsers.map((m) => {
-                      const u = m.user
-                      const first = u?.first_name ?? ""
-                      const last = u?.last_name ?? ""
-                      const displayName = `${first} ${last}`.trim() || u?.email || "Unknown"
-                      return (
-                        <SelectItem key={m.user_id} value={m.user_id}>
-                          {displayName}
-                        </SelectItem>
-                      )
-                    })}
-                  </SelectContent>
-                </Select>
-                {addUserId && (
+                <MultiSelect
+                  options={availableUsers.map((m) => {
+                    const u = m.user
+                    const first = u?.first_name ?? ""
+                    const last = u?.last_name ?? ""
+                    return { value: m.user_id, label: `${first} ${last}`.trim() || u?.email || "Unknown" }
+                  })}
+                  selected={addUserIds}
+                  onSelectionChange={setAddUserIds}
+                  placeholder="Add people…"
+                  className="flex-1"
+                />
+                {addUserIds.length > 0 && (
                   <Button
                     size="sm"
                     className="h-8 px-3 text-xs shrink-0"
-                    disabled={addMember.isPending}
+                    disabled={addMembersBatch.isPending}
                     onClick={() =>
-                      addMember.mutate(
-                        { userId: addUserId },
+                      addMembersBatch.mutate(
+                        { userIds: addUserIds },
                         {
-                          onSuccess: () => {
-                            toast.success("Access granted")
-                            setAddUserId("")
+                          onSuccess: (data) => {
+                            toast.success(`${data.added} member${data.added === 1 ? "" : "s"} added`)
+                            setAddUserIds([])
                           },
                           onError: () => toast.error("Failed to grant access"),
                         }
                       )
                     }
                   >
-                    Add
+                    {addUserIds.length === 1 ? "Add" : `Add ${addUserIds.length} members`}
                   </Button>
                 )}
               </div>
@@ -221,38 +209,33 @@ export function ProjectAccessDialog({
               </div>
             )}
 
-            {/* Add team */}
+            {/* Add team(s) */}
             {availableTeams.length > 0 && (
               <div className="flex items-center gap-2 mt-2">
                 <Users2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                <Select value={addTeamId} onValueChange={setAddTeamId}>
-                  <SelectTrigger className="h-8 text-xs flex-1">
-                    <SelectValue placeholder="Add team…" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableTeams.map((t) => (
-                      <SelectItem key={t.id} value={t.id}>
-                        {t.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {addTeamId && (
+                <MultiSelect
+                  options={availableTeams.map((t) => ({ value: t.id, label: t.name }))}
+                  selected={addTeamIds}
+                  onSelectionChange={setAddTeamIds}
+                  placeholder="Add teams…"
+                  className="flex-1"
+                />
+                {addTeamIds.length > 0 && (
                   <Button
                     size="sm"
                     className="h-8 px-3 text-xs shrink-0"
-                    disabled={addTeam.isPending}
+                    disabled={addTeamsBatch.isPending}
                     onClick={() =>
-                      addTeam.mutate(addTeamId, {
-                        onSuccess: () => {
-                          toast.success("Team access granted")
-                          setAddTeamId("")
+                      addTeamsBatch.mutate(addTeamIds, {
+                        onSuccess: (data) => {
+                          toast.success(`${data.added} team${data.added === 1 ? "" : "s"} added`)
+                          setAddTeamIds([])
                         },
-                        onError: () => toast.error("Failed to add team"),
+                        onError: () => toast.error("Failed to add teams"),
                       })
                     }
                   >
-                    Add
+                    {addTeamIds.length === 1 ? "Add" : `Add ${addTeamIds.length} teams`}
                   </Button>
                 )}
               </div>

@@ -1,16 +1,10 @@
 import { useState } from "react"
 import { useParams } from "react-router-dom"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
+import { MultiSelect } from "@/components/ui/multi-select"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,9 +17,9 @@ import {
 } from "@/components/ui/alert-dialog"
 import {
   useProjectAccess,
-  useAddProjectMember,
+  useAddProjectMembersBatch,
   useRemoveProjectMember,
-  useAddProjectTeam,
+  useAddProjectTeamsBatch,
   useRemoveProjectTeam,
 } from "@/api/hooks/useProjectAccess"
 import { useWorkspaceMembers, useTeams } from "@/api/hooks/useWorkspaces"
@@ -134,13 +128,13 @@ export function ProjectAccessPage() {
   const { data: wsMembers } = useWorkspaceMembers(workspaceId)
   const { data: wsTeams } = useTeams(workspaceId)
 
-  const addMember = useAddProjectMember(projectId)
+  const addMembersBatch = useAddProjectMembersBatch(projectId)
   const removeMember = useRemoveProjectMember(projectId)
-  const addTeam = useAddProjectTeam(projectId)
+  const addTeamsBatch = useAddProjectTeamsBatch(projectId)
   const removeTeam = useRemoveProjectTeam(projectId)
 
-  const [addUserId, setAddUserId] = useState("")
-  const [addTeamId, setAddTeamId] = useState("")
+  const [addUserIds, setAddUserIds] = useState<string[]>([])
+  const [addTeamIds, setAddTeamIds] = useState<string[]>([])
   const [memberPage, setMemberPage] = useState(0)
   const [teamPage, setTeamPage] = useState(0)
   const [memberPendingRemoval, setMemberPendingRemoval] = useState<{
@@ -232,35 +226,29 @@ export function ProjectAccessPage() {
                 </span>
                 {availableUsers.length > 0 && (
                   <div className="flex items-center gap-2 w-full sm:w-auto">
-                    <Select value={addUserId} onValueChange={setAddUserId}>
-                      <SelectTrigger className="h-8 text-xs w-full sm:w-56">
-                        <SelectValue placeholder="Add person…" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {availableUsers.map((m) => {
-                          const u = m.user
-                          const first = u?.first_name ?? ""
-                          const last = u?.last_name ?? ""
-                          const displayName = `${first} ${last}`.trim() || u?.email || "Unknown"
-                          return (
-                            <SelectItem key={m.user_id} value={m.user_id}>
-                              {displayName}
-                            </SelectItem>
-                          )
-                        })}
-                      </SelectContent>
-                    </Select>
+                    <MultiSelect
+                      options={availableUsers.map((m) => {
+                        const u = m.user
+                        const first = u?.first_name ?? ""
+                        const last = u?.last_name ?? ""
+                        return { value: m.user_id, label: `${first} ${last}`.trim() || u?.email || "Unknown" }
+                      })}
+                      selected={addUserIds}
+                      onSelectionChange={setAddUserIds}
+                      placeholder="Add people…"
+                      className="w-full sm:w-56"
+                    />
                     <Button
                       size="sm"
                       className="h-8 px-3 text-xs shrink-0"
-                      disabled={!addUserId || addMember.isPending}
+                      disabled={addUserIds.length === 0 || addMembersBatch.isPending}
                       onClick={() =>
-                        addMember.mutate(
-                          { userId: addUserId },
+                        addMembersBatch.mutate(
+                          { userIds: addUserIds },
                           {
-                            onSuccess: () => {
-                              toast.success("Access granted")
-                              setAddUserId("")
+                            onSuccess: (data) => {
+                              toast.success(`${data.added} member${data.added === 1 ? "" : "s"} added`)
+                              setAddUserIds([])
                             },
                             onError: () => toast.error("Failed to grant access"),
                           }
@@ -268,7 +256,7 @@ export function ProjectAccessPage() {
                       }
                     >
                       <UserPlus className="h-3.5 w-3.5" />
-                      Add
+                      {addUserIds.length <= 1 ? "Add" : `Add ${addUserIds.length}`}
                     </Button>
                   </div>
                 )}
@@ -326,34 +314,29 @@ export function ProjectAccessPage() {
                 </span>
                 {availableTeams.length > 0 && (
                   <div className="flex items-center gap-2 w-full sm:w-auto">
-                    <Select value={addTeamId} onValueChange={setAddTeamId}>
-                      <SelectTrigger className="h-8 text-xs w-full sm:w-56">
-                        <SelectValue placeholder="Add team…" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {availableTeams.map((t) => (
-                          <SelectItem key={t.id} value={t.id}>
-                            {t.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <MultiSelect
+                      options={availableTeams.map((t) => ({ value: t.id, label: t.name }))}
+                      selected={addTeamIds}
+                      onSelectionChange={setAddTeamIds}
+                      placeholder="Add teams…"
+                      className="w-full sm:w-56"
+                    />
                     <Button
                       size="sm"
                       className="h-8 px-3 text-xs shrink-0"
-                      disabled={!addTeamId || addTeam.isPending}
+                      disabled={addTeamIds.length === 0 || addTeamsBatch.isPending}
                       onClick={() =>
-                        addTeam.mutate(addTeamId, {
-                          onSuccess: () => {
-                            toast.success("Team access granted")
-                            setAddTeamId("")
+                        addTeamsBatch.mutate(addTeamIds, {
+                          onSuccess: (data) => {
+                            toast.success(`${data.added} team${data.added === 1 ? "" : "s"} added`)
+                            setAddTeamIds([])
                           },
-                          onError: () => toast.error("Failed to add team"),
+                          onError: () => toast.error("Failed to add teams"),
                         })
                       }
                     >
                       <Users2 className="h-3.5 w-3.5" />
-                      Add
+                      {addTeamIds.length <= 1 ? "Add" : `Add ${addTeamIds.length}`}
                     </Button>
                   </div>
                 )}
