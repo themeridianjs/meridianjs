@@ -1,6 +1,7 @@
 import { useLocation, useParams, Link } from "react-router-dom"
 import { Bell, Layers, GitBranch, LayoutDashboard, Settings, Zap, CalendarRange, Lock, BarChart2, Activity } from "lucide-react"
 import { ThemeToggle } from "@/components/theme/ThemeToggle"
+import { GlobalTimer } from "@/components/layout/GlobalTimer"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
@@ -58,7 +59,8 @@ export function Header() {
         </div>
 
         {/* Right actions */}
-        <div className="ml-auto flex items-center gap-1">
+        <div className="ml-auto flex items-center gap-2">
+          <GlobalTimer />
           <span className="hidden md:flex"><ThemeToggle /></span>
           <Button
             variant="ghost"

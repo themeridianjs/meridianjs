@@ -1,5 +1,13 @@
 # create-meridian-app
 
+## 1.13.0
+
+### Minor Changes
+
+- Fixed the time log update error
+
+## 1.12.0
+
 ## 1.11.0
 
 ## 1.10.0

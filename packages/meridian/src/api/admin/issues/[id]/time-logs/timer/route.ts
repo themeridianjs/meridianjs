@@ -16,8 +16,8 @@ export const POST = async (req: any, res: Response) => {
   if (action === "start") {
     const issue = await issueService.retrieveIssue(req.params.id).catch(() => null)
     if (!issue) { res.status(404).json({ error: { message: "Issue not found." } }); return }
-    const entry = await issueService.startTimer(req.params.id, req.user?.id ?? "system", issue.workspace_id, issue.project_id ?? undefined)
-    res.status(201).json({ time_log: entry })
+    const { entry, stoppedEntry } = await issueService.startTimer(req.params.id, req.user?.id ?? "system", issue.workspace_id, issue.project_id ?? undefined)
+    res.status(201).json({ time_log: entry, stopped_timer: stoppedEntry ?? null })
     return
   }
   const entry = await issueService.stopTimer(req.params.id, req.user?.id ?? "system")
