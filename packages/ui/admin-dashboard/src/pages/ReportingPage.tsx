@@ -1,16 +1,7 @@
 import { useState, useMemo, useEffect } from "react"
 import { Link } from "react-router-dom"
 import { format } from "date-fns"
-import { BarChart2, Clock, Users, Layers, CalendarRange, Building2 } from "lucide-react"
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip as RechartsTooltip,
-  ResponsiveContainer,
-} from "recharts"
+import { BarChart2, Clock, Users, Layers, CalendarRange, Building2, ChevronLeft, ChevronRight } from "lucide-react"
 import { useReportingTimeLogs } from "@/api/hooks/useReporting"
 import { useUserMap } from "@/api/hooks/useUsers"
 import { useProjects } from "@/api/hooks/useProjects"
@@ -20,24 +11,9 @@ import { useAuth } from "@/stores/auth"
 import { DatePicker } from "@/components/ui/date-picker"
 import { MultiSelect } from "@/components/ui/multi-select"
 import { Skeleton } from "@/components/ui/skeleton"
+import { ReportBarChart, formatMinutes } from "@/components/reports/ReportBarChart"
 
-function formatMinutes(minutes: number): string {
-  const h = Math.floor(minutes / 60)
-  const m = minutes % 60
-  if (h === 0) return `${m}m`
-  if (m === 0) return `${h}h`
-  return `${h}h ${m}m`
-}
-
-function ChartTooltip({ active, payload, label }: any) {
-  if (!active || !payload?.length) return null
-  return (
-    <div className="bg-popover border border-border rounded-lg px-3 py-2 text-xs shadow-lg">
-      <p className="font-medium mb-0.5">{label}</p>
-      <p className="text-muted-foreground">{formatMinutes(payload[0]?.value ?? 0)}</p>
-    </div>
-  )
-}
+const PAGE_SIZE = 200
 
 export function ReportingPage({ workspaceId }: { workspaceId?: string }) {
   const [from, setFrom] = useState<Date | undefined>(undefined)
@@ -45,6 +21,7 @@ export function ReportingPage({ workspaceId }: { workspaceId?: string }) {
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([])
   const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>([])
   const [selectedWorkspaceIds, setSelectedWorkspaceIds] = useState<string[]>([])
+  const [offset, setOffset] = useState(0)
 
   const { workspace } = useAuth()
   const ws = workspace?.slug ?? ""
@@ -81,6 +58,9 @@ export function ReportingPage({ workspaceId }: { workspaceId?: string }) {
     })
   }, [members])
 
+  // Reset pagination when filters change
+  useEffect(() => { setOffset(0) }, [from, to, selectedUserIds, selectedProjectIds, selectedWorkspaceIds])
+
   const fromStr = from ? format(from, "yyyy-MM-dd") : undefined
   const toStr = to ? format(to, "yyyy-MM-dd") : undefined
 
@@ -93,37 +73,35 @@ export function ReportingPage({ workspaceId }: { workspaceId?: string }) {
       : undefined
 
   const { data, isLoading } = useReportingTimeLogs(
-    { from: fromStr, to: toStr, workspace_id: workspaceId, workspace_ids: effectiveWsIds },
+    {
+      from: fromStr,
+      to: toStr,
+      workspace_id: workspaceId,
+      workspace_ids: effectiveWsIds,
+      user_ids: selectedUserIds.length > 0 ? selectedUserIds : undefined,
+      project_ids: selectedProjectIds.length > 0 ? selectedProjectIds : undefined,
+      limit: PAGE_SIZE,
+      offset,
+    },
     { enabled: true }
   )
 
-  const allLogs = data?.time_logs ?? []
-
-  // Client-side filtering — also scopes to accessible projects via projectMap
   const timeLogs = useMemo(() => {
-    let logs = allLogs
-    // Hide logs from projects the user can't access (projectMap only contains accessible projects)
+    const logs = data?.time_logs ?? []
+    // Still scope to accessible projects via projectMap (client-side access filter)
     if (!projectsLoading) {
-      logs = logs.filter((l) => !l.project_id || projectMap.has(l.project_id))
-    }
-    if (selectedUserIds.length > 0) {
-      logs = logs.filter((l) => selectedUserIds.includes(l.user_id))
-    }
-    if (selectedProjectIds.length > 0) {
-      logs = logs.filter((l) => l.project_id && selectedProjectIds.includes(l.project_id))
+      return logs.filter((l) => !l.project_id || projectMap.has(l.project_id))
     }
     return logs
-  }, [allLogs, selectedUserIds, selectedProjectIds, projectMap, projectsLoading])
+  }, [data?.time_logs, projectMap, projectsLoading])
 
-  const totalMinutes = timeLogs.reduce((s, l) => s + (l.duration_minutes ?? 0), 0)
+  // Use server-provided aggregates for summary cards
+  const totalMinutes = data?.total_minutes ?? 0
+  const uniqueEmployeeCount = data?.total_employees ?? 0
+  const uniqueProjectCount = data?.total_projects ?? 0
+  const totalCount = data?.count ?? 0
 
-  const uniqueEmployeeCount = useMemo(() => new Set(timeLogs.map((l) => l.user_id)).size, [timeLogs])
-  const uniqueProjectCount = useMemo(
-    () => new Set(timeLogs.map((l) => l.project_id).filter(Boolean)).size,
-    [timeLogs]
-  )
-
-  // Chart: time by employee (top 8)
+  // Chart: time by employee (top 8) — computed from current page
   const byEmployeeChart = useMemo(() => {
     const map = new Map<string, number>()
     for (const log of timeLogs) {
@@ -138,7 +116,7 @@ export function ReportingPage({ workspaceId }: { workspaceId?: string }) {
       .slice(0, 8)
   }, [timeLogs, userMap])
 
-  // Chart: time by project (top 8)
+  // Chart: time by project (top 8) — computed from current page
   const byProjectChart = useMemo(() => {
     const map = new Map<string, number>()
     for (const log of timeLogs) {
@@ -173,6 +151,11 @@ export function ReportingPage({ workspaceId }: { workspaceId?: string }) {
     [projects]
   )
 
+  const hasNextPage = offset + PAGE_SIZE < totalCount
+  const hasPrevPage = offset > 0
+  const currentPage = Math.floor(offset / PAGE_SIZE) + 1
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
+
   return (
     <div className="p-2 space-y-2">
       {/* Header */}
@@ -196,7 +179,7 @@ export function ReportingPage({ workspaceId }: { workspaceId?: string }) {
             <span className="font-medium">Date range</span>
           </div>
           <DatePicker value={from} onChange={setFrom} placeholder="From" />
-          <span className="text-xs text-muted-foreground shrink-0">→</span>
+          <span className="text-xs text-muted-foreground shrink-0">&rarr;</span>
           <DatePicker value={to} onChange={setTo} placeholder="To" />
         </div>
 
@@ -275,7 +258,7 @@ export function ReportingPage({ workspaceId }: { workspaceId?: string }) {
             </div>
           ))}
         </div>
-      ) : timeLogs.length === 0 ? (
+      ) : timeLogs.length === 0 && offset === 0 ? (
         <div className="bg-white dark:bg-card border border-border rounded-xl flex flex-col items-center justify-center py-16 text-center">
           <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center mb-3">
             <Clock className="h-5 w-5 text-muted-foreground" />
@@ -307,71 +290,16 @@ export function ReportingPage({ workspaceId }: { workspaceId?: string }) {
 
           {/* Charts */}
           <div className="grid grid-cols-2 gap-2">
-            {byEmployeeChart.length > 0 && (
-              <div className="bg-white dark:bg-card border border-border rounded-xl p-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <Users className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                    Time by employee
-                  </span>
-                </div>
-                <ResponsiveContainer width="100%" height={Math.max(80, byEmployeeChart.length * 36)}>
-                  <BarChart data={byEmployeeChart} layout="vertical" margin={{ left: 0, right: 40, top: 0, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="hsl(var(--border))" />
-                    <XAxis
-                      type="number"
-                      tickFormatter={(v) => formatMinutes(v)}
-                      tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }}
-                      axisLine={false}
-                      tickLine={false}
-                    />
-                    <YAxis
-                      type="category"
-                      dataKey="name"
-                      width={100}
-                      tick={{ fontSize: 11, fill: "hsl(var(--foreground))" }}
-                      axisLine={false}
-                      tickLine={false}
-                    />
-                    <RechartsTooltip content={<ChartTooltip />} cursor={{ fill: "hsl(var(--muted))" }} />
-                    <Bar dataKey="minutes" fill="#6366f1" radius={[0, 4, 4, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            )}
-
-            {byProjectChart.length > 0 && (
-              <div className="bg-white dark:bg-card border border-border rounded-xl p-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <Layers className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                    Time by project
-                  </span>
-                </div>
-                <ResponsiveContainer width="100%" height={Math.max(80, byProjectChart.length * 36)}>
-                  <BarChart data={byProjectChart} layout="vertical" margin={{ left: 0, right: 40, top: 0, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="hsl(var(--border))" />
-                    <XAxis
-                      type="number"
-                      tickFormatter={(v) => formatMinutes(v)}
-                      tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }}
-                      axisLine={false}
-                      tickLine={false}
-                    />
-                    <YAxis
-                      type="category"
-                      dataKey="name"
-                      width={100}
-                      tick={{ fontSize: 11, fill: "hsl(var(--foreground))" }}
-                      axisLine={false}
-                      tickLine={false}
-                    />
-                    <RechartsTooltip content={<ChartTooltip />} cursor={{ fill: "hsl(var(--muted))" }} />
-                    <Bar dataKey="minutes" fill="#6366f1" radius={[0, 4, 4, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            )}
+            <ReportBarChart
+              data={byEmployeeChart}
+              icon={<Users className="h-3.5 w-3.5 text-muted-foreground" />}
+              title="Time by employee"
+            />
+            <ReportBarChart
+              data={byProjectChart}
+              icon={<Layers className="h-3.5 w-3.5 text-muted-foreground" />}
+              title="Time by project"
+            />
           </div>
 
           {/* Flat table */}
@@ -437,6 +365,38 @@ export function ReportingPage({ workspaceId }: { workspaceId?: string }) {
                 })}
               </tbody>
             </table>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between px-6 py-3 border-t border-border bg-muted/10">
+                <p className="text-xs text-muted-foreground">
+                  {totalCount} total log{totalCount !== 1 ? "s" : ""}
+                </p>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={!hasPrevPage}
+                    onClick={() => setOffset(Math.max(0, offset - PAGE_SIZE))}
+                    className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-md border border-border hover:bg-accent disabled:opacity-40 disabled:pointer-events-none transition-colors"
+                  >
+                    <ChevronLeft className="h-3.5 w-3.5" />
+                    Prev
+                  </button>
+                  <span className="text-xs text-muted-foreground tabular-nums">
+                    Page {currentPage} of {totalPages}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={!hasNextPage}
+                    onClick={() => setOffset(offset + PAGE_SIZE)}
+                    className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-md border border-border hover:bg-accent disabled:opacity-40 disabled:pointer-events-none transition-colors"
+                  >
+                    Next
+                    <ChevronRight className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </>
       )}

@@ -113,7 +113,7 @@ export const POST = async (req: any, res: Response) => {
         password: parsed.data.password,
         first_name: parsed.data.first_name,
         last_name: parsed.data.last_name,
-        role: invitation.role,
+        _inviteRole: invitation.role,
       })
     }
   } catch (err: any) {

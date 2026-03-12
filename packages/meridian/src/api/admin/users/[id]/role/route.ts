@@ -5,6 +5,13 @@ export const PATCH = async (req: any, res: Response, next: NextFunction) => {
   requirePermission("role:assign")(req, res, async () => {
     try {
       const userService = req.scope.resolve("userModuleService") as any
+
+      const target = await userService.retrieveUser(req.params.id)
+      if (!target) {
+        res.status(404).json({ error: { message: "User not found" } })
+        return
+      }
+
       const { app_role_id } = req.body
 
       // Allow null to clear the role assignment

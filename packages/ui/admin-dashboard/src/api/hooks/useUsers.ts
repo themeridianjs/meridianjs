@@ -139,17 +139,19 @@ interface UserMapResponse {
   users: UserMapEntry[]
 }
 
+export interface LightweightUser {
+  id: string
+  email: string
+  first_name: string
+  last_name: string
+  avatar_url: string | null
+}
+
 export function useAllUsers() {
   return useQuery({
-    queryKey: [...userKeys.all, "map"],
+    queryKey: [...userKeys.all, "map-list"],
     queryFn: () => api.get<UserMapResponse>("/admin/users/map"),
-    select: (data) =>
-      data.users.map((u) => ({
-        ...u,
-        role: "" as string,
-        app_role_id: null as string | null,
-        is_active: true,
-      })) as User[],
+    select: (data): LightweightUser[] => data.users,
     staleTime: 1000 * 60 * 5,
   })
 }

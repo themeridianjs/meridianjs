@@ -57,16 +57,16 @@ export const PATCH = async (req: any, res: Response, next: NextFunction) => {
 export const DELETE = async (req: any, res: Response, next: NextFunction) => {
   requireRoles("super-admin", "admin")(req, res, async () => {
     try {
+      if (req.params.id === req.user?.id) {
+        res.status(400).json({ error: { message: "You cannot deactivate yourself" } })
+        return
+      }
+
       const actor = actorRank(req)
       const target = await targetRank(req)
 
       if (target >= actor) {
         res.status(403).json({ error: { message: "You cannot deactivate a user at or above your level" } })
-        return
-      }
-
-      if (req.params.id === req.user?.id) {
-        res.status(400).json({ error: { message: "You cannot deactivate yourself" } })
         return
       }
 

@@ -29,6 +29,12 @@ export class WorkspaceMemberModuleService extends MeridianService({
 
   async ensureMember(workspaceId: string, userId: string, role: "admin" | "member" = "member") {
     if (await this.isMember(workspaceId, userId)) return
-    return this.createWorkspaceMember({ workspace_id: workspaceId, user_id: userId, role })
+    try {
+      return await this.createWorkspaceMember({ workspace_id: workspaceId, user_id: userId, role })
+    } catch (err: any) {
+      // Unique constraint violation — another concurrent request created the membership
+      if (err.code === "23505" || err.name === "UniqueConstraintViolationException") return
+      throw err
+    }
   }
 }

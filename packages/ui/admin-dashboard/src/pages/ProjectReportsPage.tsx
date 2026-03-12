@@ -2,39 +2,13 @@ import { useState, useMemo } from "react"
 import { useParams, Link } from "react-router-dom"
 import { format } from "date-fns"
 import { Users, GitBranch, Clock, CalendarRange, BarChart2 } from "lucide-react"
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip as RechartsTooltip,
-  ResponsiveContainer,
-} from "recharts"
 import { useProjectByKey } from "@/api/hooks/useProjects"
 import { useReportingTimeLogs } from "@/api/hooks/useReporting"
 import { useUserMap, useAllUsers } from "@/api/hooks/useUsers"
 import { DatePicker } from "@/components/ui/date-picker"
 import { MultiSelect } from "@/components/ui/multi-select"
 import { Skeleton } from "@/components/ui/skeleton"
-
-function formatMinutes(minutes: number): string {
-  const h = Math.floor(minutes / 60)
-  const m = minutes % 60
-  if (h === 0) return `${m}m`
-  if (m === 0) return `${h}h`
-  return `${h}h ${m}m`
-}
-
-function ChartTooltip({ active, payload, label }: any) {
-  if (!active || !payload?.length) return null
-  return (
-    <div className="bg-popover border border-border rounded-lg px-3 py-2 text-xs shadow-lg">
-      <p className="font-medium mb-0.5">{label}</p>
-      <p className="text-muted-foreground">{formatMinutes(payload[0]?.value ?? 0)}</p>
-    </div>
-  )
-}
+import { ReportBarChart, formatMinutes } from "@/components/reports/ReportBarChart"
 
 export function ProjectReportsPage() {
   const { projectKey, workspace: ws } = useParams<{ projectKey: string; workspace: string }>()
@@ -204,69 +178,23 @@ export function ProjectReportsPage() {
         <>
           {/* Charts row */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-            {/* Time by user chart */}
-            {byUser.size > 0 && (
-              <div className="bg-white dark:bg-card border border-border rounded-xl p-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <Users className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Time by user</span>
-                </div>
-                <ResponsiveContainer width="100%" height={Math.max(100, userChartData.length * 36)}>
-                  <BarChart data={userChartData} layout="vertical" margin={{ left: 0, right: 32, top: 0, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="hsl(var(--border))" />
-                    <XAxis
-                      type="number"
-                      tickFormatter={(v) => formatMinutes(v)}
-                      tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }}
-                      axisLine={false}
-                      tickLine={false}
-                    />
-                    <YAxis
-                      type="category"
-                      dataKey="name"
-                      width={88}
-                      tick={{ fontSize: 11, fill: "hsl(var(--foreground))" }}
-                      axisLine={false}
-                      tickLine={false}
-                    />
-                    <RechartsTooltip content={<ChartTooltip />} cursor={{ fill: "hsl(var(--muted))" }} />
-                    <Bar dataKey="minutes" fill="#6366f1" radius={[0, 4, 4, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            )}
-
-            {/* Time by issue chart */}
-            {byIssue.size > 0 && (
-              <div className="bg-white dark:bg-card border border-border rounded-xl p-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <GitBranch className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Time by issue</span>
-                </div>
-                <ResponsiveContainer width="100%" height={Math.max(100, issueChartData.length * 36)}>
-                  <BarChart data={issueChartData} layout="vertical" margin={{ left: 0, right: 32, top: 0, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="hsl(var(--border))" />
-                    <XAxis
-                      type="number"
-                      tickFormatter={(v) => formatMinutes(v)}
-                      tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }}
-                      axisLine={false}
-                      tickLine={false}
-                    />
-                    <YAxis
-                      type="category"
-                      dataKey="name"
-                      width={64}
-                      tick={{ fontSize: 11, fill: "hsl(var(--foreground))", fontFamily: "monospace" }}
-                      axisLine={false}
-                      tickLine={false}
-                    />
-                    <RechartsTooltip content={<ChartTooltip />} cursor={{ fill: "hsl(var(--muted))" }} />
-                    <Bar dataKey="minutes" fill="#818cf8" radius={[0, 4, 4, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            )}
+            <ReportBarChart
+              data={userChartData}
+              icon={<Users className="h-3.5 w-3.5 text-muted-foreground" />}
+              title="Time by user"
+              yAxisWidth={88}
+              rightMargin={32}
+              minRowHeight={100}
+            />
+            <ReportBarChart
+              data={issueChartData}
+              icon={<GitBranch className="h-3.5 w-3.5 text-muted-foreground" />}
+              title="Time by issue"
+              barColor="#818cf8"
+              yAxisWidth={64}
+              rightMargin={32}
+              minRowHeight={100}
+            />
           </div>
 
           {/* Time by user table */}

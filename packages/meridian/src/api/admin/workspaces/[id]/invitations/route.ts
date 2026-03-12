@@ -6,11 +6,16 @@ async function assertWorkspaceMembership(req: any, res: Response): Promise<boole
   const workspaceMemberService = req.scope.resolve("workspaceMemberModuleService") as any
 
   const workspace = await workspaceService.retrieveWorkspace(req.params.id)
+  if (!workspace) {
+    res.status(404).json({ error: { message: "Workspace not found" } })
+    return false
+  }
+
   const roles: string[] = req.user?.roles ?? []
   const isPrivileged = roles.includes("super-admin") || roles.includes("admin")
 
   // Private workspaces: always require membership regardless of role
-  if (workspace?.is_private || !isPrivileged) {
+  if (workspace.is_private || !isPrivileged) {
     const membership = await workspaceMemberService.getMembership(req.params.id, req.user?.id)
     if (!membership) {
       res.status(403).json({ error: { message: "Forbidden — not a member of this workspace" } })
@@ -39,9 +44,14 @@ export const POST = async (req: any, res: Response) => {
     return
   }
 
-  // Privilege check: only admins/super-admins can invite admins or super-admins
-  if (role !== "member") {
-    const callerRoles: string[] = req.user?.roles ?? []
+  // Privilege check: only admins/super-admins can invite admins; only super-admins can invite super-admins
+  const callerRoles: string[] = req.user?.roles ?? []
+  if (role === "super-admin") {
+    if (!callerRoles.includes("super-admin")) {
+      res.status(403).json({ error: { message: "Only super-admins can invite users with the super-admin role" } })
+      return
+    }
+  } else if (role !== "member") {
     if (!callerRoles.includes("super-admin") && !callerRoles.includes("admin")) {
       res.status(403).json({ error: { message: "Only admins can invite users with elevated roles" } })
       return

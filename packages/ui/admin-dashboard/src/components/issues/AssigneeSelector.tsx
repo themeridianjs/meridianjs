@@ -1,16 +1,23 @@
 import { useState, useEffect } from "react"
-import { useAllUsers, type User } from "@/api/hooks/useUsers"
+import { useAllUsers } from "@/api/hooks/useUsers"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Check, UserPlus } from "lucide-react"
 import { cn } from "@/lib/utils"
 
+interface AssigneeUser {
+  id: string
+  email: string
+  first_name: string
+  last_name: string
+}
+
 interface AssigneeSelectorProps {
   value: string[]
   onChange: (ids: string[]) => void
   disabled?: boolean
-  users?: User[]
+  users?: AssigneeUser[]
 }
 
 function getInitials(firstName: string, lastName: string, email: string) {
