@@ -24,6 +24,25 @@ export const GET = async (req: any, res: Response) => {
   if (req.query.task_list_id === "none") filters.task_list_id = null
   else if (req.query.task_list_id) filters.task_list_id = req.query.task_list_id as string
 
+  // parent_id filter: "none" = top-level only, else filter by specific parent
+  if (req.query.parent_id === "none") filters.parent_id = null
+  else if (req.query.parent_id) filters.parent_id = req.query.parent_id as string
+
+  // assignee_id — filter using raw SQL on the jsonb column
+  if (req.query.assignee_id) {
+    const aid = req.query.assignee_id as string
+    filters.assignee_ids = { $contains: aid }
+  }
+
+  // search — text search on title and identifier
+  if (req.query.search) {
+    const term = `%${req.query.search}%`
+    filters.$or = [
+      { title: { $ilike: term } },
+      { identifier: { $ilike: term } },
+    ]
+  }
+
   // When scoped to a project, verify the caller has access to that project
   if (req.query.project_id) {
     const projectService = req.scope.resolve("projectModuleService") as any
@@ -35,12 +54,29 @@ export const GET = async (req: any, res: Response) => {
     }
   }
 
-  let [issues, count] = await issueService.listAndCountIssues(filters, { limit, offset, orderBy: { created_at: "ASC" } })
+  // sort_by + sort_order
+  const allowedSortColumns = ["created_at", "updated_at", "title", "priority", "due_date", "number"]
+  const sortBy = allowedSortColumns.includes(req.query.sort_by as string) ? req.query.sort_by as string : "created_at"
+  const sortOrder = req.query.sort_order === "desc" ? "DESC" : "ASC"
 
-  if (req.query.assignee_id) {
-    const id = req.query.assignee_id as string
-    issues = issues.filter((i: any) => (i.assignee_ids ?? []).includes(id))
-    count = issues.length
+  const [issues, count] = await issueService.listAndCountIssues(filters, { limit, offset, orderBy: { [sortBy]: sortOrder } })
+
+  // When fetching top-level issues, enrich with child_count so the UI
+  // knows which rows have expandable children without a separate request.
+  if (req.query.parent_id === "none" && issues.length > 0) {
+    const issueIds = issues.map((i: any) => i.id)
+    const [children] = await issueService.listAndCountIssues(
+      { parent_id: { $in: issueIds } },
+      { limit: 10000 }
+    )
+    const childCountMap: Record<string, number> = {}
+    for (const child of children) {
+      const pid = (child as any).parent_id
+      if (pid) childCountMap[pid] = (childCountMap[pid] ?? 0) + 1
+    }
+    for (const issue of issues) {
+      ;(issue as any).child_count = childCountMap[(issue as any).id] ?? 0
+    }
   }
 
   res.json({ issues, count, limit, offset })

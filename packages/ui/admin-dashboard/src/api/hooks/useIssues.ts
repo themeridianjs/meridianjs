@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query"
 import { api } from "../client"
 
 export interface Issue {
@@ -22,6 +22,7 @@ export interface Issue {
   recurrence_end_date?: string | null
   next_occurrence_date?: string | null
   recurrence_source_id?: string | null
+  child_count?: number
   created_at: string
   updated_at: string
 }
@@ -99,9 +100,40 @@ export const issueKeys = {
   all: ["issues"] as const,
   byProject: (projectId: string, filters?: BoardFilters) =>
     [...issueKeys.all, "project", projectId, ...(filters ? [filters] : [])] as const,
+  paginated: (params: PaginatedIssuesParams) =>
+    [...issueKeys.all, "paginated", params] as const,
+  related: (issueId: string) => [...issueKeys.all, issueId, "related"] as const,
   detail: (id: string) => [...issueKeys.all, id] as const,
   comments: (issueId: string) => [...issueKeys.all, issueId, "comments"] as const,
   activities: (issueId: string) => [...issueKeys.all, issueId, "activities"] as const,
+}
+
+export interface PaginatedIssuesParams {
+  project_id: string
+  page?: number
+  pageSize?: number
+  search?: string
+  status?: string
+  priority?: string
+  sprint_id?: string
+  task_list_id?: string
+  assignee_id?: string
+  sort_by?: string
+  sort_order?: "asc" | "desc"
+  parent_id?: string
+}
+
+export interface PaginatedIssuesResponse {
+  issues: Issue[]
+  count: number
+  limit: number
+  offset: number
+}
+
+export interface IssueRelatedResponse {
+  parent: Issue | null
+  children: Issue[]
+  depth: number
 }
 
 export function useIssues(projectId?: string, filters?: BoardFilters) {
@@ -135,7 +167,7 @@ export function useIssues(projectId?: string, filters?: BoardFilters) {
       return { issues: allIssues, count: first.count } as IssuesResponse
     },
     select: (data) => data.issues,
-    enabled: projectId !== undefined ? !!projectId : true,
+    enabled: !!projectId,
   })
 }
 
@@ -145,6 +177,39 @@ export function useIssue(id: string) {
     queryFn: () => api.get<{ issue: Issue }>(`/admin/issues/${id}`),
     select: (data) => data.issue,
     enabled: !!id,
+  })
+}
+
+export function usePaginatedIssues(params: PaginatedIssuesParams) {
+  const { project_id, page = 1, pageSize = 50, search, status, priority, sprint_id, task_list_id, assignee_id, sort_by, sort_order, parent_id } = params
+  return useQuery({
+    queryKey: issueKeys.paginated(params),
+    queryFn: async () => {
+      const qs = new URLSearchParams()
+      qs.set("project_id", project_id)
+      qs.set("limit", String(pageSize))
+      qs.set("offset", String((page - 1) * pageSize))
+      if (search) qs.set("search", search)
+      if (status) qs.set("status", status)
+      if (priority) qs.set("priority", priority)
+      if (sprint_id) qs.set("sprint_id", sprint_id)
+      if (task_list_id) qs.set("task_list_id", task_list_id)
+      if (assignee_id) qs.set("assignee_id", assignee_id)
+      if (sort_by) qs.set("sort_by", sort_by)
+      if (sort_order) qs.set("sort_order", sort_order)
+      if (parent_id) qs.set("parent_id", parent_id)
+      return api.get<PaginatedIssuesResponse>(`/admin/issues?${qs}`)
+    },
+    placeholderData: keepPreviousData,
+    enabled: !!project_id,
+  })
+}
+
+export function useIssueRelated(issueId: string) {
+  return useQuery({
+    queryKey: issueKeys.related(issueId),
+    queryFn: () => api.get<IssueRelatedResponse>(`/admin/issues/${issueId}/related`),
+    enabled: !!issueId,
   })
 }
 
@@ -165,6 +230,7 @@ export function useCreateIssue() {
       api.post<{ issue: Issue }>("/admin/issues", data),
     onSuccess: (_data, variables) => {
       qc.invalidateQueries({ queryKey: issueKeys.byProject(variables.project_id) })
+      qc.invalidateQueries({ queryKey: ["issues", "paginated"] })
     },
   })
 }
@@ -203,6 +269,8 @@ export function useUpdateIssue(id: string, projectId: string) {
     onSettled: () => {
       qc.invalidateQueries({ queryKey: issueKeys.byProject(projectId) })
       qc.invalidateQueries({ queryKey: issueKeys.detail(id) })
+      qc.invalidateQueries({ queryKey: ["issues", "paginated"] })
+      qc.invalidateQueries({ queryKey: issueKeys.related(id) })
     },
   })
 }

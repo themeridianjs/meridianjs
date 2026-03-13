@@ -1,5 +1,11 @@
 # @meridianjs/admin-dashboard
 
+## 1.19.0
+
+### Minor Changes
+
+- Fix pagination storm by preventing global issues fetch, add /related endpoint
+
 ## 1.18.0
 
 ## 1.17.0

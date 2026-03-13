@@ -1,5 +1,19 @@
 # @meridianjs/meridian
 
+## 1.19.0
+
+### Minor Changes
+
+- Fix pagination storm by preventing global issues fetch, add /related endpoint
+
+### Patch Changes
+
+- @meridianjs/types@1.19.0
+- @meridianjs/framework-utils@1.19.0
+- @meridianjs/framework@1.19.0
+- @meridianjs/workflow-engine@1.19.0
+- @meridianjs/auth@1.19.0
+
 ## 1.18.0
 
 ### Patch Changes

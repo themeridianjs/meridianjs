@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { format } from "date-fns"
-import { useIssue, useUpdateIssue, useIssues } from "@/api/hooks/useIssues"
+import { useIssue, useUpdateIssue, useIssueRelated } from "@/api/hooks/useIssues"
 import { useProjectByKey } from "@/api/hooks/useProjects"
 import { useProjectAccess } from "@/api/hooks/useProjectAccess"
 import { useProjectStatuses } from "@/api/hooks/useProjectStatuses"
@@ -38,17 +38,6 @@ import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { useAppConfig } from "@/api/hooks/useAppConfig"
 import { WidgetZone } from "@/components/WidgetZone"
-
-function getIssueDepth(issue: { parent_id?: string | null }, allIssues: { id: string; parent_id?: string | null }[]): number {
-  let depth = 0
-  let current = issue
-  while (current?.parent_id) {
-    depth++
-    current = allIssues.find((i) => i.id === current!.parent_id!) as typeof issue
-    if (!current) break
-  }
-  return depth
-}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -153,16 +142,16 @@ export function IssueDetailPage() {
   const { data: projectStatuses } = useProjectStatuses(projectId || undefined)
   const { data: sprints } = useSprints(projectId || undefined)
   const { data: taskLists } = useTaskLists(projectId || undefined)
-  const { data: allIssues } = useIssues(projectId || undefined)
+  const { data: related } = useIssueRelated(issueId ?? "")
   const activeSprints = (sprints ?? []).filter((s) => s.status !== "completed")
 
   const { data: appConfig } = useAppConfig()
   const maxDepth = appConfig?.maxChildIssueDepth ?? 1
-  const issueDepth = issue ? getIssueDepth(issue, allIssues ?? []) : 0
+  const issueDepth = related?.depth ?? 0
   const canAddChild = issueDepth < maxDepth
 
-  const parentIssue = issue?.parent_id ? allIssues?.find((i) => i.id === issue.parent_id) : null
-  const childIssues = allIssues?.filter((i) => i.parent_id === issueId) ?? []
+  const parentIssue = related?.parent ?? null
+  const childIssues = related?.children ?? []
   const currentTaskList = issue?.task_list_id ? taskLists?.find((tl) => tl.id === issue.task_list_id) : null
 
   const statusOptions = projectStatuses && projectStatuses.length > 0
