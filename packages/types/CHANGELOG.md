@@ -1,5 +1,7 @@
 # @meridianjs/types
 
+## 1.21.0
+
 ## 1.20.0
 
 ### Minor Changes
