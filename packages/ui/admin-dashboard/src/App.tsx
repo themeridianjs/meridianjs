@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes, useNavigate, useParams, useLocation } from "react-router-dom"
-import { useEffect, lazy, Suspense, type ReactNode } from "react"
+import { useEffect, useRef, lazy, Suspense, type ReactNode } from "react"
+import { useQueryClient } from "@tanstack/react-query"
 import { useAuth } from "@/stores/auth"
 import { useWorkspaces } from "@/api/hooks/useWorkspaces"
 import { useSetupStatus } from "@/api/hooks/useAuth"
@@ -71,8 +72,8 @@ function RedirectIfAuth({ children }: { children: ReactNode }) {
     return <Navigate to="/register" replace />
   }
 
-  // After first setup, /register is invite-only — redirect direct visitors to /login
-  if (setupStatus && !setupStatus.needsSetup && location.pathname === "/register") {
+  // After first setup, /register is only accessible when open registration is enabled
+  if (setupStatus && !setupStatus.needsSetup && !setupStatus.registrationEnabled && location.pathname === "/register") {
     return <Navigate to="/login" replace />
   }
 
@@ -103,7 +104,7 @@ function WorkspaceRedirect() {
 
     if (workspaces.length > 0) {
       const w = workspaces[0]
-      setWorkspace({ id: w.id, name: w.name, slug: w.slug })
+      setWorkspace({ id: w.id, name: w.name, slug: w.slug, logo_url: w.logo_url })
       navigate(`/${w.slug}/projects`, { replace: true })
     } else {
       const isPrivileged = user?.roles?.includes("super-admin") || user?.roles?.includes("admin")
@@ -131,14 +132,14 @@ function WorkspaceLayout() {
     const found = workspaces.find((w) => w.slug === slugParam)
     if (found) {
       if (found.id !== workspace?.id) {
-        setWorkspace({ id: found.id, name: found.name, slug: found.slug })
+        setWorkspace({ id: found.id, name: found.name, slug: found.slug, logo_url: found.logo_url })
       }
     } else if (isFetching) {
       // Still refetching — wait for fresh data before redirecting
       return
     } else if (workspaces.length > 0) {
       // Current workspace not accessible, switch to first available
-      setWorkspace({ id: workspaces[0].id, name: workspaces[0].name, slug: workspaces[0].slug })
+      setWorkspace({ id: workspaces[0].id, name: workspaces[0].name, slug: workspaces[0].slug, logo_url: workspaces[0].logo_url })
       navigate(`/${workspaces[0].slug}/projects`, { replace: true })
     } else {
       // No accessible workspaces at all — clear stale ref and redirect
@@ -164,7 +165,21 @@ function WorkspaceLayout() {
   )
 }
 
+function useClearCacheOnLogout() {
+  const { isAuthenticated } = useAuth()
+  const queryClient = useQueryClient()
+  const prevRef = useRef(isAuthenticated)
+
+  useEffect(() => {
+    if (prevRef.current && !isAuthenticated) {
+      queryClient.clear()
+    }
+    prevRef.current = isAuthenticated
+  }, [isAuthenticated, queryClient])
+}
+
 export function App() {
+  useClearCacheOnLogout()
   return (
     <Routes>
       {/* Public */}

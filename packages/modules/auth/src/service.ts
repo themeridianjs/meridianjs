@@ -62,6 +62,7 @@ export interface GoogleAuthInput {
     workspace_id: string
     app_role_id: string | null
   } | null
+  autoRegister?: boolean
 }
 
 export class AuthModuleService extends MeridianService({}) {
@@ -224,13 +225,14 @@ export class AuthModuleService extends MeridianService({}) {
       const [, userCount] = await userService.listAndCountUsers({}, { limit: 1 })
       if (userCount === 0) {
         role = "super-admin"
-      } else {
-        // Not first user and no invite — blocked
+      } else if (!input.autoRegister) {
+        // Not first user, no invite, and open registration not enabled — blocked
         throw Object.assign(
           new Error("You are not authorized to access this application. Contact an admin for an invitation."),
           { status: 403 }
         )
       }
+      // autoRegister: domain already validated by caller; role defaults to "member"
     }
 
     // password_hash stays non-nullable — use a random unusable hash (bcrypt cost 1 for speed, user can't know it)

@@ -23,5 +23,13 @@ export const GET = async (req: any, res: Response) => {
     // googleOAuthService not registered — feature disabled
   }
 
-  res.json({ needsSetup, googleOAuthEnabled })
+  let registrationEnabled = false
+  try {
+    const config = req.scope.resolve("config") as any
+    registrationEnabled = config?.projectConfig?.registration?.enabled === true
+  } catch {
+    // config not available — default false
+  }
+
+  res.json({ needsSetup, googleOAuthEnabled, registrationEnabled })
 }

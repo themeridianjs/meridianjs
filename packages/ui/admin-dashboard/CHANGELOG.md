@@ -1,5 +1,23 @@
 # @meridianjs/admin-dashboard
 
+## 1.21.0
+
+### Minor Changes
+
+- Fixed the query cache and workspace logo + avatar issue
+
+## 1.20.0
+
+### Minor Changes
+
+- Self registration config & routes
+
+## 1.19.0
+
+### Minor Changes
+
+- Self registration config, and routes
+
 ## 1.18.0
 
 ## 1.17.0
