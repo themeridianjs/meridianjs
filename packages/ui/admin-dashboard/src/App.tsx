@@ -71,8 +71,8 @@ function RedirectIfAuth({ children }: { children: ReactNode }) {
     return <Navigate to="/register" replace />
   }
 
-  // After first setup, /register is invite-only — redirect direct visitors to /login
-  if (setupStatus && !setupStatus.needsSetup && location.pathname === "/register") {
+  // After first setup, /register is only accessible when open registration is enabled
+  if (setupStatus && !setupStatus.needsSetup && !setupStatus.registrationEnabled && location.pathname === "/register") {
     return <Navigate to="/login" replace />
   }
 

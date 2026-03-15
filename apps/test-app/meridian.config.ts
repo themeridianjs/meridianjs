@@ -5,7 +5,11 @@ export default defineConfig({
     databaseUrl: process.env.DATABASE_URL ?? "postgresql://arjusmoon@localhost:5432/meridian_test",
     jwtSecret: process.env.JWT_SECRET ?? "super-secret-jwt-key-for-testing-only",
     httpPort: 9000,
-    maxChildIssueDepth: 3
+    maxChildIssueDepth: 3,
+    registration: {
+      enabled: true,
+      allowedDomains: ["arjusmoon.com", "schbang.com"]
+    }
   },
   admin: {
     appName: "Meridian PM Tool",

@@ -1,5 +1,17 @@
 # @meridianjs/types
 
+## 1.20.0
+
+### Minor Changes
+
+- Self registration config & routes
+
+## 1.19.0
+
+### Minor Changes
+
+- Self registration config, and routes
+
 ## 1.18.0
 
 ## 1.17.0

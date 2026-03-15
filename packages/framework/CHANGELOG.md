@@ -1,5 +1,25 @@
 # @meridianjs/framework
 
+## 1.20.0
+
+### Minor Changes
+
+- Self registration config & routes
+
+### Patch Changes
+
+- Updated dependencies
+  - @meridianjs/framework-utils@1.20.0
+  - @meridianjs/types@1.20.0
+
+## 1.19.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @meridianjs/types@1.19.0
+  - @meridianjs/framework-utils@1.19.0
+
 ## 1.18.0
 
 ### Minor Changes

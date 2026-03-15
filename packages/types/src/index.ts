@@ -47,6 +47,11 @@ export interface LinkableConfig {
 
 export type WorkerMode = "shared" | "worker" | "server"
 
+export interface RegistrationConfig {
+  enabled: boolean
+  allowedDomains: string[]
+}
+
 export interface ProjectConfig {
   databaseUrl: string
   redisUrl?: string
@@ -60,6 +65,7 @@ export interface ProjectConfig {
   }
   /** Max levels of child issue nesting. Default: 1 (children allowed, grandchildren not). */
   maxChildIssueDepth?: number
+  registration?: RegistrationConfig
 }
 
 export interface MeridianConfig {
