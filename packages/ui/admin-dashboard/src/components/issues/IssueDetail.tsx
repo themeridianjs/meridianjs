@@ -33,7 +33,7 @@ import {
   ISSUE_PRIORITY_LABELS,
   ISSUE_TYPE_LABELS,
 } from "@/lib/constants"
-import { RichTextEditor, RichTextContent } from "@/components/ui/rich-text-editor"
+import { RichTextEditor, RichTextContent, type MentionItem } from "@/components/ui/rich-text-editor"
 import { Pencil, X, Check, Link2, Paperclip, GitBranch, Maximize2, MoreHorizontal, ThumbsUp, Layers, FolderOpen, ListTree, Plus, ChevronUp, ChevronDown, ChevronRight, Calendar as CalendarIcon, RefreshCw } from "lucide-react"
 import { Switch } from "@/components/ui/switch"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -108,6 +108,14 @@ export function IssueDetail({ issue: issueProp, projectId, open, onClose }: Issu
     () => access ? access.members.filter(m => m.user).map(m => m.user!) : undefined,
     [access]
   )
+  const mentionUsers = useMemo<MentionItem[] | undefined>(
+    () => projectUsers?.map((u) => ({
+      id: u.id,
+      label: `${u.first_name ?? ""} ${u.last_name ?? ""}`.trim() || u.email,
+      email: u.email,
+    })),
+    [projectUsers]
+  )
   const { data: projectStatuses } = useProjectStatuses(projectId)
   const { data: sprints } = useSprints(projectId || undefined)
   const { data: taskLists } = useTaskLists(projectId || undefined)
@@ -140,8 +148,19 @@ export function IssueDetail({ issue: issueProp, projectId, open, onClose }: Issu
 
   const handleSaveEdit = () => {
     if (!editTitle.trim()) return
+    const mentionedUserIds: string[] = []
+    const parser = new DOMParser()
+    const doc = parser.parseFromString(editDescription, "text/html")
+    doc.querySelectorAll("[data-type='mention']").forEach((el) => {
+      const id = el.getAttribute("data-id")
+      if (id && !mentionedUserIds.includes(id)) mentionedUserIds.push(id)
+    })
     updateIssue.mutate(
-      { title: editTitle.trim(), description: editDescription.trim() || undefined },
+      {
+        title: editTitle.trim(),
+        description: editDescription.trim() || undefined,
+        mentioned_user_ids: mentionedUserIds.length > 0 ? mentionedUserIds : undefined,
+      },
       {
         onSuccess: () => { setIsEditing(false); toast.success("Issue updated") },
         onError: () => toast.error("Failed to update issue"),
@@ -789,6 +808,7 @@ export function IssueDetail({ issue: issueProp, projectId, open, onClose }: Issu
                     onChange={setEditDescription}
                     placeholder="Add a description…"
                     className="min-h-[160px] rounded-md border border-input"
+                    users={mentionUsers}
                   />
                 ) : issue.description ? (
                   <div className="rounded-lg bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-100 dark:border-zinc-800 px-3.5 py-3">

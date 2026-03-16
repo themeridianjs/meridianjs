@@ -1,6 +1,6 @@
 import type { SubscriberArgs, SubscriberConfig } from "@meridianjs/types"
 import { sseManager } from "@meridianjs/framework"
-import { emailHtml, resolveTemplate } from "./_email-helper.js"
+import { buildEmail, buildIssueUrl, htmlToEmailSafe, capitalize, userDisplayName, resolveTemplate } from "./_email-helper.js"
 
 interface CommentCreatedData {
   comment_id: string
@@ -80,21 +80,34 @@ export default async function handler({ event, container }: SubscriberArgs<Comme
   // ── Email ──────────────────────────────────────────────────────────────────
   try {
     const emailService = container.resolve("emailService") as any
-    const userService = container.resolve("userModuleService") as any
-    const config = container.resolve("config") as any
+    const userService  = container.resolve("userModuleService") as any
+    const config       = container.resolve("config") as any
     const appUrl: string = config?.appUrl ?? process.env.APP_URL ?? "http://localhost:9001"
 
-    const commentLink = `${appUrl}/issues/${data.issue_id}#comment-${data.comment_id}`
+    const issueUrl = await buildIssueUrl(container, appUrl, issue)
 
-    // Fetch comment body for inclusion in emails
-    let commentBody = ""
-    let commentBodyText = ""
+    // Fetch comment body + author name
+    let commentSafeHtml = ""
+    let commentPlainText = ""
+    let authorName = "Someone"
     try {
       const comment = await issueService.retrieveComment(data.comment_id)
-      commentBody = comment?.body ?? ""
-      // Strip HTML tags for plain-text version
-      commentBodyText = commentBody.replace(/<[^>]+>/g, "").trim()
-    } catch { /* comment fetch optional — emails still send */ }
+      commentSafeHtml = comment?.body ? htmlToEmailSafe(comment.body) : ""
+      commentPlainText = comment?.body?.replace(/<[^>]+>/g, "").trim() ?? ""
+    } catch { /* comment fetch optional */ }
+    try {
+      const author = await userService.retrieveUser(data.author_id)
+      authorName = userDisplayName(author)
+    } catch { /* fallback */ }
+
+    const meta = [
+      ...(issue.priority ? [{ label: "Priority", value: capitalize(issue.priority) }] : []),
+      ...(issue.type     ? [{ label: "Type",     value: capitalize(issue.type)     }] : []),
+    ]
+
+    const commentQuote = commentSafeHtml
+      ? { label: `Comment by ${authorName}`, html: commentSafeHtml }
+      : undefined
 
     // Email existing recipients (assignees / reporter)
     await Promise.allSettled([...recipients].map(async (userId) => {
@@ -104,11 +117,16 @@ export default async function handler({ event, container }: SubscriberArgs<Comme
       await emailService.send({
         to: user.email,
         subject: tpl?.subject ?? `New comment on [${issue.identifier}]: ${issue.title}`,
-        text: tpl?.text ?? `A comment was added on issue ${issue.identifier}: "${issue.title}" that you're involved with.\n\n${commentBodyText}`,
-        html: tpl?.html ?? emailHtml(
-          `A comment was added on issue <strong>${issue.identifier}</strong>: "${issue.title}" that you're involved with.` +
-          (commentBody ? `<br><br><div style="border-left:3px solid #e2e8f0;padding:8px 12px;color:#374151;font-size:14px;">${commentBody}</div>` : "")
-        ),
+        text: tpl?.text ?? `${authorName} left a comment on ${issue.identifier}: "${issue.title}".\n\n${commentPlainText}\n\nView it here: ${issueUrl}`,
+        html: tpl?.html ?? buildEmail({
+          preheader: `${authorName} commented on ${issue.identifier}: ${issue.title}`,
+          heading: `New comment on ${issue.identifier}`,
+          body: `<strong>${authorName}</strong> left a comment on: <em>${issue.title}</em>`,
+          meta,
+          quote: commentQuote,
+          ctaText: "View Issue",
+          ctaUrl: issueUrl,
+        }),
       })
     }))
 
@@ -119,14 +137,16 @@ export default async function handler({ event, container }: SubscriberArgs<Comme
       await emailService.send({
         to: user.email,
         subject: `You were mentioned in [${issue.identifier}]: ${issue.title}`,
-        text: `You were mentioned in a comment on issue ${issue.identifier}: "${issue.title}".\n\n${commentBodyText}\n\nView it here: ${commentLink}`,
-        html: emailHtml(
-          `You were mentioned in a comment on <strong>${issue.identifier}</strong>: "${issue.title}".<br><br>` +
-          (commentBody
-            ? `<div style="border-left:3px solid #4f46e5;padding:8px 12px;color:#374151;font-size:14px;margin-bottom:16px;">${commentBody}</div>`
-            : "") +
-          `<a href="${commentLink}" style="color:#4f46e5">View comment →</a>`
-        ),
+        text: `${authorName} mentioned you in a comment on ${issue.identifier}: "${issue.title}".\n\n${commentPlainText}\n\nView it here: ${issueUrl}`,
+        html: buildEmail({
+          preheader: `${authorName} mentioned you in ${issue.identifier}: ${issue.title}`,
+          heading: `You were mentioned in ${issue.identifier}`,
+          body: `<strong>${authorName}</strong> mentioned you in a comment on: <em>${issue.title}</em>`,
+          meta,
+          quote: commentQuote,
+          ctaText: "View Comment",
+          ctaUrl: issueUrl,
+        }),
       })
     }))
   } catch (err) {

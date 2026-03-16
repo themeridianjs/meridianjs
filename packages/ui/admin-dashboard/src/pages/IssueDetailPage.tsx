@@ -10,7 +10,7 @@ import { useTaskLists } from "@/api/hooks/useTaskLists"
 import { AssigneeSelector } from "@/components/issues/AssigneeSelector"
 import { CreateIssueDialog } from "@/components/issues/CreateIssueDialog"
 import { IssueActivity } from "@/components/issues/IssueActivity"
-import { RichTextEditor, RichTextContent } from "@/components/ui/rich-text-editor"
+import { RichTextEditor, RichTextContent, type MentionItem } from "@/components/ui/rich-text-editor"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -150,6 +150,14 @@ export function IssueDetailPage() {
     () => access ? access.members.filter(m => m.user).map(m => m.user!) : undefined,
     [access]
   )
+  const mentionUsers = useMemo<MentionItem[] | undefined>(
+    () => projectUsers?.map((u) => ({
+      id: u.id,
+      label: `${u.first_name ?? ""} ${u.last_name ?? ""}`.trim() || u.email,
+      email: u.email,
+    })),
+    [projectUsers]
+  )
   const { data: projectStatuses } = useProjectStatuses(projectId || undefined)
   const { data: sprints } = useSprints(projectId || undefined)
   const { data: taskLists } = useTaskLists(projectId || undefined)
@@ -192,8 +200,19 @@ export function IssueDetailPage() {
 
   const handleSaveEdit = () => {
     if (!editTitle.trim()) return
+    const mentionedUserIds: string[] = []
+    const parser = new DOMParser()
+    const doc = parser.parseFromString(editDescription, "text/html")
+    doc.querySelectorAll("[data-type='mention']").forEach((el) => {
+      const id = el.getAttribute("data-id")
+      if (id && !mentionedUserIds.includes(id)) mentionedUserIds.push(id)
+    })
     updateIssue.mutate(
-      { title: editTitle.trim(), description: editDescription.trim() || undefined },
+      {
+        title: editTitle.trim(),
+        description: editDescription.trim() || undefined,
+        mentioned_user_ids: mentionedUserIds.length > 0 ? mentionedUserIds : undefined,
+      },
       {
         onSuccess: () => {
           setIsEditing(false)
@@ -340,6 +359,7 @@ export function IssueDetailPage() {
                   onChange={setEditDescription}
                   placeholder="Add a description…"
                   className="border-t border-border/50 min-h-[280px]"
+                  users={mentionUsers}
                 />
               ) : issue.description ? (
                 <div className="border-t border-border/50">
