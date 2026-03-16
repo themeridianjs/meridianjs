@@ -1,5 +1,11 @@
 # @meridianjs/admin-dashboard
 
+## 1.24.0
+
+### Minor Changes
+
+- Description mention & email template updates
+
 ## 1.23.0
 
 ## 1.22.0

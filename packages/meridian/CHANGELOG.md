@@ -1,5 +1,19 @@
 # @meridianjs/meridian
 
+## 1.24.0
+
+### Minor Changes
+
+- Description mention & email template updates
+
+### Patch Changes
+
+- @meridianjs/types@1.24.0
+- @meridianjs/framework-utils@1.24.0
+- @meridianjs/framework@1.24.0
+- @meridianjs/workflow-engine@1.24.0
+- @meridianjs/auth@1.24.0
+
 ## 1.23.0
 
 ### Patch Changes
