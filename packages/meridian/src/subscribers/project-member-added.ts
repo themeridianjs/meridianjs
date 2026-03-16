@@ -1,6 +1,6 @@
 import type { SubscriberArgs, SubscriberConfig } from "@meridianjs/types"
 import { sseManager } from "@meridianjs/framework"
-import { emailHtml, resolveTemplate } from "./_email-helper.js"
+import { buildEmail, buildProjectUrl, userDisplayName, resolveTemplate } from "./_email-helper.js"
 
 interface ProjectMemberAddedData {
   project_id: string
@@ -46,14 +46,32 @@ export default async function handler({ event, container }: SubscriberArgs<Proje
   try {
     const emailService = container.resolve("emailService") as any
     const userService  = container.resolve("userModuleService") as any
+    const config       = container.resolve("config") as any
+    const appUrl: string = config?.appUrl ?? process.env.APP_URL ?? "http://localhost:9001"
+
+    const projectUrl = await buildProjectUrl(container, appUrl, data.project_id, data.workspace_id)
+
+    // Fetch actor name (who added the member)
+    let actorName = "A team member"
+    try {
+      const actor = await userService.retrieveUser(data.actor_id)
+      actorName = userDisplayName(actor)
+    } catch { /* fallback */ }
+
     const user = await userService.retrieveUser(data.user_id)
     if (user?.email) {
       const tpl = resolveTemplate(container, "project.member_added", { project: { name: data.project_name }, user })
       await emailService.send({
         to: user.email,
         subject: tpl?.subject ?? `You've been added to project "${data.project_name}"`,
-        text: tpl?.text ?? `You've been added to the project "${data.project_name}".`,
-        html: tpl?.html ?? emailHtml(`You've been added to the project <strong>"${data.project_name}"</strong>.`),
+        text: tpl?.text ?? `${actorName} added you to the project "${data.project_name}".\n\nView it here: ${projectUrl}`,
+        html: tpl?.html ?? buildEmail({
+          preheader: `${actorName} added you to ${data.project_name}`,
+          heading: `You've been added to "${data.project_name}"`,
+          body: `<strong>${actorName}</strong> added you as a member of the project: <em>${data.project_name}</em>`,
+          ctaText: "View Project",
+          ctaUrl: projectUrl,
+        }),
       })
     }
   } catch (err) {

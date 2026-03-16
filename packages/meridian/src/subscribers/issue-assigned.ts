@@ -1,6 +1,6 @@
 import type { SubscriberArgs, SubscriberConfig } from "@meridianjs/types"
 import { sseManager } from "@meridianjs/framework"
-import { emailHtml, resolveTemplate } from "./_email-helper.js"
+import { buildEmail, buildIssueUrl, capitalize, userDisplayName, resolveTemplate } from "./_email-helper.js"
 
 interface IssueAssignedData {
   issue_id: string
@@ -52,7 +52,23 @@ export default async function handler({ event, container }: SubscriberArgs<Issue
     const emailService = container.resolve("emailService") as any
     const userService  = container.resolve("userModuleService") as any
     const issueService = container.resolve("issueModuleService") as any
+    const config       = container.resolve("config") as any
+    const appUrl: string = config?.appUrl ?? process.env.APP_URL ?? "http://localhost:9001"
+
     const issue = await issueService.retrieveIssue(data.issue_id)
+    const issueUrl = await buildIssueUrl(container, appUrl, issue)
+
+    // Fetch actor name (who did the assignment)
+    let actorName = "A team member"
+    try {
+      const actor = await userService.retrieveUser(data.actor_id)
+      actorName = userDisplayName(actor)
+    } catch { /* fallback */ }
+
+    const meta = [
+      ...(issue.priority ? [{ label: "Priority", value: capitalize(issue.priority) }] : []),
+      ...(issue.type     ? [{ label: "Type",     value: capitalize(issue.type)     }] : []),
+    ]
 
     await Promise.allSettled(
       data.assignee_ids
@@ -64,8 +80,15 @@ export default async function handler({ event, container }: SubscriberArgs<Issue
           await emailService.send({
             to: user.email,
             subject: tpl?.subject ?? `[${issue.identifier}] You've been assigned: ${issue.title}`,
-            text: tpl?.text ?? `You've been assigned to issue ${issue.identifier}: "${issue.title}".`,
-            html: tpl?.html ?? emailHtml(`You've been assigned to <strong>${issue.identifier}</strong>: "${issue.title}".`),
+            text: tpl?.text ?? `${actorName} assigned you to issue ${issue.identifier}: "${issue.title}".\n\nView it here: ${issueUrl}`,
+            html: tpl?.html ?? buildEmail({
+              preheader: `${actorName} assigned you to ${issue.identifier}: ${issue.title}`,
+              heading: `You've been assigned to ${issue.identifier}`,
+              body: `<strong>${actorName}</strong> assigned you to: <em>${issue.title}</em>`,
+              meta,
+              ctaText: "View Issue",
+              ctaUrl: issueUrl,
+            }),
           })
         })
     )

@@ -57,6 +57,7 @@ interface CreateIssueInput {
   metadata?: Record<string, unknown> | null
   recurrence_frequency?: "weekly" | "monthly"
   recurrence_end_date?: string
+  mentioned_user_ids?: string[]
 }
 
 interface UpdateIssueInput {
@@ -75,6 +76,7 @@ interface UpdateIssueInput {
   recurrence_frequency?: "weekly" | "monthly" | null
   recurrence_end_date?: string | null
   next_occurrence_date?: string | null
+  mentioned_user_ids?: string[]
 }
 
 export interface Activity {

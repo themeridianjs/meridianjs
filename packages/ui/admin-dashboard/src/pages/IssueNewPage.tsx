@@ -8,7 +8,7 @@ import { useProjectStatuses } from "@/api/hooks/useProjectStatuses"
 import { useSprints, type Sprint } from "@/api/hooks/useSprints"
 import { useTaskLists } from "@/api/hooks/useTaskLists"
 import { AssigneeSelector } from "@/components/issues/AssigneeSelector"
-import { RichTextEditor } from "@/components/ui/rich-text-editor"
+import { RichTextEditor, type MentionItem } from "@/components/ui/rich-text-editor"
 import { Button } from "@/components/ui/button"
 import {
   Select,
@@ -140,6 +140,14 @@ export function IssueNewPage() {
     () => access ? access.members.filter(m => m.user).map(m => m.user!) : undefined,
     [access]
   )
+  const mentionUsers = useMemo<MentionItem[] | undefined>(
+    () => projectUsers?.map((u) => ({
+      id: u.id,
+      label: `${u.first_name ?? ""} ${u.last_name ?? ""}`.trim() || u.email,
+      email: u.email,
+    })),
+    [projectUsers]
+  )
   const { data: projectStatuses } = useProjectStatuses(projectId || undefined)
   const { data: sprints } = useSprints(projectId || undefined)
   const { data: taskLists } = useTaskLists(projectId || undefined)
@@ -167,6 +175,15 @@ export function IssueNewPage() {
       toast.error("Title is required")
       return
     }
+    const mentionedUserIds: string[] = []
+    if (description) {
+      const parser = new DOMParser()
+      const doc = parser.parseFromString(description, "text/html")
+      doc.querySelectorAll("[data-type='mention']").forEach((el) => {
+        const id = el.getAttribute("data-id")
+        if (id && !mentionedUserIds.includes(id)) mentionedUserIds.push(id)
+      })
+    }
     createIssue.mutate(
       {
         title: title.trim(),
@@ -183,6 +200,7 @@ export function IssueNewPage() {
         due_date: dueDate ? format(dueDate, "yyyy-MM-dd") : null,
         recurrence_frequency: isRecurring ? recurrenceFrequency : undefined,
         recurrence_end_date: isRecurring && recurrenceEndDate ? format(recurrenceEndDate, "yyyy-MM-dd") : undefined,
+        mentioned_user_ids: mentionedUserIds.length > 0 ? mentionedUserIds : undefined,
       },
       {
         onSuccess: (data) => {
@@ -264,6 +282,7 @@ export function IssueNewPage() {
               onChange={setDescription}
               placeholder="Add steps to reproduce, acceptance criteria, or context…"
               className="border-t border-border/50 min-h-[320px]"
+              users={mentionUsers}
             />
           </div>
 
