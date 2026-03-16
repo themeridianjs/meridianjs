@@ -34,7 +34,7 @@ import {
   ISSUE_TYPE_LABELS,
 } from "@/lib/constants"
 import { RichTextEditor, RichTextContent } from "@/components/ui/rich-text-editor"
-import { Pencil, X, Check, Link2, Paperclip, GitBranch, Maximize2, MoreHorizontal, PanelRight, ThumbsUp, Layers, FolderOpen, ListTree, Plus, ChevronUp, ChevronDown, ChevronRight, Calendar as CalendarIcon, RefreshCw } from "lucide-react"
+import { Pencil, X, Check, Link2, Paperclip, GitBranch, Maximize2, MoreHorizontal, ThumbsUp, Layers, FolderOpen, ListTree, Plus, ChevronUp, ChevronDown, ChevronRight, Calendar as CalendarIcon, RefreshCw } from "lucide-react"
 import { Switch } from "@/components/ui/switch"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
@@ -283,7 +283,7 @@ export function IssueDetail({ issue: issueProp, projectId, open, onClose }: Issu
 
   return (
     <>
-      <Drawer open={open} onOpenChange={(o) => !o && onClose()}>
+      <Drawer open={open} onOpenChange={(o) => !o && onClose()} dismissible={false}>
         <DrawerContent className="flex flex-col p-0 w-full max-w-2xl overflow-hidden bg-white dark:bg-zinc-950">
 
           {/* ── Toolbar ── */}
@@ -339,10 +339,7 @@ export function IssueDetail({ issue: issueProp, projectId, open, onClose }: Issu
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}
-              {iconBtn(PanelRight, "Open in full page", () => {
-                onClose()
-                navigate(`/${workspace}/projects/${projectKey}/issues/${issue.id}`)
-              })}
+              {iconBtn(X, "Close", onClose)}
             </div>
           </div>
 

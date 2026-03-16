@@ -395,7 +395,7 @@ export function IssueDetailPage() {
 
             {/* Card 3: Comments + Activity */}
             <div className="bg-white dark:bg-card border border-border rounded-xl overflow-hidden shadow-sm">
-              <IssueActivity issueId={issueId} projectId={projectId} />
+              <IssueActivity issueId={issueId} projectId={projectId} scrollMarginTop={57} />
             </div>
 
             <WidgetZone zone="issue.details.after" props={{ issue }} />

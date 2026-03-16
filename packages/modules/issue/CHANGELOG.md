@@ -1,5 +1,28 @@
 # @meridianjs/issue
 
+## 1.5.0
+
+### Minor Changes
+
+- Added improvement enum
+
+### Patch Changes
+
+- Updated dependencies
+  - @meridianjs/types@1.23.0
+  - @meridianjs/framework-utils@1.23.0
+
+## 1.4.0
+
+### Minor Changes
+
+- Fixed comment ordering and UI fixes
+
+### Patch Changes
+
+- @meridianjs/types@1.22.0
+- @meridianjs/framework-utils@1.22.0
+
 ## 1.3.0
 
 ### Minor Changes

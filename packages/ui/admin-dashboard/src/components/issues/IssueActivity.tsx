@@ -146,6 +146,7 @@ interface IssueActivityProps {
   onViewMore?: () => void
   onTabChange?: (tab: ActivityTab) => void
   hideCommentInput?: boolean
+  scrollMarginTop?: number
 }
 
 export function IssueActivity({
@@ -156,6 +157,7 @@ export function IssueActivity({
   onViewMore,
   onTabChange,
   hideCommentInput,
+  scrollMarginTop = 0,
 }: IssueActivityProps) {
   const [activeTab, setActiveTab] = useState<ActivityTab>("comments")
 
@@ -164,7 +166,7 @@ export function IssueActivity({
     onTabChange?.(tab)
   }
 
-  const commentsEndRef = useRef<HTMLDivElement>(null)
+  const commentsTopRef = useRef<HTMLDivElement>(null)
   const prevCommentCountRef = useRef<number | null>(null)
 
   const { user: currentUser } = useAuth()
@@ -179,7 +181,7 @@ export function IssueActivity({
     if (count === undefined) return
     // Only scroll when a new comment is added after initial load
     if (prevCommentCountRef.current !== null && count > prevCommentCountRef.current) {
-      commentsEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" })
+      commentsTopRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
     }
     prevCommentCountRef.current = count
   }, [comments?.length])
@@ -238,14 +240,14 @@ export function IssueActivity({
       {/* ── Comments tab ── */}
       {activeTab === "comments" && (
         <div className="px-6 pb-5 pt-4">
-          <div className="space-y-5 mb-5">
+          <div ref={commentsTopRef} style={{ scrollMarginTop }} className="space-y-5 mb-5">
             {loadingComments ? (
               <div className="flex gap-3">
                 <Skeleton className="h-7 w-7 rounded-full shrink-0" />
                 <Skeleton className="h-16 flex-1" />
               </div>
             ) : comments && comments.length > 0 ? (
-              (compact ? comments.slice(-5) : comments).map((c) => {
+              (compact ? comments.slice(0, 5) : comments).map((c) => {
                 const author = getCommentAuthor(c.author_id)
                 const avatarColor = getAvatarColor(author.name)
                 const commentAttachments = (allAttachments ?? []).filter(
@@ -297,8 +299,6 @@ export function IssueActivity({
               View all {comments.length} comments →
             </button>
           )}
-
-          <div ref={commentsEndRef} />
 
           {!hideCommentInput && (
             <CommentInput issueId={issueId} projectId={projectId} />

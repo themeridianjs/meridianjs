@@ -1,5 +1,13 @@
 # @meridianjs/admin-dashboard
 
+## 1.23.0
+
+## 1.22.0
+
+### Minor Changes
+
+- Fixed comment ordering and UI fixes
+
 ## 1.21.0
 
 ### Minor Changes
