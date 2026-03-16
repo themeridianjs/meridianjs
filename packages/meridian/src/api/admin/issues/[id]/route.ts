@@ -35,6 +35,27 @@ export const PUT = async (req: any, res: Response, next: NextFunction) => {
       if (updates.recurrence_end_date !== undefined) updates.recurrence_end_date = updates.recurrence_end_date ? new Date(updates.recurrence_end_date as string) : null
       if (updates.next_occurrence_date !== undefined) updates.next_occurrence_date = updates.next_occurrence_date ? new Date(updates.next_occurrence_date as string) : null
 
+      // Extract mention IDs — not a model field, used only for notifications
+      const mentionedUserIds: string[] = Array.isArray(req.body.mentioned_user_ids)
+        ? req.body.mentioned_user_ids.filter((id: unknown) => typeof id === "string")
+        : []
+
+      const emitMentions = (issue: any) => {
+        if (mentionedUserIds.length > 0 && req.body.description !== undefined) {
+          const eventBus = req.scope.resolve("eventBus") as any
+          eventBus.emit({
+            name: "issue.mentioned",
+            data: {
+              issue_id: issue.id,
+              actor_id: req.user?.id ?? "system",
+              mentioned_user_ids: mentionedUserIds,
+              workspace_id: issue.workspace_id,
+              project_id: issue.project_id,
+            },
+          }).catch(() => {})
+        }
+      }
+
       if (updates.status !== undefined) {
         const { result: issue, errors, transaction_status } = await updateIssueStatusWorkflow(req.scope).run({
           input: { issueId: req.params.id, status: updates.status as string, actor_id: req.user?.id ?? null },
@@ -45,8 +66,9 @@ export const PUT = async (req: any, res: Response, next: NextFunction) => {
           return
         }
         delete updates.status
-        if (Object.keys(updates).length === 0) { res.json({ issue }); return }
+        if (Object.keys(updates).length === 0) { emitMentions(issue); res.json({ issue }); return }
         const finalIssue = await issueService.updateIssue(req.params.id, updates)
+        emitMentions(finalIssue)
         res.json({ issue: finalIssue })
         return
       }
@@ -61,14 +83,16 @@ export const PUT = async (req: any, res: Response, next: NextFunction) => {
           return
         }
         delete updates.assignee_ids
-        if (Object.keys(updates).length === 0) { res.json({ issue }); return }
+        if (Object.keys(updates).length === 0) { emitMentions(issue); res.json({ issue }); return }
         const finalIssue = await issueService.updateIssue(req.params.id, updates)
+        emitMentions(finalIssue)
         res.json({ issue: finalIssue })
         return
       }
 
       const currentIssue = await issueService.retrieveIssue(req.params.id)
       const issue = await issueService.updateIssue(req.params.id, updates)
+      emitMentions(issue)
       await activityService.recordActivity({
         entity_type: "issue", entity_id: req.params.id,
         actor_id: req.user?.id ?? "system", action: "updated", workspace_id: issue.workspace_id,

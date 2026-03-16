@@ -2,6 +2,7 @@ import jwt from "jsonwebtoken"
 import { randomBytes } from "node:crypto"
 import type { Response } from "express"
 import { storeExchangeCode } from "../_exchange-store.js"
+import { validateEmailDomain } from "../../register/_domain-check.js"
 
 /**
  * GET /auth/google/callback?code=...&state=...
@@ -120,6 +121,25 @@ export const GET = async (req: any, res: Response) => {
     }
   }
 
+  // For register flow (non-invite), check if open registration is enabled before exchanging code
+  let regConfig: { enabled: boolean; allowedDomains: string[] } | undefined
+  let registerUserCount = 0
+  if (flow === "register" && !inviteRecord) {
+    const cfg = req.scope.resolve("config") as any
+    regConfig = cfg?.projectConfig?.registration
+    try {
+      const userService = req.scope.resolve("userModuleService") as any
+      const [, count] = await userService.listAndCountUsers({}, { limit: 1 })
+      registerUserCount = count
+    } catch {
+      // assume not first setup
+    }
+    if (registerUserCount > 0 && !regConfig?.enabled) {
+      errorRedirect("Registration is not open. Contact an admin for an invitation.")
+      return
+    }
+  }
+
   // Exchange code for Google profile
   let profile: { googleId: string; email: string; firstName: string | null; lastName: string | null; picture: string | null }
   try {
@@ -127,6 +147,16 @@ export const GET = async (req: any, res: Response) => {
   } catch (err: any) {
     errorRedirect(err.message ?? "Failed to authenticate with Google")
     return
+  }
+
+  // Domain check for open registration (after we have the profile email)
+  if (flow === "register" && !inviteRecord && registerUserCount > 0 && regConfig?.enabled) {
+    try {
+      validateEmailDomain(profile.email, regConfig.allowedDomains)
+    } catch {
+      errorRedirect("Your email domain is not allowed to register.")
+      return
+    }
   }
 
   // Verify invite email matches Google email (if invite has a locked email)
@@ -138,6 +168,7 @@ export const GET = async (req: any, res: Response) => {
   }
 
   // Perform login / register
+  const autoRegister = flow === "register" && !inviteRecord
   let authResult: { token: string }
   try {
     const authService = req.scope.resolve("authModuleService") as any
@@ -148,6 +179,7 @@ export const GET = async (req: any, res: Response) => {
       lastName: profile.lastName,
       picture: profile.picture,
       inviteRecord,
+      autoRegister,
     })
   } catch (err: any) {
     errorRedirect(err.message ?? "Authentication failed")

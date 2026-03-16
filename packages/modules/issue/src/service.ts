@@ -145,7 +145,7 @@ export class IssueModuleService extends MeridianService({
   /** List all comments for an issue. */
   async listCommentsByIssue(issueId: string): Promise<any[]> {
     const repo = this.container.resolve<any>("commentRepository")
-    return repo.find({ issue_id: issueId, deleted_at: null })
+    return repo.find({ issue_id: issueId, deleted_at: null }, { orderBy: { created_at: "DESC" } })
   }
 
   /** Add a comment to an issue. */

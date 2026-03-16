@@ -87,7 +87,7 @@ export const POST = async (req: any, res: Response, next: NextFunction) => {
     try {
       const { title, project_id, workspace_id, description, type, priority, status,
               assignee_ids, reporter_id, parent_id, start_date, due_date, estimate, sprint_id, task_list_id, metadata,
-              recurrence_frequency, recurrence_end_date } = req.body
+              recurrence_frequency, recurrence_end_date, mentioned_user_ids } = req.body
       if (!title || !project_id || !workspace_id) {
         res.status(400).json({ error: { message: "title, project_id and workspace_id are required" } })
         return
@@ -111,6 +111,23 @@ export const POST = async (req: any, res: Response, next: NextFunction) => {
         const err = errors[0]
         res.status((err as any).status ?? 500).json({ error: { message: err.message } })
         return
+      }
+      // Emit mention notifications if description has @mentions
+      const validMentionIds: string[] = Array.isArray(mentioned_user_ids)
+        ? mentioned_user_ids.filter((id: unknown) => typeof id === "string")
+        : []
+      if (validMentionIds.length > 0 && description) {
+        const eventBus = req.scope.resolve("eventBus") as any
+        eventBus.emit({
+          name: "issue.mentioned",
+          data: {
+            issue_id: issue.id,
+            actor_id: req.user?.id ?? "system",
+            mentioned_user_ids: validMentionIds,
+            workspace_id: issue.workspace_id,
+            project_id: issue.project_id,
+          },
+        }).catch(() => {})
       }
       res.status(201).json({ issue })
     } catch (err) {

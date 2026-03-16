@@ -1,6 +1,26 @@
 # @meridianjs/types
 
+## 1.23.0
+
+### Minor Changes
+
+- Added improvement enum
+
+## 1.22.0
+
+## 1.21.0
+
+## 1.20.0
+
+### Minor Changes
+
+- Self registration config & routes
+
 ## 1.19.0
+
+### Minor Changes
+
+- Self registration config, and routes
 
 ## 1.18.0
 

@@ -6,24 +6,35 @@ import { Header } from "./Header"
 import { MobileBottomNav } from "./MobileBottomNav"
 import { useAuth } from "@/stores/auth"
 
-/** If the auth store has a valid token but missing user profile data (e.g. stale
- *  localStorage from a previous Google OAuth session), re-fetch from the server. */
+/** Fetch fresh user profile on mount and sync avatar_url + workspace logo_url into local state. */
 function useEnsureUserProfile() {
-  const { user, token, login } = useAuth()
+  const { user, token, updateLocalUser, workspace, setWorkspace } = useAuth()
   useEffect(() => {
     if (!user || !token || !user.email) return
     fetch("/admin/users/me", { headers: { Authorization: `Bearer ${token}` } })
       .then((r) => (r.ok ? r.json() : null))
       .then((profile) => {
         if (profile) {
-          login(
-            { id: profile.id, email: profile.email, first_name: profile.first_name ?? "", last_name: profile.last_name ?? "", avatar_url: profile.avatar_url ?? null },
-            token
-          )
+          updateLocalUser({ avatar_url: profile.avatar_url ?? null })
         }
       })
       .catch(() => {})
   }, [user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Sync workspace logo_url from server if missing (e.g. after fresh login)
+  useEffect(() => {
+    if (!workspace || workspace.logo_url !== undefined) return
+    if (!token) return
+    fetch("/admin/workspaces", { headers: { Authorization: `Bearer ${token}` } })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        const found = data?.workspaces?.find((w: any) => w.id === workspace.id)
+        if (found) {
+          setWorkspace({ ...workspace, logo_url: found.logo_url ?? null })
+        }
+      })
+      .catch(() => {})
+  }, [workspace?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 }
 
 export function AppShell() {

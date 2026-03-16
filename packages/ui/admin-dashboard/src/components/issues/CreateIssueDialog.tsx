@@ -8,6 +8,7 @@ import { useSprints, type Sprint } from "@/api/hooks/useSprints"
 import { useTaskLists } from "@/api/hooks/useTaskLists"
 import { useAuth } from "@/stores/auth"
 import { AssigneeSelector } from "@/components/issues/AssigneeSelector"
+import { RichTextEditor, type MentionItem } from "@/components/ui/rich-text-editor"
 import {
   Drawer,
   DrawerContent,
@@ -19,7 +20,6 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
@@ -67,6 +67,14 @@ export function CreateIssueDialog({ open, onClose, projectId, defaultStatus = "b
     () => access ? access.members.filter(m => m.user).map(m => m.user!) : undefined,
     [access]
   )
+  const mentionUsers = useMemo<MentionItem[] | undefined>(
+    () => projectUsers?.map((u) => ({
+      id: u.id,
+      label: `${u.first_name ?? ""} ${u.last_name ?? ""}`.trim() || u.email,
+      email: u.email,
+    })),
+    [projectUsers]
+  )
   const { data: projectStatuses } = useProjectStatuses(projectId)
   const { data: sprints } = useSprints(projectId || undefined)
   const { data: taskLists } = useTaskLists(projectId || undefined)
@@ -97,6 +105,15 @@ export function CreateIssueDialog({ open, onClose, projectId, defaultStatus = "b
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!title.trim()) return
+    const mentionedUserIds: string[] = []
+    if (description) {
+      const parser = new DOMParser()
+      const doc = parser.parseFromString(description, "text/html")
+      doc.querySelectorAll("[data-type='mention']").forEach((el) => {
+        const id = el.getAttribute("data-id")
+        if (id && !mentionedUserIds.includes(id)) mentionedUserIds.push(id)
+      })
+    }
     createIssue.mutate(
       {
         title: title.trim(), description: description.trim() || undefined, status, priority, type,
@@ -108,6 +125,7 @@ export function CreateIssueDialog({ open, onClose, projectId, defaultStatus = "b
         due_date: dueDate ? format(dueDate, "yyyy-MM-dd") : null,
         recurrence_frequency: isRecurring ? recurrenceFrequency : undefined,
         recurrence_end_date: isRecurring && recurrenceEndDate ? format(recurrenceEndDate, "yyyy-MM-dd") : undefined,
+        mentioned_user_ids: mentionedUserIds.length > 0 ? mentionedUserIds : undefined,
       },
       {
         onSuccess: () => {
@@ -120,8 +138,8 @@ export function CreateIssueDialog({ open, onClose, projectId, defaultStatus = "b
   }
 
   return (
-    <Drawer open={open} onOpenChange={(o) => !o && handleClose()}>
-      <DrawerContent className="max-w-md">
+    <Drawer open={open} onOpenChange={(o) => !o && handleClose()} dismissible={false}>
+      <DrawerContent className="max-w-xl">
         <DrawerHeader>
           <DrawerTitle>New issue</DrawerTitle>
         </DrawerHeader>
@@ -138,12 +156,13 @@ export function CreateIssueDialog({ open, onClose, projectId, defaultStatus = "b
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="issue-desc">Description <span className="text-xs text-muted-foreground font-normal">Optional</span></Label>
-            <Textarea
-              id="issue-desc"
-              placeholder="Add more context..."
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
+            <Label>Description <span className="text-xs text-muted-foreground font-normal">Optional</span></Label>
+            <RichTextEditor
+              content={description}
+              onChange={setDescription}
+              placeholder="Add more context… (type @ to mention)"
+              className="min-h-[120px] rounded-md border border-input"
+              users={mentionUsers}
             />
           </div>
           <div className="grid grid-cols-3 gap-3">

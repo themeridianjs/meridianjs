@@ -12,6 +12,7 @@ interface RegisterInput {
   password: string
   first_name: string
   last_name: string
+  otp?: string
 }
 
 interface AuthResponse {
@@ -28,9 +29,16 @@ interface AuthResponse {
 export function useSetupStatus() {
   return useQuery({
     queryKey: ["setup-status"],
-    queryFn: () => api.get<{ needsSetup: boolean; googleOAuthEnabled: boolean }>("/auth/setup"),
+    queryFn: () => api.get<{ needsSetup: boolean; googleOAuthEnabled: boolean; registrationEnabled: boolean }>("/auth/setup"),
     staleTime: 60_000,
     retry: false,
+  })
+}
+
+export function useSendRegistrationOtp() {
+  return useMutation({
+    mutationFn: (data: { email: string }) =>
+      api.post<{ ok: boolean }>("/auth/register/send-otp", data),
   })
 }
 

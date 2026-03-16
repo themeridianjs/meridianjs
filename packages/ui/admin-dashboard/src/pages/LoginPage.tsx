@@ -99,12 +99,14 @@ export function LoginPage() {
           </div>
         )}
 
-        <p className="text-sm text-center text-muted-foreground mt-6">
-          Don't have an account?{" "}
-          <Link to="/register" className="text-indigo hover:opacity-80 transition-opacity">
-            Create one
-          </Link>
-        </p>
+        {(setupStatus?.needsSetup || setupStatus?.registrationEnabled) && (
+          <p className="text-sm text-center text-muted-foreground mt-6">
+            Don't have an account?{" "}
+            <Link to="/register" className="text-indigo hover:opacity-80 transition-opacity">
+              Create one
+            </Link>
+          </p>
+        )}
         <WidgetZone zone="login.after" props={{}} />
       </div>
     </div>

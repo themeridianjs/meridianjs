@@ -1,10 +1,30 @@
 # @meridianjs/admin-dashboard
 
+## 1.23.0
+
+## 1.22.0
+
+### Minor Changes
+
+- Fixed comment ordering and UI fixes
+
+## 1.21.0
+
+### Minor Changes
+
+- Fixed the query cache and workspace logo + avatar issue
+
+## 1.20.0
+
+### Minor Changes
+
+- Self registration config & routes
+
 ## 1.19.0
 
 ### Minor Changes
 
-- Fix pagination storm by preventing global issues fetch, add /related endpoint
+- Self registration config, and routes
 
 ## 1.18.0
 
