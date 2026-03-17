@@ -699,8 +699,6 @@ export function ProjectIssuesPage() {
     groupedByList[tl.id] = []
   }
   for (const issue of topLevel) {
-    // If the issue's task_list_id no longer matches a known list (e.g. cache
-    // is momentarily stale after a list deletion), fall back to "No List".
     const key = (issue.task_list_id && knownListIds.has(issue.task_list_id))
       ? issue.task_list_id
       : "__none__"
