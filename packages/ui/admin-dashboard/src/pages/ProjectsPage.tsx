@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import { useProjects, useDeleteProject } from "@/api/hooks/useProjects"
+import { useWorkspaces } from "@/api/hooks/useWorkspaces"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Input } from "@/components/ui/input"
@@ -13,7 +14,8 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { CreateProjectDialog } from "@/components/projects/CreateProjectDialog"
 import { ProjectAccessDialog } from "@/components/projects/ProjectAccessDialog"
-import { Plus, MoreHorizontal, Layers, GitBranch, Trash2, Search, Lock } from "lucide-react"
+import { TransferProjectDialog } from "@/components/projects/TransferProjectDialog"
+import { Plus, MoreHorizontal, Layers, GitBranch, Trash2, Search, Lock, ArrowRightLeft } from "lucide-react"
 import { toast } from "sonner"
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
@@ -21,12 +23,16 @@ import { cn } from "@/lib/utils"
 export function ProjectsPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [accessProject, setAccessProject] = useState<{ id: string; name: string } | null>(null)
+  const [transferProject, setTransferProject] = useState<{ id: string; name: string } | null>(null)
   const [search, setSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "paused" | "archived">("all")
   const { workspace } = useParams<{ workspace: string }>()
   const { data: projects, isLoading } = useProjects()
+  const { data: allWorkspaces } = useWorkspaces()
   const deleteProject = useDeleteProject()
   const navigate = useNavigate()
+
+  const currentWorkspace = allWorkspaces?.find((w) => w.slug === workspace)
 
   const filtered = (projects ?? []).filter(
     (p) =>
@@ -196,6 +202,10 @@ export function ProjectsPage() {
                           <Lock className="h-4 w-4" />
                           Manage access
                         </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setTransferProject({ id: project.id, name: project.name })}>
+                          <ArrowRightLeft className="h-4 w-4" />
+                          Transfer to workspace
+                        </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                           className="text-destructive focus:text-destructive"
@@ -261,6 +271,10 @@ export function ProjectsPage() {
                           <Lock className="h-4 w-4" />
                           Manage access
                         </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setTransferProject({ id: project.id, name: project.name })}>
+                          <ArrowRightLeft className="h-4 w-4" />
+                          Transfer to workspace
+                        </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                           className="text-destructive focus:text-destructive"
@@ -308,6 +322,16 @@ export function ProjectsPage() {
           onClose={() => setAccessProject(null)}
           projectId={accessProject.id}
           projectName={accessProject.name}
+        />
+      )}
+
+      {transferProject && (
+        <TransferProjectDialog
+          open={!!transferProject}
+          onClose={() => setTransferProject(null)}
+          projectId={transferProject.id}
+          projectName={transferProject.name}
+          currentWorkspaceId={currentWorkspace?.id ?? ""}
         />
       )}
     </div>

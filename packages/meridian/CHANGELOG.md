@@ -1,5 +1,19 @@
 # @meridianjs/meridian
 
+## 1.26.0
+
+### Minor Changes
+
+- Added a feature to transfer project from one workspace to another
+
+### Patch Changes
+
+- @meridianjs/types@1.26.0
+- @meridianjs/framework-utils@1.26.0
+- @meridianjs/framework@1.26.0
+- @meridianjs/workflow-engine@1.26.0
+- @meridianjs/auth@1.26.0
+
 ## 1.25.0
 
 ### Minor Changes

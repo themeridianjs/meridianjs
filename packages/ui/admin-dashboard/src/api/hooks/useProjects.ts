@@ -212,3 +212,16 @@ export function useProjectActivities(projectId: string) {
     enabled: !!projectId,
   })
 }
+
+export function useTransferProject(projectId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: { target_workspace_id: string; carry_over_user_ids: string[] }) =>
+      api.post<{ project: Project }>(`/admin/projects/${projectId}/transfer`, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: projectKeys.list() })
+      qc.invalidateQueries({ queryKey: projectKeys.detail(projectId) })
+      qc.invalidateQueries({ queryKey: ["projects", projectId, "access"] })
+    },
+  })
+}
