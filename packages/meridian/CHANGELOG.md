@@ -1,5 +1,19 @@
 # @meridianjs/meridian
 
+## 1.25.0
+
+### Minor Changes
+
+- 4fc092f: Fix pagination storm by preventing global issues fetch
+
+### Patch Changes
+
+- @meridianjs/types@1.25.0
+- @meridianjs/framework-utils@1.25.0
+- @meridianjs/framework@1.25.0
+- @meridianjs/workflow-engine@1.25.0
+- @meridianjs/auth@1.25.0
+
 ## 1.24.0
 
 ### Minor Changes
