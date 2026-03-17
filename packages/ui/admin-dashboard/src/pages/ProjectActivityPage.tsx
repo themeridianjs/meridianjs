@@ -2,7 +2,7 @@ import { useParams } from "react-router-dom"
 import { format } from "date-fns"
 import {
   Globe, Link2Off, Pencil, Plus, Activity,
-  UserPlus, UserMinus, Users, UserX, Tag, Trash2,
+  UserPlus, UserMinus, Users, UserX, Tag, Trash2, ArrowRightLeft,
 } from "lucide-react"
 import { useProjectByKey, useProjectActivities } from "@/api/hooks/useProjects"
 import { useUserMap } from "@/api/hooks/useUsers"
@@ -105,6 +105,18 @@ const ACTION_CONFIG: Record<string, {
     color: "text-emerald-600",
     bg: "bg-emerald-50 dark:bg-emerald-950/40",
     label: () => "Created project",
+  },
+  transferred: {
+    icon: ArrowRightLeft,
+    color: "text-sky-500",
+    bg: "bg-sky-50 dark:bg-sky-950/40",
+    label: (changes) => {
+      const from = (changes as any)?.from_workspace_name?.from as string | undefined
+      const to = (changes as any)?.to_workspace_name?.to as string | undefined
+      if (from && to) return `Transferred project from "${from}" to "${to}"`
+      if (to) return `Transferred project to "${to}"`
+      return "Transferred project"
+    },
   },
 }
 
