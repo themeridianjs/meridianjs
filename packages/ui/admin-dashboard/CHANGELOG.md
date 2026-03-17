@@ -1,5 +1,11 @@
 # @meridianjs/admin-dashboard
 
+## 1.26.0
+
+### Minor Changes
+
+- Added a feature to transfer project from one workspace to another
+
 ## 1.25.0
 
 ### Minor Changes

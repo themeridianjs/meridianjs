@@ -2,6 +2,9 @@ import { fileURLToPath } from "node:url"
 import path from "node:path"
 import type { PluginRegistrationContext } from "@meridianjs/types"
 
+export { transferProjectWorkflow } from "./workflows/transfer-project.js"
+export type { TransferProjectInput } from "./workflows/transfer-project.js"
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 /**
