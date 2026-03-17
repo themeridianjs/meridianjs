@@ -1,5 +1,19 @@
 # @meridianjs/meridian
 
+## 1.27.0
+
+### Minor Changes
+
+- Added clear activity when trasferring the project
+
+### Patch Changes
+
+- @meridianjs/types@1.27.0
+- @meridianjs/framework-utils@1.27.0
+- @meridianjs/framework@1.27.0
+- @meridianjs/workflow-engine@1.27.0
+- @meridianjs/auth@1.27.0
+
 ## 1.26.0
 
 ### Minor Changes

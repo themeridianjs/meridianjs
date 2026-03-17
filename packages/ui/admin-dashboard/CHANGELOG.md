@@ -1,5 +1,11 @@
 # @meridianjs/admin-dashboard
 
+## 1.27.0
+
+### Minor Changes
+
+- Added clear activity when trasferring the project
+
 ## 1.26.0
 
 ### Minor Changes

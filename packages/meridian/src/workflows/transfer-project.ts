@@ -124,16 +124,38 @@ const adjustMembershipsStep = createStep(
 const logTransferActivityStep = createStep(
   "log-transfer-activity",
   async (
-    input: { project: any; actor_id?: string | null },
+    input: { project: any; actor_id?: string | null; original_workspace_id: string },
     { container }
   ) => {
     const activitySvc = container.resolve("activityModuleService") as any
+    const workspaceSvc = container.resolve("workspaceModuleService") as any
+
+    // Resolve workspace names for a human-readable log entry
+    const [fromWs, toWs] = await Promise.all([
+      workspaceSvc.retrieveWorkspace(input.original_workspace_id).catch(() => null),
+      workspaceSvc.retrieveWorkspace(input.project.workspace_id).catch(() => null),
+    ])
+
     await activitySvc.recordActivity({
       entity_type: "project",
       entity_id: input.project.id,
       actor_id: input.actor_id ?? "system",
       action: "transferred",
       workspace_id: input.project.workspace_id,
+      changes: {
+        workspace_id: {
+          from: input.original_workspace_id,
+          to: input.project.workspace_id,
+        },
+        from_workspace_name: {
+          from: fromWs?.name ?? input.original_workspace_id,
+          to: null,
+        },
+        to_workspace_name: {
+          from: null,
+          to: toWs?.name ?? input.project.workspace_id,
+        },
+      },
     }).catch(() => {})
   }
 )
@@ -145,7 +167,7 @@ export const transferProjectWorkflow = createWorkflow(
     const transferred = await transferProjectStep(validated)
     const withIssues = await updateIssuesWorkspaceStep(transferred)
     await adjustMembershipsStep(withIssues)
-    await logTransferActivityStep({ project: transferred.project, actor_id: input.actor_id })
+    await logTransferActivityStep({ project: transferred.project, actor_id: input.actor_id, original_workspace_id: transferred.original_workspace_id })
     await emitEventStep({
       name: "project.transferred",
       data: { project_id: transferred.project.id, workspace_id: transferred.project.workspace_id, actor_id: input.actor_id ?? "system" },
