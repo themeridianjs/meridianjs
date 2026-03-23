@@ -118,7 +118,8 @@ export function startDashboardServer(
   apiHost = "localhost",
   adminExtensionsBuf: Buffer | null = null,
   apiUrlOverride?: string,
-  branding?: DashboardBranding
+  branding?: DashboardBranding,
+  projectDir?: string
 ): Promise<http.Server> {
   const resolvedApiUrl = apiUrlOverride ?? `http://${apiHost}:${apiPort}`
   const configObj: Record<string, string> = { apiUrl: resolvedApiUrl }
@@ -149,6 +150,19 @@ export function startDashboardServer(
         res.writeHead(200, { "Content-Type": "application/javascript" })
         res.end(adminExtensionsBuf ?? Buffer.from("export default [];\n"))
         return
+      }
+
+      // Serve user favicon override if present, otherwise fall through to dist
+      if (urlPath === "/favicon.ico" && projectDir) {
+        const userFavicon = path.join(projectDir, "public", "favicon.ico")
+        if (existsSync(userFavicon)) {
+          fs.readFile(userFavicon, (err, data) => {
+            if (err) { res.writeHead(404); res.end("Not found"); return }
+            res.writeHead(200, { "Content-Type": "image/x-icon" })
+            res.end(data)
+          })
+          return
+        }
       }
 
       // Resolve file path; fall back to index.html for unknown paths (SPA routing)
@@ -236,7 +250,7 @@ export async function runServeDashboard(portOverride?: number): Promise<void> {
   }
 
   const branding = { appName: projectConfig.appName, logoUrl: projectConfig.logoUrl }
-  const server = await startDashboardServer(distDir, port, apiPort, "localhost", adminExtensionsBuf, apiUrl, branding)
+  const server = await startDashboardServer(distDir, port, apiPort, "localhost", adminExtensionsBuf, apiUrl, branding, rootDir)
 
   console.log(chalk.green("  ✔ Admin dashboard: ") + chalk.cyan(`http://localhost:${port}`))
   console.log(chalk.dim(`     → API: ${apiUrl}`))

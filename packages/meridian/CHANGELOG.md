@@ -1,5 +1,15 @@
 # @meridianjs/meridian
 
+## 1.28.0
+
+### Patch Changes
+
+- @meridianjs/types@1.28.0
+- @meridianjs/framework-utils@1.28.0
+- @meridianjs/framework@1.28.0
+- @meridianjs/workflow-engine@1.28.0
+- @meridianjs/auth@1.28.0
+
 ## 1.27.0
 
 ### Minor Changes

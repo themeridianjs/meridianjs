@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import { format } from "date-fns"
 import { useCreateIssue } from "@/api/hooks/useIssues"
@@ -77,6 +77,15 @@ export function CreateIssueDialog({ open, onClose, projectId, defaultStatus = "b
   )
   const { data: projectStatuses } = useProjectStatuses(projectId)
   const { data: sprints } = useSprints(projectId || undefined)
+
+  useEffect(() => {
+    if (projectStatuses && projectStatuses.length > 0) {
+      const validKeys = projectStatuses.map((s) => s.key)
+      if (!validKeys.includes(status)) {
+        setStatus(projectStatuses[0].key)
+      }
+    }
+  }, [projectStatuses])
   const { data: taskLists } = useTaskLists(projectId || undefined)
   const activeSprints = (sprints ?? []).filter((s) => s.status !== "completed")
 

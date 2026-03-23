@@ -158,6 +158,9 @@ export async function runNew(projectName?: string): Promise<void> {
     await mkdirWithKeep(path.join(targetDir, "src", "jobs"))
     await mkdirWithKeep(path.join(targetDir, "src", "links"))
 
+    // Public assets directory — place favicon.ico, robots.txt, etc. here
+    await mkdirWithKeep(path.join(targetDir, "public"))
+
     // Admin UI extension entry point (only when dashboard is enabled)
     if (vars.dashboard) {
       await writeFile(

@@ -1,5 +1,11 @@
 # @meridianjs/admin-dashboard
 
+## 1.28.0
+
+### Minor Changes
+
+- Fixed the issue create issue sidebar, added favicon
+
 ## 1.27.0
 
 ### Minor Changes

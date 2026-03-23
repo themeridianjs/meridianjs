@@ -413,6 +413,16 @@ ${vars.dashboard ? `
 Add custom React components to \`src/admin/widgets/index.tsx\` to inject them into the dashboard UI. They are compiled automatically when you run \`npm run dev\` and loaded by the dashboard at runtime.
 
 Available zones: \`issue.details.before/after/sidebar\`, \`project.board.before/after\`, \`project.issues.before/after\`, \`project.timeline.before/after\`, \`project.sprints.before/after\`, \`workspace.settings.before/after\`.
+
+## Favicon
+
+To replace the default Meridian favicon, place your own \`favicon.ico\` at:
+
+\`\`\`
+public/favicon.ico
+\`\`\`
+
+The dashboard server automatically serves your file in place of the default.
 ` : ""}
 ## Extending Meridian
 

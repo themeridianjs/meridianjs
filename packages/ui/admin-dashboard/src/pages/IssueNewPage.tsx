@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { useCreateIssue } from "@/api/hooks/useIssues"
 import { useProjectByKey } from "@/api/hooks/useProjects"
@@ -150,6 +150,15 @@ export function IssueNewPage() {
   )
   const { data: projectStatuses } = useProjectStatuses(projectId || undefined)
   const { data: sprints } = useSprints(projectId || undefined)
+
+  useEffect(() => {
+    if (projectStatuses && projectStatuses.length > 0) {
+      const validKeys = projectStatuses.map((s) => s.key)
+      if (!validKeys.includes(status)) {
+        setStatus(projectStatuses[0].key)
+      }
+    }
+  }, [projectStatuses])
   const { data: taskLists } = useTaskLists(projectId || undefined)
   const activeSprints = (sprints ?? []).filter((s) => s.status !== "completed")
 
