@@ -8,6 +8,7 @@ import { useProjectStatuses } from "@/api/hooks/useProjectStatuses"
 import { useSprints, type Sprint } from "@/api/hooks/useSprints"
 import { useTaskLists } from "@/api/hooks/useTaskLists"
 import { AssigneeSelector } from "@/components/issues/AssigneeSelector"
+import { IssueRelationSelector } from "@/components/issues/IssueRelationSelector"
 import { CreateIssueDialog } from "@/components/issues/CreateIssueDialog"
 import { IssueActivity } from "@/components/issues/IssueActivity"
 import { RichTextEditor, RichTextContent, type MentionItem } from "@/components/ui/rich-text-editor"
@@ -607,6 +608,26 @@ export function IssueDetailPage() {
                       )}
                     </PopoverContent>
                   </Popover>
+                </PropertyRow>
+
+                <PropertyRow label="Depends on">
+                  <IssueRelationSelector
+                    value={issue.depends_on_ids ?? []}
+                    onChange={(ids) => handlePropUpdate({ depends_on_ids: ids }, "Dependencies")}
+                    projectId={issue.project_id}
+                    excludeId={issue.id}
+                    disabled={updateIssue.isPending}
+                  />
+                </PropertyRow>
+
+                <PropertyRow label="Related to">
+                  <IssueRelationSelector
+                    value={issue.related_to_ids ?? []}
+                    onChange={(ids) => handlePropUpdate({ related_to_ids: ids }, "Relations")}
+                    projectId={issue.project_id}
+                    excludeId={issue.id}
+                    disabled={updateIssue.isPending}
+                  />
                 </PropertyRow>
 
                 {parentIssue && (

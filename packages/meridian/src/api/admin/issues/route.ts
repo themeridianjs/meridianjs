@@ -87,7 +87,8 @@ export const POST = async (req: any, res: Response, next: NextFunction) => {
     try {
       const { title, project_id, workspace_id, description, type, priority, status,
               assignee_ids, reporter_id, parent_id, start_date, due_date, estimate, sprint_id, task_list_id, metadata,
-              recurrence_frequency, recurrence_end_date, mentioned_user_ids } = req.body
+              recurrence_frequency, recurrence_end_date, mentioned_user_ids,
+              depends_on_ids, related_to_ids } = req.body
       if (!title || !project_id || !workspace_id) {
         res.status(400).json({ error: { message: "title, project_id and workspace_id are required" } })
         return
@@ -104,6 +105,8 @@ export const POST = async (req: any, res: Response, next: NextFunction) => {
           metadata: metadata ?? null,
           recurrence_frequency: recurrence_frequency ?? null,
           recurrence_end_date: recurrence_end_date ? new Date(recurrence_end_date) : null,
+          depends_on_ids: Array.isArray(depends_on_ids) ? depends_on_ids : null,
+          related_to_ids: Array.isArray(related_to_ids) ? related_to_ids : null,
           actor_id: req.user?.id ?? null,
         },
       })

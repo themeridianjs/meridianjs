@@ -26,6 +26,8 @@ export interface CreateIssueInput {
   recurrence_end_date?: Date | null
   next_occurrence_date?: Date | null
   recurrence_source_id?: string | null
+  depends_on_ids?: string[] | null
+  related_to_ids?: string[] | null
 }
 
 export interface CreateAttachmentInput {
