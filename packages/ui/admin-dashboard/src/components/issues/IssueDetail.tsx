@@ -12,6 +12,7 @@ import { useSprints, type Sprint } from "@/api/hooks/useSprints"
 import { useTaskLists } from "@/api/hooks/useTaskLists"
 import { CreateIssueDialog } from "@/components/issues/CreateIssueDialog"
 import { AssigneeSelector } from "@/components/issues/AssigneeSelector"
+import { IssueRelationSelector } from "@/components/issues/IssueRelationSelector"
 import { IssueActivity, type ActivityTab } from "@/components/issues/IssueActivity"
 import { CommentInput } from "@/components/issues/CommentInput"
 import {
@@ -600,6 +601,40 @@ export function IssueDetail({ issue: issueProp, projectId, open, onClose }: Issu
                       )}
                     </PopoverContent>
                   </Popover>
+                </div>
+              </div>
+
+              <Divider />
+
+              {/* ── Relations ── */}
+              <div className="space-y-3">
+                <div>
+                  <FieldLabel>Depends on</FieldLabel>
+                  <IssueRelationSelector
+                    value={issue.depends_on_ids ?? []}
+                    onChange={(ids) =>
+                      updateIssue.mutate({ depends_on_ids: ids }, {
+                        onSuccess: () => toast.success("Dependencies updated"),
+                      })
+                    }
+                    projectId={issue.project_id}
+                    excludeId={issue.id}
+                    disabled={updateIssue.isPending}
+                  />
+                </div>
+                <div>
+                  <FieldLabel>Related to</FieldLabel>
+                  <IssueRelationSelector
+                    value={issue.related_to_ids ?? []}
+                    onChange={(ids) =>
+                      updateIssue.mutate({ related_to_ids: ids }, {
+                        onSuccess: () => toast.success("Relations updated"),
+                      })
+                    }
+                    projectId={issue.project_id}
+                    excludeId={issue.id}
+                    disabled={updateIssue.isPending}
+                  />
                 </div>
               </div>
 

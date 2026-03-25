@@ -8,6 +8,7 @@ import { useSprints, type Sprint } from "@/api/hooks/useSprints"
 import { useTaskLists } from "@/api/hooks/useTaskLists"
 import { useAuth } from "@/stores/auth"
 import { AssigneeSelector } from "@/components/issues/AssigneeSelector"
+import { IssueRelationSelector } from "@/components/issues/IssueRelationSelector"
 import { RichTextEditor, type MentionItem } from "@/components/ui/rich-text-editor"
 import {
   Drawer,
@@ -61,6 +62,8 @@ export function CreateIssueDialog({ open, onClose, projectId, defaultStatus = "b
   const [isRecurring, setIsRecurring] = useState(false)
   const [recurrenceFrequency, setRecurrenceFrequency] = useState<"weekly" | "monthly">("weekly")
   const [recurrenceEndDate, setRecurrenceEndDate] = useState<Date | undefined>(undefined)
+  const [dependsOnIds, setDependsOnIds] = useState<string[]>([])
+  const [relatedToIds, setRelatedToIds] = useState<string[]>([])
   const createIssue = useCreateIssue()
   const { data: access } = useProjectAccess(projectId)
   const projectUsers = useMemo(
@@ -108,6 +111,8 @@ export function CreateIssueDialog({ open, onClose, projectId, defaultStatus = "b
     setIsRecurring(false)
     setRecurrenceFrequency("weekly")
     setRecurrenceEndDate(undefined)
+    setDependsOnIds([])
+    setRelatedToIds([])
     onClose()
   }
 
@@ -135,6 +140,8 @@ export function CreateIssueDialog({ open, onClose, projectId, defaultStatus = "b
         recurrence_frequency: isRecurring ? recurrenceFrequency : undefined,
         recurrence_end_date: isRecurring && recurrenceEndDate ? format(recurrenceEndDate, "yyyy-MM-dd") : undefined,
         mentioned_user_ids: mentionedUserIds.length > 0 ? mentionedUserIds : undefined,
+        depends_on_ids: dependsOnIds.length > 0 ? dependsOnIds : null,
+        related_to_ids: relatedToIds.length > 0 ? relatedToIds : null,
       },
       {
         onSuccess: () => {
@@ -332,6 +339,28 @@ export function CreateIssueDialog({ open, onClose, projectId, defaultStatus = "b
               </PopoverContent>
             </Popover>
           </div>
+          {/* ── Relations ── */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label>Depends on <span className="text-xs text-muted-foreground font-normal">Optional</span></Label>
+              <IssueRelationSelector
+                value={dependsOnIds}
+                onChange={setDependsOnIds}
+                projectId={projectId}
+                emptyLabel="No dependencies"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Related to <span className="text-xs text-muted-foreground font-normal">Optional</span></Label>
+              <IssueRelationSelector
+                value={relatedToIds}
+                onChange={setRelatedToIds}
+                projectId={projectId}
+                emptyLabel="No relations"
+              />
+            </div>
+          </div>
+
           {/* ── Recurring ── */}
           <div className="space-y-3">
             <div className="flex items-center gap-2">

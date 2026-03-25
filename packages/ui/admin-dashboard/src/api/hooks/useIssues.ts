@@ -22,6 +22,8 @@ export interface Issue {
   recurrence_end_date?: string | null
   next_occurrence_date?: string | null
   recurrence_source_id?: string | null
+  depends_on_ids?: string[] | null
+  related_to_ids?: string[] | null
   child_count?: number
   created_at: string
   updated_at: string
@@ -59,6 +61,8 @@ interface CreateIssueInput {
   recurrence_frequency?: "weekly" | "monthly"
   recurrence_end_date?: string
   mentioned_user_ids?: string[]
+  depends_on_ids?: string[] | null
+  related_to_ids?: string[] | null
 }
 
 interface UpdateIssueInput {
@@ -78,6 +82,8 @@ interface UpdateIssueInput {
   recurrence_end_date?: string | null
   next_occurrence_date?: string | null
   mentioned_user_ids?: string[]
+  depends_on_ids?: string[] | null
+  related_to_ids?: string[] | null
 }
 
 export interface Activity {
@@ -105,6 +111,7 @@ export const issueKeys = {
   paginated: (params: PaginatedIssuesParams) =>
     [...issueKeys.all, "paginated", params] as const,
   related: (issueId: string) => [...issueKeys.all, issueId, "related"] as const,
+  relations: (issueId: string) => [...issueKeys.all, issueId, "relations"] as const,
   detail: (id: string) => [...issueKeys.all, id] as const,
   comments: (issueId: string) => [...issueKeys.all, issueId, "comments"] as const,
   activities: (issueId: string) => [...issueKeys.all, issueId, "activities"] as const,
@@ -211,6 +218,19 @@ export function useIssueRelated(issueId: string) {
   return useQuery({
     queryKey: issueKeys.related(issueId),
     queryFn: () => api.get<IssueRelatedResponse>(`/admin/issues/${issueId}/related`),
+    enabled: !!issueId,
+  })
+}
+
+export interface IssueRelationsResponse {
+  depends_on: Issue[]
+  related_to: Issue[]
+}
+
+export function useIssueRelations(issueId: string) {
+  return useQuery({
+    queryKey: issueKeys.relations(issueId),
+    queryFn: () => api.get<IssueRelationsResponse>(`/admin/issues/${issueId}/relations`),
     enabled: !!issueId,
   })
 }

@@ -16,6 +16,10 @@ const Issue = model.define("issue", {
   workspace_id: model.text(),
   /** Array of user IDs assigned to this issue */
   assignee_ids: model.json().nullable(),
+  /** Array of issue IDs that this issue depends on */
+  depends_on_ids: model.json().nullable(),
+  /** Array of issue IDs related to this issue */
+  related_to_ids: model.json().nullable(),
   reporter_id: model.text().nullable(),
   /** Parent issue ID for subtasks */
   parent_id: model.text().nullable(),

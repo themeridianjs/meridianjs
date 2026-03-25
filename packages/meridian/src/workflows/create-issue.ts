@@ -27,6 +27,8 @@ export interface CreateIssueInput {
   metadata?: Record<string, unknown> | null
   recurrence_frequency?: "weekly" | "monthly" | null
   recurrence_end_date?: Date | null
+  depends_on_ids?: string[] | null
+  related_to_ids?: string[] | null
 }
 
 function computeFirstOccurrence(input: CreateIssueInput): Date | null {
@@ -56,6 +58,8 @@ const createIssueStep = createStep(
       recurrence_frequency: input.recurrence_frequency ?? null,
       recurrence_end_date: input.recurrence_end_date ?? null,
       next_occurrence_date: computeFirstOccurrence(input),
+      depends_on_ids: input.depends_on_ids ?? null,
+      related_to_ids: input.related_to_ids ?? null,
     })
     return new StepResponse(issue, { issueId: issue.id })
   },
