@@ -38,6 +38,8 @@ import { ForgotPasswordPage } from "@/pages/ForgotPasswordPage"
 import { ResetPasswordPage } from "@/pages/ResetPasswordPage"
 
 const ProjectTimelinePage = lazy(() => import("@/pages/ProjectTimelinePage").then(m => ({ default: m.ProjectTimelinePage })))
+const ProjectHealthPage = lazy(() => import("@/pages/ProjectHealthPage").then(m => ({ default: m.ProjectHealthPage })))
+const HealthReportDetailPage = lazy(() => import("@/pages/HealthReportDetailPage").then(m => ({ default: m.HealthReportDetailPage })))
 const WorkspaceReportingPage = lazy(() => import("@/pages/WorkspaceReportingPage").then(m => ({ default: m.WorkspaceReportingPage })))
 
 function RequireAuth({ children }: { children: ReactNode }) {
@@ -316,6 +318,8 @@ export function App() {
           <Route path="access" element={<ProjectAccessPage />} />
           <Route path="reports" element={<ProjectReportsPage />} />
           <Route path="activity" element={<ProjectActivityPage />} />
+          <Route path="health" element={<Suspense fallback={<div className="flex items-center justify-center h-full text-sm text-muted-foreground">Loading…</div>}><ProjectHealthPage /></Suspense>} />
+          <Route path="health/:reportId" element={<Suspense fallback={<div className="flex items-center justify-center h-full text-sm text-muted-foreground">Loading…</div>}><HealthReportDetailPage /></Suspense>} />
         </Route>
         <Route path="my-tasks" element={<MyTasksPage />} />
         <Route path="notifications" element={<NotificationsPage />} />

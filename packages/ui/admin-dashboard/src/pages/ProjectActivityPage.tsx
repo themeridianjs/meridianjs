@@ -94,6 +94,24 @@ const ACTION_CONFIG: Record<string, {
       return name ? `Deleted status "${name}"` : "Deleted status"
     },
   },
+  health_update_updated: {
+    icon: Pencil,
+    color: "text-amber-500",
+    bg: "bg-amber-50 dark:bg-amber-950/40",
+    label: (changes) => {
+      const title = (changes as any)?.title?.to as string | undefined
+      return title ? `Edited status update "${title}"` : "Edited a status update"
+    },
+  },
+  health_update_deleted: {
+    icon: Trash2,
+    color: "text-red-500",
+    bg: "bg-red-50 dark:bg-red-950/40",
+    label: (changes) => {
+      const title = (changes as any)?.title?.from as string | undefined
+      return title ? `Deleted status update "${title}"` : "Deleted a status update"
+    },
+  },
   updated: {
     icon: Pencil,
     color: "text-amber-500",

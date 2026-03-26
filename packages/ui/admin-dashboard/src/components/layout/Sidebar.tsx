@@ -83,28 +83,30 @@ function WorkspaceSwitcher() {
             <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">
               Workspaces
             </DropdownMenuLabel>
-            {workspaces?.map((w) => (
-              <DropdownMenuItem
-                key={w.id}
-                className="cursor-pointer gap-2 p-2"
-                onClick={() => {
-                  setWorkspace({ id: w.id, name: w.name, slug: w.slug, logo_url: w.logo_url })
-                  navigate(`/${w.slug}/projects`)
-                }}
-              >
-                {w.logo_url ? (
-                  <img src={w.logo_url} alt={w.name} className="size-6 rounded-sm object-cover shrink-0" />
-                ) : (
-                  <div className="flex size-6 items-center justify-center rounded-sm bg-foreground text-background shrink-0">
-                    <span className="text-[10px] font-bold">{w.name[0].toUpperCase()}</span>
-                  </div>
-                )}
-                <span className="flex-1 truncate">{w.name}</span>
-                {w.id === workspace?.id && (
-                  <Check className="size-3.5 text-muted-foreground shrink-0" />
-                )}
-              </DropdownMenuItem>
-            ))}
+            <div className="max-h-64 overflow-y-auto">
+              {workspaces?.map((w) => (
+                <DropdownMenuItem
+                  key={w.id}
+                  className="cursor-pointer gap-2 p-2"
+                  onClick={() => {
+                    setWorkspace({ id: w.id, name: w.name, slug: w.slug, logo_url: w.logo_url })
+                    navigate(`/${w.slug}/projects`)
+                  }}
+                >
+                  {w.logo_url ? (
+                    <img src={w.logo_url} alt={w.name} className="size-6 rounded-sm object-cover shrink-0" />
+                  ) : (
+                    <div className="flex size-6 items-center justify-center rounded-sm bg-foreground text-background shrink-0">
+                      <span className="text-[10px] font-bold">{w.name[0].toUpperCase()}</span>
+                    </div>
+                  )}
+                  <span className="flex-1 truncate">{w.name}</span>
+                  {w.id === workspace?.id && (
+                    <Check className="size-3.5 text-muted-foreground shrink-0" />
+                  )}
+                </DropdownMenuItem>
+              ))}
+            </div>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               className="cursor-pointer gap-2 p-2 text-muted-foreground"
