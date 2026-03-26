@@ -12,7 +12,7 @@ import {
   Shield,
   BarChart2,
   User as UserIcon,
-  UserPlus,
+  Lock,
 } from "lucide-react"
 import { toast } from "sonner"
 import { useProjects } from "@/api/hooks/useProjects"
@@ -70,8 +70,7 @@ function WorkspaceSwitcher() {
   const [confirmMessage, setConfirmMessage] = useState("")
 
   const sortedWorkspaces = [...(workspaces ?? [])].sort((a, b) => a.name.localeCompare(b.name))
-  const memberIds = new Set(workspaces?.map((w) => w.id) ?? [])
-  const joinable = allPublic.filter((w) => !memberIds.has(w.id)).sort((a, b) => a.name.localeCompare(b.name))
+  const joinable = allPublic.filter((w) => !w.is_member).sort((a, b) => a.name.localeCompare(b.name))
 
   const handleConfirmRequest = () => {
     if (!confirmWorkspace) return
@@ -174,7 +173,7 @@ function WorkspaceSwitcher() {
                         {requested ? (
                           <span className="text-[10px] text-muted-foreground shrink-0">Requested</span>
                         ) : (
-                          <UserPlus className="size-3.5 text-muted-foreground shrink-0" />
+                          <Lock className="size-3.5 text-muted-foreground shrink-0" />
                         )}
                       </DropdownMenuItem>
                     )

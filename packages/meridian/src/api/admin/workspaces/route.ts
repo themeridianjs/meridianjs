@@ -4,7 +4,7 @@ import { requirePermission } from "@meridianjs/auth"
 export const GET = async (req: any, res: Response) => {
   const workspaceService = req.scope.resolve("workspaceModuleService") as any
   const workspaceMemberService = req.scope.resolve("workspaceMemberModuleService") as any
-  const limit = Math.min(Number(req.query.limit) || 20, 100)
+  const limit = Number(req.query.limit) || 200
   const offset = Number(req.query.offset) || 0
 
   const roles: string[] = req.user?.roles ?? []

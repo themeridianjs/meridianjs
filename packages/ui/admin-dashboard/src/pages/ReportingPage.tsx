@@ -13,7 +13,7 @@ import { MultiSelect } from "@/components/ui/multi-select"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ReportBarChart, formatMinutes } from "@/components/reports/ReportBarChart"
 
-const PAGE_SIZE = 200
+const PAGE_SIZE = 20
 
 export function ReportingPage({ workspaceId, orgScope = false }: { workspaceId?: string; orgScope?: boolean }) {
   const [from, setFrom] = useState<Date | undefined>(undefined)
@@ -68,6 +68,7 @@ export function ReportingPage({ workspaceId, orgScope = false }: { workspaceId?:
   const toStr = to ? format(to, "yyyy-MM-dd") : undefined
 
   const projectMap = useMemo(() => new Map(projects.map((p) => [p.id, p])), [projects])
+  const workspaceMap = useMemo(() => new Map(workspaces.map((w) => [w.id, w])), [workspaces])
 
   const effectiveWsIds = workspaceId
     ? [workspaceId]
@@ -90,14 +91,7 @@ export function ReportingPage({ workspaceId, orgScope = false }: { workspaceId?:
     { enabled: true }
   )
 
-  const timeLogs = useMemo(() => {
-    const logs = data?.time_logs ?? []
-    // Still scope to accessible projects via projectMap (client-side access filter)
-    if (!projectsLoading) {
-      return logs.filter((l) => !l.project_id || projectMap.has(l.project_id))
-    }
-    return logs
-  }, [data?.time_logs, projectMap, projectsLoading])
+  const timeLogs = data?.time_logs ?? []
 
   // Use server-provided aggregates for summary cards
   const totalMinutes = data?.total_minutes ?? 0
@@ -312,6 +306,9 @@ export function ReportingPage({ workspaceId, orgScope = false }: { workspaceId?:
               <thead>
                 <tr className="border-b border-border bg-muted/20">
                   <th className="text-left px-6 py-2.5 text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
+                    Workspace
+                  </th>
+                  <th className="text-left px-6 py-2.5 text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
                     Employee
                   </th>
                   <th className="text-left px-6 py-2.5 text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
@@ -334,9 +331,13 @@ export function ReportingPage({ workspaceId, orgScope = false }: { workspaceId?:
               <tbody className="divide-y divide-border">
                 {timeLogs.map((log) => {
                   const proj = log.project_id ? projectMap.get(log.project_id) : undefined
+                  const logWs = workspaceMap.get(log.workspace_id)?.slug ?? ws
                   const userName = userMap?.get(log.user_id)?.name ?? log.user_id.slice(0, 8) + "…"
                   return (
                     <tr key={log.id} className="hover:bg-muted/30 transition-colors">
+                      <td className="px-6 py-3 text-xs text-muted-foreground">
+                        {workspaceMap.get(log.workspace_id)?.name ?? "—"}
+                      </td>
                       <td className="px-6 py-3 text-xs font-medium">{userName}</td>
                       <td className="px-6 py-3 text-xs text-muted-foreground">
                         {proj?.name ?? (log.project_id ? "Unknown" : "—")}
@@ -344,7 +345,7 @@ export function ReportingPage({ workspaceId, orgScope = false }: { workspaceId?:
                       <td className="px-6 py-3">
                         {log.issue_identifier ? (
                           <Link
-                            to={`/${ws}/projects/${proj?.identifier}/issues/${log.issue_id}`}
+                            to={`/${logWs}/projects/${proj?.identifier}/issues/${log.issue_id}`}
                             className="font-mono text-xs text-indigo-600 dark:text-indigo-400 hover:underline"
                           >
                             {log.issue_identifier}
