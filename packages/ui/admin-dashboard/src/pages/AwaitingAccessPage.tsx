@@ -153,10 +153,6 @@ export function AwaitingAccessPage() {
     )
   }
 
-  const visibleResults = searchResults.filter((ws) =>
-    ws.name.toLowerCase().includes(query.toLowerCase())
-  )
-
   return (
     <div className="min-h-screen bg-[hsl(60_5%_96%)] dark:bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-[420px] space-y-6">
@@ -247,12 +243,12 @@ export function AwaitingAccessPage() {
               onFocus={() => setIsOpen(true)}
               className="bg-white dark:bg-card h-9 text-sm"
             />
-            {isOpen && visibleResults.length > 0 && (
+            {isOpen && searchResults.length > 0 && (
               <div
                 ref={dropdownRef}
                 className="absolute z-50 mt-1 w-full bg-white dark:bg-card border border-border rounded-md shadow-md overflow-hidden max-h-48 overflow-y-auto"
               >
-                {visibleResults.map((ws) => (
+                {searchResults.map((ws) => (
                   <button
                     key={ws.id}
                     type="button"

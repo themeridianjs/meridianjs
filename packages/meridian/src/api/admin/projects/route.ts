@@ -1,6 +1,7 @@
 import type { Response, NextFunction } from "express"
 import { requirePermission } from "@meridianjs/auth"
 import { createProjectWorkflow } from "../../../workflows/create-project.js"
+import { getAccessibleWorkspaceIds } from "../../utils/workspace-access.js"
 
 export const GET = async (req: any, res: Response) => {
   const projectService = req.scope.resolve("projectModuleService") as any
@@ -28,34 +29,15 @@ export const GET = async (req: any, res: Response) => {
       return
     }
 
-    const workspaceService = req.scope.resolve("workspaceModuleService") as any
-    const workspaceMemberService = req.scope.resolve("workspaceMemberModuleService") as any
-    const userId: string = req.user?.id
-
     // Determine which workspace IDs are being queried
-    let queriedWsIds: string[] | null = null
+    let queriedWsIds: string[] | undefined
     if (Array.isArray(filters.workspace_id)) {
       queriedWsIds = filters.workspace_id as string[]
     } else if (filters.workspace_id) {
       queriedWsIds = [filters.workspace_id as string]
     }
 
-    // Fetch workspace objects to check is_private
-    let workspaces: any[]
-    if (queriedWsIds) {
-      workspaces = (await Promise.all(
-        queriedWsIds.map((id: string) => workspaceService.retrieveWorkspace(id).catch(() => null))
-      )).filter(Boolean)
-    } else {
-      const [all] = await workspaceService.listAndCountWorkspaces({}, { limit: 1000 })
-      workspaces = all
-    }
-
-    // Keep public workspaces + private ones where user is a member
-    const memberWsIds = new Set<string>(await workspaceMemberService.getWorkspaceIdsForUser(userId))
-    const allowedIds = workspaces
-      .filter((ws: any) => !ws.is_private || memberWsIds.has(ws.id))
-      .map((ws: any) => ws.id)
+    const allowedIds = await getAccessibleWorkspaceIds(req, queriedWsIds)
 
     if (allowedIds.length === 0) {
       res.json({ projects: [], count: 0, limit, offset })

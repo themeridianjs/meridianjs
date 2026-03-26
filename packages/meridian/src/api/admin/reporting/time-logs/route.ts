@@ -3,6 +3,7 @@ import type { IssueModuleService } from "@meridianjs/issue"
 import type { WorkspaceMemberModuleService } from "@meridianjs/workspace-member"
 import type { TeamMemberModuleService } from "@meridianjs/team-member"
 import type { ProjectMemberModuleService } from "@meridianjs/project-member"
+import { getAccessibleWorkspaceIds } from "../../../utils/workspace-access.js"
 
 export const GET = async (req: any, res: Response) => {
   const issueService = req.scope.resolve("issueModuleService") as IssueModuleService
@@ -51,25 +52,7 @@ export const GET = async (req: any, res: Response) => {
   }
 
   if (isPrivileged) {
-    const workspaceService = req.scope.resolve("workspaceModuleService") as any
-    const workspaceMemberService = req.scope.resolve("workspaceMemberModuleService") as any
-    const userId: string = req.user?.id
-
-    let workspaces: any[]
-    if (wsIds.length > 0) {
-      workspaces = (await Promise.all(
-        wsIds.map((id) => workspaceService.retrieveWorkspace(id).catch(() => null))
-      )).filter(Boolean)
-    } else {
-      // No explicit workspace filter — scope to all workspaces the user can access
-      const [all] = await workspaceService.listAndCountWorkspaces({}, { limit: 1000 })
-      workspaces = all
-    }
-
-    const memberWsIds = new Set<string>(await workspaceMemberService.getWorkspaceIdsForUser(userId))
-    const allowedIds: string[] = workspaces
-      .filter((ws: any) => !ws.is_private || memberWsIds.has(ws.id))
-      .map((ws: any) => ws.id)
+    const allowedIds = await getAccessibleWorkspaceIds(req, wsIds.length > 0 ? wsIds : undefined)
 
     if (allowedIds.length === 0) {
       res.json({ time_logs: [], count: 0, total_minutes: 0, total_employees: 0, total_projects: 0, limit: 0, offset: 0 })
@@ -80,22 +63,24 @@ export const GET = async (req: any, res: Response) => {
     else filters.workspace_id = allowedIds
   }
 
-  if (!isPrivileged && wsIds.length > 0) {
+  if (!isPrivileged) {
     const userId = req.user?.id
     const workspaceMemberService = req.scope.resolve("workspaceMemberModuleService") as WorkspaceMemberModuleService
     const teamMemberService = req.scope.resolve("teamMemberModuleService") as TeamMemberModuleService
     const projectMemberService = req.scope.resolve("projectMemberModuleService") as ProjectMemberModuleService
 
-    // Hoist getUserTeamIds out of the loop — same result every iteration
     const userTeamIds = await teamMemberService.getUserTeamIds(userId)
+    const allAccessibleProjectIds = await projectMemberService.getAccessibleProjectIds(userId, userTeamIds)
 
-    // Verify membership in each requested workspace, collect accessible projects
-    const allAccessibleProjectIds: string[] = []
-    for (const wid of wsIds) {
-      const membership = await workspaceMemberService.getMembership(wid, userId)
-      if (!membership) continue // skip workspaces user isn't a member of
-      const projectIds = await projectMemberService.getAccessibleProjectIds(userId, userTeamIds)
-      allAccessibleProjectIds.push(...projectIds)
+    if (wsIds.length > 0) {
+      // Batch-check membership for all requested workspaces in one query
+      const memberships = await workspaceMemberService.listWorkspaceMembers(
+        { workspace_id: wsIds.length === 1 ? wsIds[0] : wsIds, user_id: userId } as any
+      )
+      if ((memberships as any[]).length === 0) {
+        res.json({ time_logs: [], count: 0, total_minutes: 0, total_employees: 0, total_projects: 0, limit: 0, offset: 0 })
+        return
+      }
     }
 
     if (filterProjectIds.length > 0) {

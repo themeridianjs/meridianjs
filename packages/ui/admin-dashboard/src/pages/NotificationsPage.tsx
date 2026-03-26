@@ -9,17 +9,18 @@ import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 
 const ENTITY_CONFIG: Record<string, { icon: React.FC<{ className?: string }>; label: string }> = {
-  issue:                    { icon: GitBranch,     label: "Issue" },
-  project:                  { icon: Layers,        label: "Project" },
-  comment:                  { icon: MessageSquare, label: "Comment" },
-  sprint:                   { icon: Zap,           label: "Sprint" },
-  workspace_access_request: { icon: UserPlus,      label: "Access Request" },
-  project_access_resolved:  { icon: UserPlus,      label: "Access Request" },
+  issue: { icon: GitBranch, label: "Issue" },
+  project: { icon: Layers, label: "Project" },
+  comment: { icon: MessageSquare, label: "Comment" },
+  sprint: { icon: Zap, label: "Sprint" },
+  workspace_access_request: { icon: UserPlus, label: "Access Request" },
+  project_access_request: { icon: UserPlus, label: "Access Request" },
+  project_access_resolved: { icon: UserPlus, label: "Access Request" },
 }
 
 function formatTime(dateStr: string): string {
   const date = new Date(dateStr)
-  if (isToday(date))     return formatDistanceToNow(date, { addSuffix: true })
+  if (isToday(date)) return formatDistanceToNow(date, { addSuffix: true })
   if (isYesterday(date)) return `Yesterday ${format(date, "h:mm a")}`
   return format(date, "MMM d, yyyy")
 }
@@ -30,7 +31,7 @@ export function NotificationsPage() {
 
   const { data: notifications, isLoading } = useNotifications()
   const { data: projects = [] } = useProjects()
-  const markAsRead    = useMarkAsRead()
+  const markAsRead = useMarkAsRead()
   const markAllAsRead = useMarkAllAsRead()
 
   const unreadCount = notifications?.filter((n) => !n.read).length ?? 0
@@ -49,7 +50,11 @@ export function NotificationsPage() {
     }
     if (notification.entity_type === "workspace_access_request") {
       const slug = notification.metadata?.workspace_slug ?? workspace
-      return `/${slug}/settings`
+      return `/${slug}/settings?tab=access-requests`
+    }
+    if (notification.entity_type === "project_access_request" && notification.metadata?.project_id) {
+      const project = projectById[notification.metadata.project_id]
+      if (project) return `/${workspace}/projects/${project.identifier}/access`
     }
     if (notification.entity_type === "project_access_resolved" && notification.metadata?.project_id) {
       const project = projectById[notification.metadata.project_id]
@@ -73,7 +78,7 @@ export function NotificationsPage() {
               onClick={() =>
                 markAllAsRead.mutate(undefined, {
                   onSuccess: () => toast.success("All marked as read"),
-                  onError:   () => toast.error("Failed"),
+                  onError: () => toast.error("Failed"),
                 })
               }
               disabled={markAllAsRead.isPending}
@@ -126,7 +131,7 @@ export function NotificationsPage() {
         ) : (
           <div className="divide-y divide-border">
             {notifications.map((notification) => {
-              const cfg  = ENTITY_CONFIG[notification.entity_type] ?? { icon: Bell, label: notification.entity_type }
+              const cfg = ENTITY_CONFIG[notification.entity_type] ?? { icon: Bell, label: notification.entity_type }
               const Icon = cfg.icon
               const link = getLink(notification)
 

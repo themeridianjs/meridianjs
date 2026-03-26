@@ -1,30 +1,5 @@
 import type { Response, NextFunction } from "express"
-
-async function resolveProjectAndAccess(req: any, res: Response): Promise<{ project: any; isAuthorized: boolean } | null> {
-  const projectService = req.scope.resolve("projectModuleService") as any
-  const project = await projectService.retrieveProject(req.params.id).catch(() => null)
-  if (!project) {
-    res.status(404).json({ error: { message: "Project not found" } })
-    return null
-  }
-
-  const roles: string[] = req.user?.roles ?? []
-  const isGlobalAdmin = roles.includes("super-admin") || roles.includes("admin")
-  if (isGlobalAdmin) return { project, isAuthorized: true }
-
-  // Check workspace admin
-  const workspaceMemberService = req.scope.resolve("workspaceMemberModuleService") as any
-  const wsMembership = await workspaceMemberService.getMembership(project.workspace_id, req.user?.id)
-  if (wsMembership?.role === "admin") return { project, isAuthorized: true }
-
-  // Check project manager
-  const projectMemberService = req.scope.resolve("projectMemberModuleService") as any
-  const members = await projectMemberService.listProjectMembers(project.id)
-  const myMembership = members.find((m: any) => m.user_id === req.user?.id)
-  if (myMembership?.role === "manager") return { project, isAuthorized: true }
-
-  return { project, isAuthorized: false }
-}
+import { resolveProjectAndAccess } from "../../../../utils/project-access.js"
 
 export const GET = async (req: any, res: Response, next: NextFunction) => {
   try {
@@ -117,9 +92,17 @@ export const POST = async (req: any, res: Response, next: NextFunction) => {
       for (const manager of managers) {
         await notificationService.createNotification({
           user_id: manager.user_id,
-          title: "New project access request",
-          body: `${requesterName} requested access to "${project.name}"`,
-          type: "project_access_requested",
+          entity_type: "project_access_request",
+          entity_id: access_request.id,
+          action: "access_requested",
+          message: `${requesterName} requested access to "${project.name}"`,
+          workspace_id: project.workspace_id,
+          metadata: {
+            requesting_user_id: userId,
+            requesting_user_name: requesterName,
+            project_id: project.id,
+            project_name: project.name,
+          },
         }).catch(() => {})
       }
     } catch {

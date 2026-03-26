@@ -1,26 +1,5 @@
 import type { Response } from "express"
-
-async function assertWorkspaceAdmin(req: any, res: Response): Promise<boolean> {
-  const workspaceService = req.scope.resolve("workspaceModuleService") as any
-  const workspaceMemberService = req.scope.resolve("workspaceMemberModuleService") as any
-
-  const workspace = await workspaceService.retrieveWorkspace(req.params.id)
-  if (!workspace) {
-    res.status(404).json({ error: { message: "Workspace not found" } })
-    return false
-  }
-
-  const roles: string[] = req.user?.roles ?? []
-  const isGlobalAdmin = roles.includes("super-admin") || roles.includes("admin")
-  if (isGlobalAdmin) return true
-
-  const membership = await workspaceMemberService.getMembership(req.params.id, req.user?.id)
-  if (!membership || membership.role !== "admin") {
-    res.status(403).json({ error: { message: "Workspace admin access required" } })
-    return false
-  }
-  return true
-}
+import { assertWorkspaceAdmin } from "../../../../utils/workspace-access.js"
 
 export const GET = async (req: any, res: Response) => {
   if (!await assertWorkspaceAdmin(req, res)) return
@@ -82,6 +61,11 @@ export const POST = async (req: any, res: Response) => {
   }
 
   const { message } = req.body
+  if (message && typeof message === "string" && message.length > 1000) {
+    res.status(400).json({ error: { message: "message must be 1000 characters or fewer" } })
+    return
+  }
+
   const accessRequest = await workspaceMemberService.createAccessRequest({
     workspace_id: req.params.id,
     user_id: userId,

@@ -12,7 +12,7 @@ import {
   Shield,
   BarChart2,
   User as UserIcon,
-  UserPlus,
+  Lock,
 } from "lucide-react"
 import { toast } from "sonner"
 import { useProjects } from "@/api/hooks/useProjects"
@@ -59,7 +59,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 function WorkspaceSwitcher() {
   const { workspace, setWorkspace } = useAuth()
   const { data: workspaces } = useWorkspaces()
-  const { data: allPublic = [] } = useSearchWorkspaces("")
+  const [dropdownOpen, setDropdownOpen] = useState(false)
+  const { data: allPublic = [] } = useSearchWorkspaces("", { enabled: dropdownOpen })
   const requestAccess = useRequestWorkspaceAccess()
   const navigate = useNavigate()
 
@@ -68,8 +69,8 @@ function WorkspaceSwitcher() {
   const [confirmWorkspace, setConfirmWorkspace] = useState<{ id: string; name: string } | null>(null)
   const [confirmMessage, setConfirmMessage] = useState("")
 
-  const memberIds = new Set(workspaces?.map((w) => w.id) ?? [])
-  const joinable = allPublic.filter((w) => !memberIds.has(w.id))
+  const sortedWorkspaces = [...(workspaces ?? [])].sort((a, b) => a.name.localeCompare(b.name))
+  const joinable = allPublic.filter((w) => !w.is_member).sort((a, b) => a.name.localeCompare(b.name))
 
   const handleConfirmRequest = () => {
     if (!confirmWorkspace) return
@@ -93,7 +94,7 @@ function WorkspaceSwitcher() {
     <>
     <SidebarMenu>
       <SidebarMenuItem>
-        <DropdownMenu>
+        <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton
               size="lg"
@@ -125,7 +126,7 @@ function WorkspaceSwitcher() {
               My workspaces
             </DropdownMenuLabel>
             <div className="max-h-48 overflow-y-auto">
-              {workspaces?.map((w) => (
+              {sortedWorkspaces.map((w) => (
                 <DropdownMenuItem
                   key={w.id}
                   className="cursor-pointer gap-2 p-2"
@@ -172,7 +173,7 @@ function WorkspaceSwitcher() {
                         {requested ? (
                           <span className="text-[10px] text-muted-foreground shrink-0">Requested</span>
                         ) : (
-                          <UserPlus className="size-3.5 text-muted-foreground shrink-0" />
+                          <Lock className="size-3.5 text-muted-foreground shrink-0" />
                         )}
                       </DropdownMenuItem>
                     )

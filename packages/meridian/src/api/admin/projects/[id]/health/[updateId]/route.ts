@@ -19,6 +19,13 @@ export const GET = async (req: any, res: Response) => {
 export const PUT = async (req: any, res: Response) => {
   requirePermission("project:update")(req, res, async () => {
     const { health, title, summary, collaborators, report_date } = req.body
+
+  const validHealth = ["on_track", "delayed", "on_hold", "completed"]
+  if (health !== undefined && !validHealth.includes(health)) {
+    res.status(400).json({ error: { message: `health must be one of: ${validHealth.join(", ")}` } })
+    return
+  }
+
   const svc = req.scope.resolve("projectModuleService") as any
   const activityService = req.scope.resolve("activityModuleService") as any
   const project = await svc.retrieveProject(req.params.id).catch(() => null)

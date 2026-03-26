@@ -1,4 +1,6 @@
 import type { Response } from "express"
+import { assertWorkspaceAdmin } from "../../../../../utils/workspace-access.js"
+import { assignDefaultUserRole } from "../../../../../utils/assign-default-role.js"
 
 // Owner cancels their own pending request
 export const DELETE = async (req: any, res: Response) => {
@@ -23,27 +25,13 @@ export const DELETE = async (req: any, res: Response) => {
 }
 
 export const PATCH = async (req: any, res: Response) => {
+  if (!await assertWorkspaceAdmin(req, res)) return
+
   const workspaceService = req.scope.resolve("workspaceModuleService") as any
   const workspaceMemberService = req.scope.resolve("workspaceMemberModuleService") as any
   const notificationService = req.scope.resolve("notificationModuleService") as any
-  const userService = req.scope.resolve("userModuleService") as any
 
   const workspace = await workspaceService.retrieveWorkspace(req.params.id)
-  if (!workspace) {
-    res.status(404).json({ error: { message: "Workspace not found" } })
-    return
-  }
-
-  // Only workspace admins or global admins can approve/deny
-  const roles: string[] = req.user?.roles ?? []
-  const isGlobalAdmin = roles.includes("super-admin") || roles.includes("admin")
-  if (!isGlobalAdmin) {
-    const membership = await workspaceMemberService.getMembership(req.params.id, req.user?.id)
-    if (!membership || membership.role !== "admin") {
-      res.status(403).json({ error: { message: "Workspace admin access required" } })
-      return
-    }
-  }
 
   const accessRequest = await workspaceMemberService.getAccessRequest(req.params.requestId)
   if (!accessRequest || accessRequest.workspace_id !== req.params.id) {
@@ -64,16 +52,7 @@ export const PATCH = async (req: any, res: Response) => {
 
   if (action === "approve") {
     await workspaceMemberService.ensureMember(req.params.id, accessRequest.user_id, "member")
-    // Assign "User" system role by default
-    try {
-      const appRoleService = req.scope.resolve("appRoleModuleService") as any
-      const [userRoles] = await appRoleService.listAndCountAppRoles({ name: "User", is_system: true }, { limit: 1 })
-      if (userRoles.length > 0) {
-        await userService.updateUser(accessRequest.user_id, { app_role_id: userRoles[0].id })
-      }
-    } catch {
-      // Non-fatal
-    }
+    await assignDefaultUserRole(req, accessRequest.user_id)
   }
 
   const updated = await workspaceMemberService.updateAccessRequestStatus(

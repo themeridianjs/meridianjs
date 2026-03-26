@@ -1,29 +1,14 @@
 import type { Response, NextFunction } from "express"
 import { requirePermission } from "@meridianjs/auth"
+import { assertWorkspaceAccess } from "../../../../../utils/workspace-access.js"
+import { assignDefaultUserRole } from "../../../../../utils/assign-default-role.js"
 
 export const POST = async (req: any, res: Response, next: NextFunction) => {
   requirePermission("member:invite")(req, res, async () => {
     try {
-      const workspaceService = req.scope.resolve("workspaceModuleService") as any
+      if (!await assertWorkspaceAccess(req, res)) return
+
       const workspaceMemberService = req.scope.resolve("workspaceMemberModuleService") as any
-
-      const workspace = await workspaceService.retrieveWorkspace(req.params.id)
-      if (!workspace) {
-        res.status(404).json({ error: { message: "Workspace not found" } })
-        return
-      }
-
-      const roles: string[] = req.user?.roles ?? []
-      const isPrivileged = roles.includes("super-admin") || roles.includes("admin")
-
-      if (workspace.is_private || !isPrivileged) {
-        const membership = await workspaceMemberService.getMembership(req.params.id, req.user?.id)
-        if (!membership) {
-          res.status(403).json({ error: { message: "Forbidden — not a member of this workspace" } })
-          return
-        }
-      }
-
       const { user_ids, role, app_role_id } = req.body
 
       if (!Array.isArray(user_ids) || user_ids.length === 0) {
@@ -32,6 +17,16 @@ export const POST = async (req: any, res: Response, next: NextFunction) => {
       }
 
       const wsRole: "admin" | "member" = role === "member" ? "member" : "admin"
+
+      // Validate all user IDs exist before creating memberships
+      const userService = req.scope.resolve("userModuleService") as any
+      const userMap = await userService.listUsersByIds(user_ids)
+      const invalidIds = user_ids.filter((id: string) => !userMap.has(id))
+      if (invalidIds.length > 0) {
+        res.status(404).json({ error: { message: `Users not found: ${invalidIds.join(", ")}` } })
+        return
+      }
+
       let added = 0
       let skipped = 0
 
@@ -61,25 +56,9 @@ export const POST = async (req: any, res: Response, next: NextFunction) => {
         }).catch(() => {})
       }
 
-      // Assign custom app role — or default to "User" system role
-      try {
-        const userService = req.scope.resolve("userModuleService") as any
-        if (app_role_id) {
-          for (const userId of user_ids) {
-            await userService.updateUser(userId, { app_role_id }).catch(() => {})
-          }
-        } else {
-          const appRoleService = req.scope.resolve("appRoleModuleService") as any
-          const [userRoles] = await appRoleService.listAndCountAppRoles({ name: "User", is_system: true }, { limit: 1 })
-          if (userRoles.length > 0) {
-            const defaultRoleId = userRoles[0].id
-            for (const userId of user_ids) {
-              await userService.updateUser(userId, { app_role_id: defaultRoleId }).catch(() => {})
-            }
-          }
-        }
-      } catch {
-        // Non-fatal
+      // Assign app roles
+      for (const userId of user_ids) {
+        await assignDefaultUserRole(req, userId, app_role_id)
       }
 
       res.status(201).json({ added, skipped })
