@@ -1,33 +1,10 @@
 import type { Response } from "express"
 import { requirePermission } from "@meridianjs/auth"
 import { createInvitationWorkflow } from "../../../../../workflows/create-invitation.js"
-
-async function assertWorkspaceMembership(req: any, res: Response): Promise<boolean> {
-  const workspaceService = req.scope.resolve("workspaceModuleService") as any
-  const workspaceMemberService = req.scope.resolve("workspaceMemberModuleService") as any
-
-  const workspace = await workspaceService.retrieveWorkspace(req.params.id)
-  if (!workspace) {
-    res.status(404).json({ error: { message: "Workspace not found" } })
-    return false
-  }
-
-  const roles: string[] = req.user?.roles ?? []
-  const isPrivileged = roles.includes("super-admin") || roles.includes("admin")
-
-  // Private workspaces: always require membership regardless of role
-  if (workspace.is_private || !isPrivileged) {
-    const membership = await workspaceMemberService.getMembership(req.params.id, req.user?.id)
-    if (!membership) {
-      res.status(403).json({ error: { message: "Forbidden — not a member of this workspace" } })
-      return false
-    }
-  }
-  return true
-}
+import { assertWorkspaceAccess } from "../../../../utils/workspace-access.js"
 
 export const GET = async (req: any, res: Response) => {
-  if (!await assertWorkspaceMembership(req, res)) return
+  if (!await assertWorkspaceAccess(req, res)) return
   const svc = req.scope.resolve("invitationModuleService") as any
   const [invitations, count] = await svc.listAndCountInvitations(
     { workspace_id: req.params.id },
@@ -38,7 +15,7 @@ export const GET = async (req: any, res: Response) => {
 
 export const POST = async (req: any, res: Response) => {
   requirePermission("member:invite")(req, res, async () => {
-    if (!await assertWorkspaceMembership(req, res)) return
+    if (!await assertWorkspaceAccess(req, res)) return
     const { email, role, app_role_id } = req.body
 
   if (!role || !["super-admin", "admin", "member"].includes(role)) {

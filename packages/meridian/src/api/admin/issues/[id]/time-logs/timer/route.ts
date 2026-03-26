@@ -1,8 +1,28 @@
 import type { Response } from "express"
 import { requirePermission } from "@meridianjs/auth"
 import { sseManager } from "@meridianjs/framework"
+import { hasProjectAccess } from "../../../../../utils/project-access.js"
+
+async function assertIssueAccess(req: any, res: Response): Promise<boolean> {
+  const issueService = req.scope.resolve("issueModuleService") as any
+  const issue = await issueService.retrieveIssue(req.params.id).catch(() => null)
+  if (!issue) {
+    res.status(404).json({ error: { message: "Issue not found" } })
+    return false
+  }
+  if (issue.project_id) {
+    const projectService = req.scope.resolve("projectModuleService") as any
+    const project = await projectService.retrieveProject(issue.project_id).catch(() => null)
+    if (project && !await hasProjectAccess(req, project)) {
+      res.status(403).json({ error: { message: "Forbidden" } })
+      return false
+    }
+  }
+  return true
+}
 
 export const GET = async (req: any, res: Response) => {
+  if (!await assertIssueAccess(req, res)) return
   const issueService = req.scope.resolve("issueModuleService") as any
   const active = await issueService.getActiveTimer(req.params.id, req.user?.id ?? "system")
   res.json({ active_timer: active ?? null })
@@ -10,6 +30,7 @@ export const GET = async (req: any, res: Response) => {
 
 export const POST = async (req: any, res: Response) => {
   requirePermission("issue:update")(req, res, async () => {
+    if (!await assertIssueAccess(req, res)) return
     const issueService = req.scope.resolve("issueModuleService") as any
     const { action } = req.body
     if (action !== "start" && action !== "stop") {

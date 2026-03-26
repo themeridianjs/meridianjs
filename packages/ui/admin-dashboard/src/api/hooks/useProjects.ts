@@ -73,6 +73,7 @@ export function useProjects(options?: { allWorkspaces?: boolean; workspaceIds?: 
     },
     select: (data) => data.projects,
     enabled: scopeToWorkspace ? !!workspace?.id : true,
+    staleTime: 1000 * 60 * 2,
   })
 }
 

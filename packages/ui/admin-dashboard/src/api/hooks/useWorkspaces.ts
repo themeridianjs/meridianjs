@@ -29,6 +29,7 @@ export function useWorkspaces(enabledOrOptions: boolean | { orgScope?: boolean; 
     select: (data) => data.workspaces,
     enabled,
     refetchInterval,
+    staleTime: 1000 * 60 * 2,
   })
 }
 
@@ -102,6 +103,7 @@ export function useInvitations(workspaceId: string) {
       ),
     select: (data) => data.invitations,
     enabled: !!workspaceId,
+    staleTime: 1000 * 60 * 2,
   })
 }
 
@@ -160,18 +162,7 @@ export function useWorkspaceMembers(workspaceId: string) {
       ),
     select: (data) => data.members,
     enabled: !!workspaceId,
-  })
-}
-
-export function useAddWorkspaceMember(workspaceId: string) {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: (data: { user_id: string; role: "admin" | "member"; app_role_id?: string | null }) =>
-      api.post<{ member: WorkspaceMember }>(`/admin/workspaces/${workspaceId}/members`, data),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: memberKeys.list(workspaceId) })
-      qc.invalidateQueries({ queryKey: ["workspaces"] })
-    },
+    staleTime: 1000 * 60 * 2,
   })
 }
 
@@ -183,17 +174,6 @@ export function useAddWorkspaceMembersBatch(workspaceId: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: memberKeys.list(workspaceId) })
       qc.invalidateQueries({ queryKey: ["workspaces"] })
-    },
-  })
-}
-
-export function useUpdateWorkspaceMemberRole(workspaceId: string) {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: ({ userId, role }: { userId: string; role: "admin" | "member" }) =>
-      api.patch(`/admin/workspaces/${workspaceId}/members/${userId}`, { role }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: memberKeys.list(workspaceId) })
     },
   })
 }
@@ -234,6 +214,7 @@ export function useTeams(workspaceId: string) {
       api.get<{ teams: Team[]; count: number }>(`/admin/workspaces/${workspaceId}/teams`),
     select: (data) => data.teams,
     enabled: !!workspaceId,
+    staleTime: 1000 * 60 * 2,
   })
 }
 
@@ -242,17 +223,6 @@ export function useCreateTeam(workspaceId: string) {
   return useMutation({
     mutationFn: (data: { name: string; description?: string; icon?: string }) =>
       api.post<{ team: Team }>(`/admin/workspaces/${workspaceId}/teams`, data),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: teamKeys.list(workspaceId) })
-    },
-  })
-}
-
-export function useUpdateTeam(workspaceId: string) {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: ({ teamId, ...data }: { teamId: string; name?: string; description?: string; icon?: string }) =>
-      api.put<{ team: Team }>(`/admin/workspaces/${workspaceId}/teams/${teamId}`, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: teamKeys.list(workspaceId) })
     },
@@ -323,7 +293,8 @@ export interface WorkspaceSearchResult {
   has_pending_request: boolean
 }
 
-export function useSearchWorkspaces(query: string) {
+export function useSearchWorkspaces(query: string, options?: { enabled?: boolean }) {
+  const enabled = options?.enabled ?? true
   return useQuery({
     queryKey: ["workspaces", "search", query],
     queryFn: () =>
@@ -331,7 +302,7 @@ export function useSearchWorkspaces(query: string) {
         `/admin/workspaces/search?q=${encodeURIComponent(query)}`
       ),
     select: (data) => data.workspaces,
-    enabled: true,
+    enabled,
     staleTime: 10_000,
   })
 }
@@ -361,6 +332,7 @@ export function useWorkspaceAccessRequests(workspaceId: string) {
       ),
     select: (data) => data.access_requests,
     enabled: !!workspaceId,
+    staleTime: 1000 * 60 * 2,
   })
 }
 

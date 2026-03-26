@@ -7,7 +7,6 @@ import { randomBytes, randomUUID } from "crypto"
 const BCRYPT_ROUNDS = 12
 const JWT_EXPIRES_IN = "7d"
 const JWT_EXPIRES_MS = 7 * 24 * 60 * 60 * 1000
-const RESET_TOKEN_EXPIRES_MS = 30 * 60 * 1000 // 30 minutes
 
 export type UserRole = "super-admin" | "admin" | "moderator" | "member"
 

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
+import { useQueryClient } from "@tanstack/react-query"
 import { useWorkspaces, useCreateWorkspace, useSearchWorkspaces, useRequestWorkspaceAccess } from "@/api/hooks/useWorkspaces"
 import { useAuth } from "@/stores/auth"
 import type { WorkspaceRef } from "@/stores/auth"
@@ -10,6 +11,7 @@ import { AppLogo } from "@/components/AppLogo"
 import { getAppName } from "@/lib/branding"
 import { Lock, AlertTriangle, CheckCircle2 } from "lucide-react"
 import { toast } from "sonner"
+import { createUserEventSource } from "@/lib/sse"
 import type { ApiError } from "@/api/client"
 import { cn } from "@/lib/utils"
 
@@ -30,9 +32,29 @@ export function SetupWorkspacePage() {
   const [conflictWorkspace, setConflictWorkspace] = useState<ConflictWorkspace | null>(null)
   const [requestSent, setRequestSent] = useState(false)
   const navigate = useNavigate()
-  const { setWorkspace } = useAuth()
+  const queryClient = useQueryClient()
+  const { token, setWorkspace } = useAuth()
 
-  // Poll for access approval after request is sent
+  // SSE: listen for real-time access request approval (instant redirect)
+  useEffect(() => {
+    if (!requestSent || !token) return
+    const es = createUserEventSource(token)
+
+    es.addEventListener("workspace.access_request_resolved", (e: MessageEvent) => {
+      try {
+        const data = JSON.parse(e.data ?? "{}")
+        if (data.action === "approve") {
+          queryClient.invalidateQueries({ queryKey: ["workspaces"] })
+        }
+      } catch { /* ignore parse errors */ }
+    })
+
+    es.onerror = () => { /* EventSource auto-reconnects */ }
+
+    return () => es.close()
+  }, [requestSent, token, queryClient])
+
+  // Poll for access approval as fallback
   const { data: myWorkspaces } = useWorkspaces(requestSent ? { refetchInterval: 15_000 } : false)
   useEffect(() => {
     if (!requestSent) return

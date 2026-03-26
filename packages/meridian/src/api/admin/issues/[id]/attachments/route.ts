@@ -1,8 +1,28 @@
 import type { Response } from "express"
 import { requirePermission } from "@meridianjs/auth"
+import { hasProjectAccess } from "../../../../utils/project-access.js"
 import { processUpload } from "../../../../../utils/upload.js"
 
+async function assertIssueAccess(req: any, res: Response): Promise<boolean> {
+  const issueService = req.scope.resolve("issueModuleService") as any
+  const issue = await issueService.retrieveIssue(req.params.id).catch(() => null)
+  if (!issue) {
+    res.status(404).json({ error: { message: "Issue not found" } })
+    return false
+  }
+  if (issue.project_id) {
+    const projectService = req.scope.resolve("projectModuleService") as any
+    const project = await projectService.retrieveProject(issue.project_id).catch(() => null)
+    if (project && !await hasProjectAccess(req, project)) {
+      res.status(403).json({ error: { message: "Forbidden" } })
+      return false
+    }
+  }
+  return true
+}
+
 export const GET = async (req: any, res: Response) => {
+  if (!await assertIssueAccess(req, res)) return
   const issueService = req.scope.resolve("issueModuleService") as any
   const attachments = await issueService.listAttachmentsByIssue(req.params.id)
   res.json({ attachments })
@@ -10,6 +30,7 @@ export const GET = async (req: any, res: Response) => {
 
 export const POST = async (req: any, res: Response) => {
   requirePermission("issue:update")(req, res, async () => {
+    if (!await assertIssueAccess(req, res)) return
     const upload = await processUpload(req, res, "file", "issue-attachments")
     if (!upload) {
       res.status(400).json({ error: { message: "No file uploaded. Use multipart/form-data with field name 'file'." } })

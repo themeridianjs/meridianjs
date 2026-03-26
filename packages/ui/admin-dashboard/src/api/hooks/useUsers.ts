@@ -150,7 +150,7 @@ export interface LightweightUser {
 
 export function useAllUsers() {
   return useQuery({
-    queryKey: [...userKeys.all, "map-list"],
+    queryKey: [...userKeys.all, "map"],
     queryFn: () => api.get<UserMapResponse>("/admin/users/map"),
     select: (data): LightweightUser[] => data.users,
     staleTime: 1000 * 60 * 5,

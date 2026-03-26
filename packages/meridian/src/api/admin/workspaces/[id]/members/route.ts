@@ -1,28 +1,7 @@
 import type { Response, NextFunction } from "express"
 import { requirePermission } from "@meridianjs/auth"
-
-async function assertWorkspaceAccess(req: any, res: Response): Promise<boolean> {
-  const workspaceService = req.scope.resolve("workspaceModuleService") as any
-  const workspaceMemberService = req.scope.resolve("workspaceMemberModuleService") as any
-
-  const workspace = await workspaceService.retrieveWorkspace(req.params.id)
-  if (!workspace) {
-    res.status(404).json({ error: { message: "Workspace not found" } })
-    return false
-  }
-
-  const roles: string[] = req.user?.roles ?? []
-  const isPrivileged = roles.includes("super-admin") || roles.includes("admin")
-
-  if (workspace.is_private || !isPrivileged) {
-    const membership = await workspaceMemberService.getMembership(req.params.id, req.user?.id)
-    if (!membership) {
-      res.status(403).json({ error: { message: "Forbidden — not a member of this workspace" } })
-      return false
-    }
-  }
-  return true
-}
+import { assertWorkspaceAccess } from "../../../../utils/workspace-access.js"
+import { assignDefaultUserRole } from "../../../../utils/assign-default-role.js"
 
 export const GET = async (req: any, res: Response) => {
   if (!await assertWorkspaceAccess(req, res)) return
@@ -66,6 +45,13 @@ export const POST = async (req: any, res: Response, next: NextFunction) => {
         return
       }
 
+      const userService = req.scope.resolve("userModuleService") as any
+      const targetUser = await userService.retrieveUser(user_id).catch(() => null)
+      if (!targetUser) {
+        res.status(404).json({ error: { message: "User not found" } })
+        return
+      }
+
       const existing = await workspaceMemberService.getMembership(req.params.id, user_id)
       if (existing) {
         res.status(409).json({ error: { message: "User is already a member of this workspace" } })
@@ -81,21 +67,7 @@ export const POST = async (req: any, res: Response, next: NextFunction) => {
         role: wsRole,
       })
 
-      // Assign custom app role — or default to "User" system role
-      try {
-        const userService = req.scope.resolve("userModuleService") as any
-        if (app_role_id) {
-          await userService.updateUser(user_id, { app_role_id })
-        } else {
-          const appRoleService = req.scope.resolve("appRoleModuleService") as any
-          const [userRoles] = await appRoleService.listAndCountAppRoles({ name: "User", is_system: true }, { limit: 1 })
-          if (userRoles.length > 0) {
-            await userService.updateUser(user_id, { app_role_id: userRoles[0].id })
-          }
-        }
-      } catch {
-        // Non-fatal
-      }
+      await assignDefaultUserRole(req, user_id, app_role_id)
 
       const eventBus = req.scope.resolve("eventBus") as any
       eventBus.emit({

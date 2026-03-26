@@ -12,7 +12,7 @@ export interface ReportingMember {
 export function useReportingMembers(workspaceIds: string[], projectIds: string[], options?: { orgScope?: boolean }) {
   const orgScope = options?.orgScope ?? false
   return useQuery({
-    queryKey: ["reporting", "members", workspaceIds, projectIds, orgScope],
+    queryKey: ["reporting", "members", workspaceIds.join(","), projectIds.join(","), orgScope],
     queryFn: () => {
       const params = new URLSearchParams()
       if (workspaceIds.length) params.set("workspace_ids", workspaceIds.join(","))

@@ -1,4 +1,5 @@
 import type { Response } from "express"
+import { getAccessibleWorkspaceIds } from "../../../utils/workspace-access.js"
 
 export const GET = async (req: any, res: Response) => {
   const issueService = req.scope.resolve("issueModuleService") as any
@@ -13,14 +14,7 @@ export const GET = async (req: any, res: Response) => {
     return
   }
 
-  // Determine accessible workspaces: public ones + private ones where user is a member
-  const workspaceService = req.scope.resolve("workspaceModuleService") as any
-  const workspaceMemberService = req.scope.resolve("workspaceMemberModuleService") as any
-  const [allWorkspaces] = await workspaceService.listAndCountWorkspaces({}, { limit: 1000 })
-  const memberWsIds = new Set<string>(await workspaceMemberService.getWorkspaceIdsForUser(userId))
-  let accessibleWsIds: string[] = (allWorkspaces as any[])
-    .filter((ws: any) => !ws.is_private || memberWsIds.has(ws.id))
-    .map((ws: any) => ws.id)
+  let accessibleWsIds = await getAccessibleWorkspaceIds(req)
 
   // If caller passed workspace_id filter, intersect with accessible IDs
   if (req.query.workspace_id) {
@@ -36,21 +30,22 @@ export const GET = async (req: any, res: Response) => {
 
   const wsFilter = accessibleWsIds.length === 1 ? accessibleWsIds[0] : { $in: accessibleWsIds }
 
-  // Fetch issues assigned to this user within accessible workspaces
-  let [issues, count] = await issueService.listAndCountIssues(
-    { workspace_id: wsFilter, assignee_ids: { $contains: userId } },
-    { limit: 500, offset: 0, orderBy: { updated_at: "DESC" } }
-  )
-
-  // Apply optional filters
+  // Build DB filters — push priority/type into query instead of post-filtering
+  const issueFilters: Record<string, unknown> = { workspace_id: wsFilter, assignee_ids: { $contains: userId } }
   if (req.query.priority) {
     const priorities = (req.query.priority as string).split(",").filter(Boolean)
-    issues = issues.filter((i: any) => priorities.includes(i.priority))
+    issueFilters.priority = priorities.length === 1 ? priorities[0] : { $in: priorities }
   }
   if (req.query.type) {
     const types = (req.query.type as string).split(",").filter(Boolean)
-    issues = issues.filter((i: any) => types.includes(i.type))
+    issueFilters.type = types.length === 1 ? types[0] : { $in: types }
   }
+
+  // Fetch issues assigned to this user within accessible workspaces
+  let [issues, count] = await issueService.listAndCountIssues(
+    issueFilters,
+    { limit: 500, offset: 0, orderBy: { updated_at: "DESC" } }
+  )
 
   // Collect unique project IDs for enrichment
   const projectIds = [...new Set(issues.map((i: any) => i.project_id))] as string[]
@@ -68,17 +63,17 @@ export const GET = async (req: any, res: Response) => {
       projectMap.set(p.id, { name: p.name, identifier: p.identifier })
     }
 
-    // Fetch statuses for all projects
-    for (const pid of projectIds) {
-      try {
-        const statuses = await projectService.listProjectStatuss({ project_id: pid }, { limit: 50 })
-        for (const s of statuses) {
-          // Key by project_id + status_key for lookup
-          statusMap.set(`${pid}:${s.key}`, { name: s.name, color: s.color, category: s.category })
-        }
-      } catch {
-        // Project may not have custom statuses
+    // Batch-fetch statuses for all projects in one query
+    try {
+      const allStatuses = await projectService.listProjectStatuss(
+        { project_id: projectIds.length === 1 ? projectIds[0] : { $in: projectIds } },
+        { limit: projectIds.length * 50 }
+      )
+      for (const s of allStatuses) {
+        statusMap.set(`${s.project_id}:${s.key}`, { name: s.name, color: s.color, category: s.category })
       }
+    } catch {
+      // Projects may not have custom statuses
     }
   }
 

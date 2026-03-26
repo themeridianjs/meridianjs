@@ -2,6 +2,7 @@ import type { Response, NextFunction } from "express"
 import { requirePermission } from "@meridianjs/auth"
 import { createIssueWorkflow } from "../../../workflows/create-issue.js"
 import { hasProjectAccess } from "../../utils/project-access.js"
+import { getAccessibleWorkspaceIds } from "../../utils/workspace-access.js"
 
 export const GET = async (req: any, res: Response) => {
   const issueService = req.scope.resolve("issueModuleService") as any
@@ -55,7 +56,6 @@ export const GET = async (req: any, res: Response) => {
   } else {
     // No project scope — restrict to projects the caller can access
     const projectService = req.scope.resolve("projectModuleService") as any
-    const workspaceMemberService = req.scope.resolve("workspaceMemberModuleService") as any
     const userId: string = req.user?.id
     const roles: string[] = req.user?.roles ?? []
     const isPrivileged = roles.includes("super-admin") || roles.includes("admin")
@@ -63,12 +63,7 @@ export const GET = async (req: any, res: Response) => {
     let accessibleProjectIds: string[]
 
     if (isPrivileged) {
-      const workspaceService = req.scope.resolve("workspaceModuleService") as any
-      const [allWorkspaces] = await workspaceService.listAndCountWorkspaces({}, { limit: 1000 })
-      const memberWsIds = new Set<string>(await workspaceMemberService.getWorkspaceIdsForUser(userId))
-      const allowedWsIds = (allWorkspaces as any[])
-        .filter((ws: any) => !ws.is_private || memberWsIds.has(ws.id))
-        .map((ws: any) => ws.id)
+      const allowedWsIds = await getAccessibleWorkspaceIds(req)
 
       if (allowedWsIds.length === 0) {
         res.json({ issues: [], count: 0, limit, offset })

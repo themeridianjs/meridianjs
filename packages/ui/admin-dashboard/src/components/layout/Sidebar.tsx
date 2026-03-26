@@ -59,7 +59,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 function WorkspaceSwitcher() {
   const { workspace, setWorkspace } = useAuth()
   const { data: workspaces } = useWorkspaces()
-  const { data: allPublic = [] } = useSearchWorkspaces("")
+  const [dropdownOpen, setDropdownOpen] = useState(false)
+  const { data: allPublic = [] } = useSearchWorkspaces("", { enabled: dropdownOpen })
   const requestAccess = useRequestWorkspaceAccess()
   const navigate = useNavigate()
 
@@ -68,8 +69,9 @@ function WorkspaceSwitcher() {
   const [confirmWorkspace, setConfirmWorkspace] = useState<{ id: string; name: string } | null>(null)
   const [confirmMessage, setConfirmMessage] = useState("")
 
+  const sortedWorkspaces = [...(workspaces ?? [])].sort((a, b) => a.name.localeCompare(b.name))
   const memberIds = new Set(workspaces?.map((w) => w.id) ?? [])
-  const joinable = allPublic.filter((w) => !memberIds.has(w.id))
+  const joinable = allPublic.filter((w) => !memberIds.has(w.id)).sort((a, b) => a.name.localeCompare(b.name))
 
   const handleConfirmRequest = () => {
     if (!confirmWorkspace) return
@@ -93,7 +95,7 @@ function WorkspaceSwitcher() {
     <>
     <SidebarMenu>
       <SidebarMenuItem>
-        <DropdownMenu>
+        <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton
               size="lg"
@@ -125,7 +127,7 @@ function WorkspaceSwitcher() {
               My workspaces
             </DropdownMenuLabel>
             <div className="max-h-48 overflow-y-auto">
-              {workspaces?.map((w) => (
+              {sortedWorkspaces.map((w) => (
                 <DropdownMenuItem
                   key={w.id}
                   className="cursor-pointer gap-2 p-2"

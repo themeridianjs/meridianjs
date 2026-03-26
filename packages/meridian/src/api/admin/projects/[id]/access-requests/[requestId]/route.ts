@@ -1,4 +1,5 @@
 import type { Response, NextFunction } from "express"
+import { resolveProjectAndAccess } from "../../../../../utils/project-access.js"
 
 // Owner cancels their own pending request
 export const DELETE = async (req: any, res: Response, next: NextFunction) => {
@@ -28,36 +29,14 @@ export const DELETE = async (req: any, res: Response, next: NextFunction) => {
 
 export const PATCH = async (req: any, res: Response, next: NextFunction) => {
   try {
-    const projectService = req.scope.resolve("projectModuleService") as any
-    const projectMemberService = req.scope.resolve("projectMemberModuleService") as any
-
-    const project = await projectService.retrieveProject(req.params.id).catch(() => null)
-    if (!project) {
-      res.status(404).json({ error: { message: "Project not found" } })
-      return
-    }
-
-    // Must be project manager, workspace admin, or global admin
-    const roles: string[] = req.user?.roles ?? []
-    const isGlobalAdmin = roles.includes("super-admin") || roles.includes("admin")
-    let authorized = isGlobalAdmin
-
-    if (!authorized) {
-      const workspaceMemberService = req.scope.resolve("workspaceMemberModuleService") as any
-      const wsMembership = await workspaceMemberService.getMembership(project.workspace_id, req.user?.id)
-      if (wsMembership?.role === "admin") authorized = true
-    }
-
-    if (!authorized) {
-      const members = await projectMemberService.listProjectMembers(project.id)
-      const myMembership = members.find((m: any) => m.user_id === req.user?.id)
-      if (myMembership?.role === "manager") authorized = true
-    }
-
-    if (!authorized) {
+    const result = await resolveProjectAndAccess(req, res)
+    if (!result) return
+    if (!result.isAuthorized) {
       res.status(403).json({ error: { message: "Forbidden — project manager or admin role required" } })
       return
     }
+    const { project } = result
+    const projectMemberService = req.scope.resolve("projectMemberModuleService") as any
 
     const { action } = req.body
     if (action !== "approve" && action !== "deny") {
@@ -97,11 +76,17 @@ export const PATCH = async (req: any, res: Response, next: NextFunction) => {
       const notificationService = req.scope.resolve("notificationModuleService") as any
       await notificationService.createNotification({
         user_id: request.user_id,
-        title: action === "approve" ? "Project access approved" : "Project access denied",
-        body: action === "approve"
+        entity_type: "project_access_request",
+        entity_id: request.id,
+        action: action === "approve" ? "access_approved" : "access_denied",
+        message: action === "approve"
           ? `Your request to join "${project.name}" was approved.`
           : `Your request to join "${project.name}" was denied.`,
-        type: "project_access_resolved",
+        workspace_id: project.workspace_id,
+        metadata: {
+          project_id: project.id,
+          project_name: project.name,
+        },
       }).catch(() => {})
     } catch {
       // Non-fatal

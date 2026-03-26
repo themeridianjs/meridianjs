@@ -3,6 +3,7 @@ import type { WorkspaceMemberModuleService } from "@meridianjs/workspace-member"
 import type { ProjectMemberModuleService } from "@meridianjs/project-member"
 import type { TeamMemberModuleService } from "@meridianjs/team-member"
 import type { UserModuleService } from "@meridianjs/user"
+import { getAccessibleWorkspaceIds } from "../../../utils/workspace-access.js"
 
 export const GET = async (req: any, res: Response) => {
   const workspaceMemberService = req.scope.resolve("workspaceMemberModuleService") as WorkspaceMemberModuleService
@@ -44,14 +45,7 @@ export const GET = async (req: any, res: Response) => {
   // Filter workspace IDs to only those the user can access (public + private where member)
   let wsIds = rawWsIds
   if (rawWsIds.length > 0) {
-    const workspaceService = req.scope.resolve("workspaceModuleService") as any
-    const workspaces = (await Promise.all(
-      rawWsIds.map((id) => workspaceService.retrieveWorkspace(id).catch(() => null))
-    )).filter(Boolean)
-    const memberWsIds = new Set<string>(await workspaceMemberService.getWorkspaceIdsForUser(userId))
-    wsIds = workspaces
-      .filter((ws: any) => !ws.is_private || memberWsIds.has(ws.id))
-      .map((ws: any) => ws.id)
+    wsIds = await getAccessibleWorkspaceIds(req, rawWsIds)
   }
 
   let userIdSet = new Set<string>()
