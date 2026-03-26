@@ -5,12 +5,14 @@ import ProjectModel from "./models/project.js"
 import LabelModel from "./models/label.js"
 import MilestoneModel from "./models/milestone.js"
 import ProjectStatusModel from "./models/project-status.js"
+import ProjectHealthUpdateModel from "./models/project-health-update.js"
 
 export class ProjectModuleService extends MeridianService({
   Project: ProjectModel,
   Label: LabelModel,
   Milestone: MilestoneModel,
   ProjectStatus: ProjectStatusModel,
+  ProjectHealthUpdate: ProjectHealthUpdateModel,
 }) {
   private readonly container: MeridianContainer
 
@@ -122,5 +124,16 @@ export class ProjectModuleService extends MeridianService({
       Object.assign(entity as object, { position: i })
     }
     await repo.flush()
+  }
+
+  /** List health updates for a project, newest first. */
+  async listHealthUpdatesByProject(projectId: string): Promise<any[]> {
+    const repo = this.container.resolve<any>("projectHealthUpdateRepository")
+    return repo.find({ project_id: projectId }, { orderBy: { created_at: "DESC" } })
+  }
+
+  /** Create a project health update. */
+  async createHealthUpdate(data: { project_id: string; health: string; title?: string | null; summary?: string | null; created_by?: string | null }): Promise<any> {
+    return this.createProjectHealthUpdate(data)
   }
 }

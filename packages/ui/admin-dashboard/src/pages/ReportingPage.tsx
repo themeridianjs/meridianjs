@@ -15,7 +15,7 @@ import { ReportBarChart, formatMinutes } from "@/components/reports/ReportBarCha
 
 const PAGE_SIZE = 200
 
-export function ReportingPage({ workspaceId }: { workspaceId?: string }) {
+export function ReportingPage({ workspaceId, orgScope = false }: { workspaceId?: string; orgScope?: boolean }) {
   const [from, setFrom] = useState<Date | undefined>(undefined)
   const [to, setTo] = useState<Date | undefined>(undefined)
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([])
@@ -30,15 +30,18 @@ export function ReportingPage({ workspaceId }: { workspaceId?: string }) {
   const { data: projects = [], isLoading: projectsLoading } = useProjects(
     workspaceId
       ? undefined
-      : selectedWorkspaceIds.length > 0
-        ? { workspaceIds: selectedWorkspaceIds }
-        : { allWorkspaces: true }
+      : orgScope
+        ? { allWorkspaces: true, orgScope: true }
+        : selectedWorkspaceIds.length > 0
+          ? { workspaceIds: selectedWorkspaceIds }
+          : { allWorkspaces: true }
   )
   const { data: members = [], isLoading: membersLoading } = useReportingMembers(
     workspaceId ? [workspaceId] : selectedWorkspaceIds,
-    selectedProjectIds
+    selectedProjectIds,
+    { orgScope }
   )
-  const { data: workspaces = [], isLoading: workspacesLoading } = useWorkspaces()
+  const { data: workspaces = [], isLoading: workspacesLoading } = useWorkspaces(orgScope ? { orgScope: true } : true)
   const { data: userMap } = useUserMap()
 
   // Prune stale child selections when parent options change
@@ -78,6 +81,7 @@ export function ReportingPage({ workspaceId }: { workspaceId?: string }) {
       to: toStr,
       workspace_id: workspaceId,
       workspace_ids: effectiveWsIds,
+      org_scope: orgScope || undefined,
       user_ids: selectedUserIds.length > 0 ? selectedUserIds : undefined,
       project_ids: selectedProjectIds.length > 0 ? selectedProjectIds : undefined,
       limit: PAGE_SIZE,

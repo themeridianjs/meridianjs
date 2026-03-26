@@ -2,10 +2,12 @@ import { MeridianService } from "@meridianjs/framework-utils"
 import type { MeridianContainer } from "@meridianjs/types"
 import ProjectMemberModel from "./models/project-member.js"
 import ProjectTeamModel from "./models/project-team.js"
+import ProjectAccessRequestModel from "./models/project-access-request.js"
 
 export class ProjectMemberModuleService extends MeridianService({
   ProjectMember: ProjectMemberModel,
   ProjectTeam: ProjectTeamModel,
+  ProjectAccessRequest: ProjectAccessRequestModel,
 }) {
   private readonly container: MeridianContainer
 
@@ -90,5 +92,54 @@ export class ProjectMemberModuleService extends MeridianService({
     const repo = this.container.resolve<any>("projectTeamRepository")
     const m = await repo.findOne({ project_id: projectId, team_id: teamId })
     if (m) await this.deleteProjectTeam(m.id)
+  }
+
+  // ── Access Requests ──────────────────────────────────────────────────────────
+
+  async createAccessRequest(data: { project_id: string; user_id: string; message?: string | null }) {
+    return this.createProjectAccessRequest({ project_id: data.project_id, user_id: data.user_id, message: data.message ?? null, status: "pending" })
+  }
+
+  async getPendingRequest(projectId: string, userId: string) {
+    const repo = this.container.resolve<any>("projectAccessRequestRepository")
+    return repo.findOne({ project_id: projectId, user_id: userId, status: "pending" })
+  }
+
+  async getAccessRequest(id: string) {
+    const repo = this.container.resolve<any>("projectAccessRequestRepository")
+    return repo.findOne({ id })
+  }
+
+  async listPendingAccessRequests(projectId: string) {
+    const repo = this.container.resolve<any>("projectAccessRequestRepository")
+    return repo.find({ project_id: projectId, status: "pending" })
+  }
+
+  async updateAccessRequestStatus(id: string, status: "approved" | "denied") {
+    return this.updateProjectAccessRequest(id, { status })
+  }
+
+  async getPendingCountsForProjects(projectIds: string[]): Promise<Map<string, number>> {
+    if (projectIds.length === 0) return new Map()
+    const repo = this.container.resolve<any>("projectAccessRequestRepository")
+    const requests = await repo.find({ project_id: { $in: projectIds }, status: "pending" })
+    const counts = new Map<string, number>()
+    for (const r of requests) {
+      counts.set(r.project_id, (counts.get(r.project_id) ?? 0) + 1)
+    }
+    return counts
+  }
+
+  async getUserPendingProjectIds(userId: string, projectIds: string[]): Promise<Set<string>> {
+    if (projectIds.length === 0) return new Set()
+    const repo = this.container.resolve<any>("projectAccessRequestRepository")
+    const requests = await repo.find({ user_id: userId, status: "pending", project_id: { $in: projectIds } })
+    return new Set(requests.map((r: any) => r.project_id))
+  }
+
+  async deleteAccessRequest(id: string): Promise<void> {
+    const repo = this.container.resolve<any>("projectAccessRequestRepository")
+    const record = await repo.findOne({ id })
+    if (record) await repo.removeAndFlush(record)
   }
 }

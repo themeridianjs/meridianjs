@@ -3,16 +3,18 @@ import { useNotifications, useMarkAsRead, useMarkAllAsRead } from "@/api/hooks/u
 import { useProjects } from "@/api/hooks/useProjects"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Bell, CheckCheck, GitBranch, Layers, MessageSquare, Zap } from "lucide-react"
+import { Bell, CheckCheck, GitBranch, Layers, MessageSquare, UserPlus, Zap } from "lucide-react"
 import { format, formatDistanceToNow, isToday, isYesterday } from "date-fns"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 
 const ENTITY_CONFIG: Record<string, { icon: React.FC<{ className?: string }>; label: string }> = {
-  issue:   { icon: GitBranch,     label: "Issue" },
-  project: { icon: Layers,        label: "Project" },
-  comment: { icon: MessageSquare, label: "Comment" },
-  sprint:  { icon: Zap,           label: "Sprint" },
+  issue:                    { icon: GitBranch,     label: "Issue" },
+  project:                  { icon: Layers,        label: "Project" },
+  comment:                  { icon: MessageSquare, label: "Comment" },
+  sprint:                   { icon: Zap,           label: "Sprint" },
+  workspace_access_request: { icon: UserPlus,      label: "Access Request" },
+  project_access_resolved:  { icon: UserPlus,      label: "Access Request" },
 }
 
 function formatTime(dateStr: string): string {
@@ -44,6 +46,14 @@ export function NotificationsPage() {
     if (notification.entity_type === "project") {
       const project = projectById[notification.entity_id]
       if (project) return `/${workspace}/projects/${project.identifier}/board`
+    }
+    if (notification.entity_type === "workspace_access_request") {
+      const slug = notification.metadata?.workspace_slug ?? workspace
+      return `/${slug}/settings`
+    }
+    if (notification.entity_type === "project_access_resolved" && notification.metadata?.project_id) {
+      const project = projectById[notification.metadata.project_id]
+      if (project) return `/${workspace}/projects/${project.identifier}/access`
     }
     return null
   }

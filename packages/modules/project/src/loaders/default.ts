@@ -4,13 +4,15 @@ import ProjectModel from "../models/project.js"
 import LabelModel from "../models/label.js"
 import MilestoneModel from "../models/milestone.js"
 import ProjectStatusModel from "../models/project-status.js"
+import ProjectHealthUpdateModel from "../models/project-health-update.js"
 
 const ProjectSchema = dmlToEntitySchema(ProjectModel)
 const LabelSchema = dmlToEntitySchema(LabelModel)
 const MilestoneSchema = dmlToEntitySchema(MilestoneModel)
 const ProjectStatusSchema = dmlToEntitySchema(ProjectStatusModel)
+const ProjectHealthUpdateSchema = dmlToEntitySchema(ProjectHealthUpdateModel)
 
-export const entitySchemas = [ProjectSchema, LabelSchema, MilestoneSchema, ProjectStatusSchema]
+export const entitySchemas = [ProjectSchema, LabelSchema, MilestoneSchema, ProjectStatusSchema, ProjectHealthUpdateSchema]
 
 export default async function defaultLoader({ container }: LoaderOptions): Promise<void> {
   const config = container.resolve<MeridianConfig>("config")
@@ -24,6 +26,7 @@ export default async function defaultLoader({ container }: LoaderOptions): Promi
     labelRepository: createRepository(em, "label"),
     milestoneRepository: createRepository(em, "milestone"),
     projectStatusRepository: createRepository(em, "project_status"),
+    projectHealthUpdateRepository: createRepository(em, "project_health_update"),
     projectOrm: orm,
   })
 }

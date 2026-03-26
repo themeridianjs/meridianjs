@@ -7,6 +7,7 @@ export interface ProjectMemberEntry {
   id: string
   user_id: string
   role: "manager" | "member" | "viewer"
+  app_role_name: string | null
   user: User | null
 }
 
@@ -21,8 +22,19 @@ export interface ProjectAccess {
   teams: ProjectTeamEntry[]
 }
 
+export interface ProjectAccessRequest {
+  id: string
+  project_id: string
+  user_id: string
+  message: string | null
+  status: "pending" | "approved" | "denied"
+  created_at: string
+  user: { id: string; email: string; first_name: string; last_name: string } | null
+}
+
 const accessKeys = {
   project: (projectId: string) => ["projects", projectId, "access"] as const,
+  requests: (projectId: string) => ["projects", projectId, "access-requests"] as const,
 }
 
 export function useProjectAccess(projectId: string) {
@@ -95,6 +107,49 @@ export function useRemoveProjectTeam(projectId: string) {
       api.delete(`/admin/projects/${projectId}/teams/${teamId}`),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: accessKeys.project(projectId) })
+    },
+  })
+}
+
+export function useProjectAccessRequests(projectId: string) {
+  return useQuery({
+    queryKey: accessKeys.requests(projectId),
+    queryFn: () => api.get<{ requests: ProjectAccessRequest[] }>(`/admin/projects/${projectId}/access-requests`),
+    enabled: !!projectId,
+  })
+}
+
+export function useRequestProjectAccess() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ projectId, message }: { projectId: string; message?: string }) =>
+      api.post(`/admin/projects/${projectId}/access-requests`, { message }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["projects"] })
+    },
+  })
+}
+
+export function useHandleProjectAccessRequest(projectId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ requestId, action }: { requestId: string; action: "approve" | "deny" }) =>
+      api.patch(`/admin/projects/${projectId}/access-requests/${requestId}`, { action }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: accessKeys.requests(projectId) })
+      qc.invalidateQueries({ queryKey: accessKeys.project(projectId) })
+      qc.invalidateQueries({ queryKey: ["projects"] })
+    },
+  })
+}
+
+export function useCancelProjectAccessRequest() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (projectId: string) =>
+      api.delete(`/admin/projects/${projectId}/access-requests`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["projects"] })
     },
   })
 }

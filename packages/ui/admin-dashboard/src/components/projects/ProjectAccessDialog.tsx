@@ -11,6 +11,8 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { MultiSelect } from "@/components/ui/multi-select"
 import {
   useProjectAccess,
+  useProjectAccessRequests,
+  useHandleProjectAccessRequest,
   useAddProjectMembersBatch,
   useRemoveProjectMember,
   useAddProjectTeamsBatch,
@@ -19,7 +21,7 @@ import {
 import { useWorkspaceMembers, useTeams } from "@/api/hooks/useWorkspaces"
 import { useAuth } from "@/stores/auth"
 import { toast } from "sonner"
-import { X, UserPlus, Users2 } from "lucide-react"
+import { X, UserPlus, Users2, Check } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface ProjectAccessDialogProps {
@@ -39,6 +41,7 @@ export function ProjectAccessDialog({
   const workspaceId = wsRef?.id ?? ""
 
   const { data: access, isLoading } = useProjectAccess(projectId)
+  const { data: requestsData } = useProjectAccessRequests(projectId)
   const { data: wsMembers } = useWorkspaceMembers(workspaceId)
   const { data: wsTeams } = useTeams(workspaceId)
 
@@ -46,6 +49,9 @@ export function ProjectAccessDialog({
   const removeMember = useRemoveProjectMember(projectId)
   const addTeamsBatch = useAddProjectTeamsBatch(projectId)
   const removeTeam = useRemoveProjectTeam(projectId)
+  const handleRequest = useHandleProjectAccessRequest(projectId)
+
+  const pendingRequests = requestsData?.requests ?? []
 
   const [addUserIds, setAddUserIds] = useState<string[]>([])
   const [addTeamIds, setAddTeamIds] = useState<string[]>([])
@@ -60,10 +66,50 @@ export function ProjectAccessDialog({
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="sm:max-w-[480px]">
         <DialogHeader>
-          <DialogTitle>Access — {projectName}</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            Access — {projectName}
+            {pendingRequests.length > 0 && (
+              <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-medium text-white">
+                {pendingRequests.length}
+              </span>
+            )}
+          </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-5 pt-1">
+          {/* ── Pending Requests ── */}
+          {pendingRequests.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Requests</p>
+              <div className="space-y-1">
+                {pendingRequests.map((r) => {
+                  const u = r.user
+                  const displayName = u ? (`${u.first_name ?? ""} ${u.last_name ?? ""}`.trim() || u.email) : "Unknown"
+                  const initials = (u?.first_name?.[0] ?? u?.last_name?.[0] ?? u?.email?.[0] ?? "U").toUpperCase()
+                  return (
+                    <div key={r.id} className="flex items-center gap-2.5 py-1">
+                      <Avatar className="h-7 w-7 shrink-0">
+                        <AvatarFallback className="text-[11px] font-medium">{initials}</AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm truncate">{displayName}</p>
+                        {r.message && <p className="text-xs text-muted-foreground italic truncate">{r.message}</p>}
+                      </div>
+                      <button
+                        className="h-6 px-2 text-xs rounded border border-border hover:bg-muted text-muted-foreground shrink-0"
+                        onClick={() => handleRequest.mutate({ requestId: r.id, action: "deny" }, { onSuccess: () => toast.success("Request denied"), onError: () => toast.error("Failed") })}
+                      >Deny</button>
+                      <button
+                        className="h-6 px-2 text-xs rounded bg-foreground text-background hover:opacity-90 shrink-0 flex items-center gap-1"
+                        onClick={() => handleRequest.mutate({ requestId: r.id, action: "approve" }, { onSuccess: () => toast.success("Access granted"), onError: () => toast.error("Failed") })}
+                      ><Check className="h-3 w-3" />Approve</button>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
           {/* ── People ── */}
           <div>
             <div className="flex items-center justify-between mb-2">

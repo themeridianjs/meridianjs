@@ -43,8 +43,8 @@ export const GET = async (req: any, res: Response) => {
     ]
   }
 
-  // When scoped to a project, verify the caller has access to that project
   if (req.query.project_id) {
+    // Scoped to a specific project — verify access
     const projectService = req.scope.resolve("projectModuleService") as any
     const project = await projectService.retrieveProject(req.query.project_id).catch(() => null)
     if (!project) { res.status(404).json({ error: { message: "Project not found" } }); return }
@@ -52,6 +52,49 @@ export const GET = async (req: any, res: Response) => {
       res.status(403).json({ error: { message: "Forbidden" } })
       return
     }
+  } else {
+    // No project scope — restrict to projects the caller can access
+    const projectService = req.scope.resolve("projectModuleService") as any
+    const workspaceMemberService = req.scope.resolve("workspaceMemberModuleService") as any
+    const userId: string = req.user?.id
+    const roles: string[] = req.user?.roles ?? []
+    const isPrivileged = roles.includes("super-admin") || roles.includes("admin")
+
+    let accessibleProjectIds: string[]
+
+    if (isPrivileged) {
+      const workspaceService = req.scope.resolve("workspaceModuleService") as any
+      const [allWorkspaces] = await workspaceService.listAndCountWorkspaces({}, { limit: 1000 })
+      const memberWsIds = new Set<string>(await workspaceMemberService.getWorkspaceIdsForUser(userId))
+      const allowedWsIds = (allWorkspaces as any[])
+        .filter((ws: any) => !ws.is_private || memberWsIds.has(ws.id))
+        .map((ws: any) => ws.id)
+
+      if (allowedWsIds.length === 0) {
+        res.json({ issues: [], count: 0, limit, offset })
+        return
+      }
+
+      const [projects] = await projectService.listAndCountProjects(
+        { workspace_id: allowedWsIds.length === 1 ? allowedWsIds[0] : allowedWsIds },
+        { limit: 1000 }
+      )
+      accessibleProjectIds = (projects as any[]).map((p: any) => p.id)
+    } else {
+      const teamMemberService = req.scope.resolve("teamMemberModuleService") as any
+      const projectMemberService = req.scope.resolve("projectMemberModuleService") as any
+      const userTeamIds = await teamMemberService.getUserTeamIds(userId)
+      accessibleProjectIds = await projectMemberService.getAccessibleProjectIds(userId, userTeamIds)
+    }
+
+    if (accessibleProjectIds.length === 0) {
+      res.json({ issues: [], count: 0, limit, offset })
+      return
+    }
+
+    filters.project_id = accessibleProjectIds.length === 1
+      ? accessibleProjectIds[0]
+      : { $in: accessibleProjectIds }
   }
 
   // sort_by + sort_order

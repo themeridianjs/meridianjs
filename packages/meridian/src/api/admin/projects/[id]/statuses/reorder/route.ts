@@ -1,8 +1,10 @@
 import type { Response } from "express"
+import { requirePermission } from "@meridianjs/auth"
 import { hasProjectAccess } from "../../../../../utils/project-access.js"
 
 export const POST = async (req: any, res: Response) => {
-  const { orderedIds } = req.body
+  requirePermission("project:update")(req, res, async () => {
+    const { orderedIds } = req.body
   if (!Array.isArray(orderedIds) || orderedIds.length === 0) {
     res.status(400).json({ error: { message: "orderedIds must be a non-empty array" } })
     return
@@ -14,6 +16,7 @@ export const POST = async (req: any, res: Response) => {
     res.status(403).json({ error: { message: "Forbidden" } })
     return
   }
-  await svc.reorderStatuses(req.params.id, orderedIds)
-  res.status(204).send()
+    await svc.reorderStatuses(req.params.id, orderedIds)
+    res.status(204).send()
+  })
 }

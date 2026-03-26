@@ -17,6 +17,8 @@ import {
 } from "@/components/ui/alert-dialog"
 import {
   useProjectAccess,
+  useProjectAccessRequests,
+  useHandleProjectAccessRequest,
   useAddProjectMembersBatch,
   useRemoveProjectMember,
   useAddProjectTeamsBatch,
@@ -26,7 +28,7 @@ import { useWorkspaceMembers, useTeams } from "@/api/hooks/useWorkspaces"
 import { useProjectByKey } from "@/api/hooks/useProjects"
 import { useAuth } from "@/stores/auth"
 import { toast } from "sonner"
-import { X, UserPlus, Users2, ChevronLeft, ChevronRight } from "lucide-react"
+import { X, UserPlus, Users2, ChevronLeft, ChevronRight, Check } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const PAGE_SIZE = 20
@@ -59,13 +61,15 @@ function MemberRow({
 
       <Badge
         className={cn(
-          "shrink-0 text-[11px] border-0 w-20 justify-center",
-          member.role === "manager"
+          "shrink-0 text-[11px] border-0 min-w-20 justify-center",
+          member.app_role_name === "Workspace Admin"
             ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400"
-            : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
+            : member.app_role_name === "Viewer"
+              ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+              : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
         )}
       >
-        {member.role}
+        {member.app_role_name ?? member.role}
       </Badge>
 
       <Button
@@ -127,6 +131,10 @@ export function ProjectAccessPage() {
   const { data: access, isLoading } = useProjectAccess(projectId)
   const { data: wsMembers } = useWorkspaceMembers(workspaceId)
   const { data: wsTeams } = useTeams(workspaceId)
+
+  const { data: requestsData } = useProjectAccessRequests(projectId)
+  const handleRequest = useHandleProjectAccessRequest(projectId)
+  const pendingRequests = (requestsData?.requests ?? []).filter((r) => r.status === "pending")
 
   const addMembersBatch = useAddProjectMembersBatch(projectId)
   const removeMember = useRemoveProjectMember(projectId)
@@ -211,6 +219,77 @@ export function ProjectAccessPage() {
           </div>
         ) : (
           <div>
+            {pendingRequests.length > 0 && (
+              <div>
+                <div className="px-6 py-2 border-b border-border bg-amber-50 dark:bg-amber-950/20">
+                  <span className="text-xs font-semibold text-amber-700 dark:text-amber-400 uppercase tracking-wide flex items-center gap-2">
+                    Requests
+                    <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-medium text-white">
+                      {pendingRequests.length}
+                    </span>
+                  </span>
+                </div>
+                <div className="divide-y divide-border">
+                  {pendingRequests.map((req) => {
+                    const first = req.user?.first_name ?? ""
+                    const last = req.user?.last_name ?? ""
+                    const displayName = `${first} ${last}`.trim() || req.user?.email || "Unknown"
+                    const initials = (first[0] ?? last[0] ?? req.user?.email?.[0] ?? "U").toUpperCase()
+                    return (
+                      <div key={req.id} className="flex items-center gap-4 px-6 py-4 hover:bg-muted/30 transition-colors">
+                        <Avatar className="h-8 w-8 shrink-0">
+                          <AvatarFallback className="text-xs font-medium">{initials}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{displayName}</p>
+                          {req.user?.email && (
+                            <p className="text-xs text-muted-foreground truncate mt-0.5">{req.user.email}</p>
+                          )}
+                          {req.message && (
+                            <p className="text-xs text-muted-foreground mt-1 italic">"{req.message}"</p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 px-2 text-xs text-destructive border-destructive/30 hover:bg-destructive/10"
+                            disabled={handleRequest.isPending}
+                            onClick={() =>
+                              handleRequest.mutate(
+                                { requestId: req.id, action: "deny" },
+                                { onError: () => toast.error("Failed to deny request") }
+                              )
+                            }
+                          >
+                            <X className="h-3 w-3 mr-1" />
+                            Deny
+                          </Button>
+                          <Button
+                            size="sm"
+                            className="h-7 px-2 text-xs"
+                            disabled={handleRequest.isPending}
+                            onClick={() =>
+                              handleRequest.mutate(
+                                { requestId: req.id, action: "approve" },
+                                {
+                                  onSuccess: () => toast.success(`${displayName} granted access`),
+                                  onError: () => toast.error("Failed to approve request"),
+                                }
+                              )
+                            }
+                          >
+                            <Check className="h-3 w-3 mr-1" />
+                            Approve
+                          </Button>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
             <div>
               <div className="px-6 py-2 border-b border-border bg-muted/20 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-2">

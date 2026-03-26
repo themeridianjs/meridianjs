@@ -2,6 +2,7 @@ import { z } from "zod"
 import type { Response } from "express"
 import { consumeOtp } from "./_otp-store.js"
 import { validateEmailDomain } from "./_domain-check.js"
+import { applyPendingInvites } from "../_apply-pending-invites.js"
 
 const registerSchema = z.object({
   email: z.string().email(),
@@ -59,5 +60,21 @@ export const POST = async (req: any, res: Response) => {
 
   const authService = req.scope.resolve("authModuleService") as any
   const response = await authService.register(result.data)
+
+  // Auto-apply any pending invitations for this email
+  if (response.user?.id) {
+    const applied = await applyPendingInvites(req.scope, response.user.id, result.data.email)
+    if (applied) {
+      // Re-sign the JWT with a fresh DB read so the token reflects the upgraded role/permissions
+      try {
+        const freshAuth = await authService.issueToken(response.user.id)
+        response.token = freshAuth.token
+        response.user = freshAuth.user
+      } catch {
+        // Non-fatal — user still registered, they can log in to get the updated token
+      }
+    }
+  }
+
   res.status(201).json(response)
 }

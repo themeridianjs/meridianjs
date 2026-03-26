@@ -18,12 +18,17 @@ interface WorkspacesResponse {
   count: number
 }
 
-export function useWorkspaces(enabled = true) {
+export function useWorkspaces(enabledOrOptions: boolean | { orgScope?: boolean; refetchInterval?: number | false } = true) {
+  const enabled = typeof enabledOrOptions === "boolean" ? enabledOrOptions : true
+  const orgScope = typeof enabledOrOptions === "object" ? (enabledOrOptions.orgScope ?? false) : false
+  const refetchInterval = typeof enabledOrOptions === "object" ? (enabledOrOptions.refetchInterval ?? false) : false
+  const qs = orgScope ? "?org_scope=true" : ""
   return useQuery({
-    queryKey: ["workspaces"],
-    queryFn: () => api.get<WorkspacesResponse>("/admin/workspaces"),
+    queryKey: ["workspaces", orgScope ? "org" : "default"],
+    queryFn: () => api.get<WorkspacesResponse>(`/admin/workspaces${qs}`),
     select: (data) => data.workspaces,
     enabled,
+    refetchInterval,
   })
 }
 
@@ -303,6 +308,117 @@ export function useRemoveTeamMember(workspaceId: string, teamId: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: teamKeys.members(workspaceId, teamId) })
       qc.invalidateQueries({ queryKey: teamKeys.list(workspaceId) })
+    },
+  })
+}
+
+// ── Workspace search (browse public workspaces) ────────────────────────────────
+
+export interface WorkspaceSearchResult {
+  id: string
+  name: string
+  slug: string
+  is_private: boolean
+  is_member: boolean
+  has_pending_request: boolean
+}
+
+export function useSearchWorkspaces(query: string) {
+  return useQuery({
+    queryKey: ["workspaces", "search", query],
+    queryFn: () =>
+      api.get<{ workspaces: WorkspaceSearchResult[] }>(
+        `/admin/workspaces/search?q=${encodeURIComponent(query)}`
+      ),
+    select: (data) => data.workspaces,
+    enabled: true,
+    staleTime: 10_000,
+  })
+}
+
+// ── Workspace access requests ──────────────────────────────────────────────────
+
+export interface AccessRequest {
+  id: string
+  workspace_id: string
+  user_id: string
+  message: string | null
+  status: "pending" | "approved" | "denied"
+  created_at: string
+  user: { id: string; email: string; first_name: string; last_name: string } | null
+}
+
+const accessRequestKeys = {
+  list: (workspaceId: string) => ["workspaces", workspaceId, "access-requests"] as const,
+}
+
+export function useWorkspaceAccessRequests(workspaceId: string) {
+  return useQuery({
+    queryKey: accessRequestKeys.list(workspaceId),
+    queryFn: () =>
+      api.get<{ access_requests: AccessRequest[]; count: number }>(
+        `/admin/workspaces/${workspaceId}/access-requests`
+      ),
+    select: (data) => data.access_requests,
+    enabled: !!workspaceId,
+  })
+}
+
+export function useRequestWorkspaceAccess() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ workspaceId, message }: { workspaceId: string; message?: string }) =>
+      api.post<{ access_request: AccessRequest }>(
+        `/admin/workspaces/${workspaceId}/access-requests`,
+        { message: message ?? null }
+      ),
+    onSuccess: (_data, { workspaceId }) => {
+      qc.invalidateQueries({ queryKey: accessRequestKeys.list(workspaceId) })
+    },
+  })
+}
+
+export function useHandleAccessRequest(workspaceId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ requestId, action }: { requestId: string; action: "approve" | "deny" }) =>
+      api.patch<{ access_request: AccessRequest }>(
+        `/admin/workspaces/${workspaceId}/access-requests/${requestId}`,
+        { action }
+      ),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: accessRequestKeys.list(workspaceId) })
+      qc.invalidateQueries({ queryKey: ["workspaces"] })
+    },
+  })
+}
+
+export interface MyWorkspaceAccessRequest {
+  id: string
+  workspace_id: string
+  workspace_name: string | null
+  workspace_slug: string | null
+  message: string | null
+  status: "pending"
+  created_at: string
+}
+
+export function useMyWorkspaceAccessRequests() {
+  return useQuery({
+    queryKey: ["workspaces", "my-access-requests"] as const,
+    queryFn: () => api.get<{ requests: MyWorkspaceAccessRequest[] }>("/admin/workspaces/my-access-requests"),
+    select: (data) => data.requests,
+  })
+}
+
+export function useCancelWorkspaceAccessRequest() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ workspaceId, requestId }: { workspaceId: string; requestId: string }) =>
+      api.delete(`/admin/workspaces/${workspaceId}/access-requests/${requestId}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["workspaces", "my-access-requests"] })
+      qc.invalidateQueries({ queryKey: ["workspaces", "search"] })
     },
   })
 }

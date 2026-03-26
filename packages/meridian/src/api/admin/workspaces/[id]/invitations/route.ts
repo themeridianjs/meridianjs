@@ -1,4 +1,5 @@
 import type { Response } from "express"
+import { requirePermission } from "@meridianjs/auth"
 import { createInvitationWorkflow } from "../../../../../workflows/create-invitation.js"
 
 async function assertWorkspaceMembership(req: any, res: Response): Promise<boolean> {
@@ -36,8 +37,9 @@ export const GET = async (req: any, res: Response) => {
 }
 
 export const POST = async (req: any, res: Response) => {
-  if (!await assertWorkspaceMembership(req, res)) return
-  const { email, role, app_role_id } = req.body
+  requirePermission("member:invite")(req, res, async () => {
+    if (!await assertWorkspaceMembership(req, res)) return
+    const { email, role, app_role_id } = req.body
 
   if (!role || !["super-admin", "admin", "member"].includes(role)) {
     res.status(400).json({ error: { message: "role must be 'super-admin', 'admin', or 'member'" } })
@@ -95,5 +97,6 @@ export const POST = async (req: any, res: Response) => {
     return
   }
 
-  res.status(201).json({ invitation: result })
+    res.status(201).json({ invitation: result })
+  })
 }

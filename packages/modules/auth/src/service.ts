@@ -375,6 +375,36 @@ export class AuthModuleService extends MeridianService({}) {
     return jwt.verify(token, secret, { algorithms: ["HS256"] }) as JwtPayload
   }
 
+  /**
+   * Issue a fresh JWT for a user by reading their current state from the DB.
+   * Uses `retrieveUserFresh` to bypass the identity map cache.
+   * Useful after updating a user's role or app_role_id outside the auth flow.
+   */
+  async issueToken(userId: string): Promise<AuthResult> {
+    const userService = this.container.resolve<any>("userModuleService")
+    const config = this.container.resolve<MeridianConfig>("config")
+
+    const user = await userService.retrieveUserFresh(userId)
+    if (!user) {
+      throw Object.assign(new Error("User not found"), { status: 404 })
+    }
+
+    const permissions = await this.resolvePermissions(user.app_role_id)
+    const { token, jti, expiresAt } = this.signToken(user.id, null, [user.role ?? "member"], permissions, config.projectConfig.jwtSecret)
+
+    await userService.createSession(jti, user.id, expiresAt).catch(() => {})
+
+    return {
+      user: {
+        id: user.id,
+        email: user.email,
+        first_name: user.first_name ?? null,
+        last_name: user.last_name ?? null,
+      },
+      token,
+    }
+  }
+
   /** Resolve permissions for a given app_role_id — gracefully degrades if module not loaded. */
   private async resolvePermissions(appRoleId: string | null | undefined): Promise<string[]> {
     if (!appRoleId) return []

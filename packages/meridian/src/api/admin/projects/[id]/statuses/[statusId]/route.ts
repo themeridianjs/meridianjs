@@ -1,8 +1,10 @@
 import type { Response } from "express"
+import { requirePermission } from "@meridianjs/auth"
 import { hasProjectAccess } from "../../../../../utils/project-access.js"
 
 export const PUT = async (req: any, res: Response) => {
-  const { name, color, category, metadata } = req.body
+  requirePermission("project:update")(req, res, async () => {
+    const { name, color, category, metadata } = req.body
   const svc = req.scope.resolve("projectModuleService") as any
   const activityService = req.scope.resolve("activityModuleService") as any
   const project = await svc.retrieveProject(req.params.id).catch(() => null)
@@ -38,11 +40,13 @@ export const PUT = async (req: any, res: Response) => {
       workspace_id: project.workspace_id, changes,
     }).catch(() => {})
   }
-  res.json({ status: updated })
+    res.json({ status: updated })
+  })
 }
 
 export const DELETE = async (req: any, res: Response) => {
-  const svc = req.scope.resolve("projectModuleService") as any
+  requirePermission("project:update")(req, res, async () => {
+    const svc = req.scope.resolve("projectModuleService") as any
   const issueSvc = req.scope.resolve("issueModuleService") as any
   const activityService = req.scope.resolve("activityModuleService") as any
   const project = await svc.retrieveProject(req.params.id).catch(() => null)
@@ -66,5 +70,6 @@ export const DELETE = async (req: any, res: Response) => {
     workspace_id: project.workspace_id,
     changes: { name: { from: target.name, to: null }, key: { from: target.key, to: null } },
   }).catch(() => {})
-  res.status(204).send()
+    res.status(204).send()
+  })
 }

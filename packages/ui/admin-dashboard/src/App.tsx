@@ -31,6 +31,7 @@ import { ReportingPage } from "@/pages/ReportingPage"
 import { ProjectReportsPage } from "@/pages/ProjectReportsPage"
 import { ProjectActivityPage } from "@/pages/ProjectActivityPage"
 import { OrgSettingsPage } from "@/pages/OrgSettingsPage"
+import { OrgReportsPage } from "@/pages/OrgReportsPage"
 import { PublicProjectPage } from "@/pages/public/PublicProjectPage"
 import { GoogleCallbackPage } from "@/pages/GoogleCallbackPage"
 import { ProfilePage } from "@/pages/ProfilePage"
@@ -38,6 +39,8 @@ import { ForgotPasswordPage } from "@/pages/ForgotPasswordPage"
 import { ResetPasswordPage } from "@/pages/ResetPasswordPage"
 
 const ProjectTimelinePage = lazy(() => import("@/pages/ProjectTimelinePage").then(m => ({ default: m.ProjectTimelinePage })))
+const ProjectHealthPage = lazy(() => import("@/pages/ProjectHealthPage").then(m => ({ default: m.ProjectHealthPage })))
+const HealthReportDetailPage = lazy(() => import("@/pages/HealthReportDetailPage").then(m => ({ default: m.HealthReportDetailPage })))
 const WorkspaceReportingPage = lazy(() => import("@/pages/WorkspaceReportingPage").then(m => ({ default: m.WorkspaceReportingPage })))
 
 function RequireAuth({ children }: { children: ReactNode }) {
@@ -107,8 +110,7 @@ function WorkspaceRedirect() {
       setWorkspace({ id: w.id, name: w.name, slug: w.slug, logo_url: w.logo_url })
       navigate(`/${w.slug}/projects`, { replace: true })
     } else {
-      const isPrivileged = user?.roles?.includes("super-admin") || user?.roles?.includes("admin")
-      navigate(isPrivileged ? "/setup" : "/awaiting-access", { replace: true })
+      navigate("/awaiting-access", { replace: true })
     }
   }, [workspaces, isLoading, navigate, setWorkspace, user, workspace])
 
@@ -144,8 +146,7 @@ function WorkspaceLayout() {
     } else {
       // No accessible workspaces at all — clear stale ref and redirect
       setWorkspace(null)
-      const isPrivileged = user?.roles?.includes("super-admin") || user?.roles?.includes("admin")
-      navigate(isPrivileged ? "/setup" : "/awaiting-access", { replace: true })
+      navigate("/awaiting-access", { replace: true })
     }
   }, [workspaces, slugParam, isLoading, isFetching, workspace?.id, navigate, setWorkspace, user])
 
@@ -239,9 +240,9 @@ export function App() {
         <Route index element={<ReportingPage />} />
       </Route>
 
-      {/* Org settings — admin/super-admin only */}
+      {/* Org — admin/super-admin only */}
       <Route
-        path="/org/settings"
+        path="/org"
         element={
           <RequireAuth>
             <RequireAdmin>
@@ -250,7 +251,9 @@ export function App() {
           </RequireAuth>
         }
       >
-        <Route index element={<OrgSettingsPage />} />
+        <Route index element={<Navigate to="settings" replace />} />
+        <Route path="settings" element={<OrgSettingsPage />} />
+        <Route path="reports" element={<RequireSuperAdmin><OrgReportsPage /></RequireSuperAdmin>} />
       </Route>
 
       {/* User profile — auth required, workspace-independent */}
@@ -316,6 +319,8 @@ export function App() {
           <Route path="access" element={<ProjectAccessPage />} />
           <Route path="reports" element={<ProjectReportsPage />} />
           <Route path="activity" element={<ProjectActivityPage />} />
+          <Route path="health" element={<Suspense fallback={<div className="flex items-center justify-center h-full text-sm text-muted-foreground">Loading…</div>}><ProjectHealthPage /></Suspense>} />
+          <Route path="health/:reportId" element={<Suspense fallback={<div className="flex items-center justify-center h-full text-sm text-muted-foreground">Loading…</div>}><HealthReportDetailPage /></Suspense>} />
         </Route>
         <Route path="my-tasks" element={<MyTasksPage />} />
         <Route path="notifications" element={<NotificationsPage />} />

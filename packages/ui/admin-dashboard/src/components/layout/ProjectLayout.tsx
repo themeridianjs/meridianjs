@@ -1,14 +1,41 @@
-import { NavLink, Outlet, useParams, useNavigate, useSearchParams, useLocation, Navigate } from "react-router-dom"
+import { NavLink, Link, Outlet, useParams, useNavigate, useSearchParams, useLocation, Navigate } from "react-router-dom"
 import { useEffect, useState } from "react"
 import { Zap, GitBranch, LayoutDashboard, Lock, CalendarRange, BarChart2, Share2, Activity } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
+import { cn } from "@/lib/utils"
 import { useProjectByKey } from "@/api/hooks/useProjects"
-import { useProjectAccess } from "@/api/hooks/useProjectAccess"
+import { useProjectAccess, useProjectAccessRequests } from "@/api/hooks/useProjectAccess"
+import { useProjectHealthUpdates, type ProjectHealthUpdate } from "@/api/hooks/useProjectHealth"
 import { useAuth } from "@/stores/auth"
 import { Button } from "@/components/ui/button"
 import { ShareProjectDialog } from "@/components/projects/ShareProjectDialog"
 import { ApiError } from "@/api/client"
 import { useIsMobile } from "@/lib/hooks"
+
+type HealthStatus = ProjectHealthUpdate["health"]
+
+const HEALTH_BADGE: Record<HealthStatus, { label: string; dot: string; badge: string }> = {
+  on_track: {
+    label: "On track",
+    dot: "bg-green-500",
+    badge: "text-green-700 bg-green-50 border-green-200 dark:text-green-400 dark:bg-green-950/40 dark:border-green-800",
+  },
+  delayed: {
+    label: "Delayed",
+    dot: "bg-orange-500",
+    badge: "text-orange-700 bg-orange-50 border-orange-200 dark:text-orange-400 dark:bg-orange-950/40 dark:border-orange-800",
+  },
+  on_hold: {
+    label: "On hold",
+    dot: "bg-yellow-500",
+    badge: "text-yellow-700 bg-yellow-50 border-yellow-200 dark:text-yellow-400 dark:bg-yellow-950/40 dark:border-yellow-800",
+  },
+  completed: {
+    label: "Completed",
+    dot: "bg-indigo-500",
+    badge: "text-indigo-700 bg-indigo-50 border-indigo-200 dark:text-indigo-400 dark:bg-indigo-950/40 dark:border-indigo-800",
+  },
+}
 
 const PROJECT_TAB_ROUTES = ["board", "issues", "sprints", "timeline", "access", "reports", "activity"] as const
 
@@ -17,6 +44,10 @@ export function ProjectLayout() {
   const { data: project, error } = useProjectByKey(projectKey ?? "")
   const { user } = useAuth()
   const { data: projectAccess } = useProjectAccess(project?.id ?? "")
+  const { data: accessRequestsData } = useProjectAccessRequests(project?.id ?? "")
+  const pendingAccessRequestCount = (accessRequestsData?.requests ?? []).filter((r) => r.status === "pending").length
+  const { data: healthUpdates } = useProjectHealthUpdates(project?.id)
+  const latestHealth = healthUpdates?.[0] ?? null
   const [shareOpen, setShareOpen] = useState(false)
   const navigate = useNavigate()
   const location = useLocation()
@@ -85,6 +116,15 @@ export function ProjectLayout() {
           <h1 className="text-sm font-semibold">
             {project?.name ?? ""}
           </h1>
+          {latestHealth && (
+            <Link to={`health`} className={cn(
+              "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium border transition-opacity hover:opacity-80",
+              HEALTH_BADGE[latestHealth.health].badge,
+            )}>
+              <span className={cn("h-1.5 w-1.5 rounded-full shrink-0", HEALTH_BADGE[latestHealth.health].dot)} />
+              {HEALTH_BADGE[latestHealth.health].label}
+            </Link>
+          )}
         </div>
 
         {/* Desktop tab bar */}
@@ -104,9 +144,24 @@ export function ProjectLayout() {
               >
                 <Icon className="h-3.5 w-3.5" strokeWidth={1.5} />
                 {label}
+                {label === "Access" && pendingAccessRequestCount > 0 && (
+                  <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-medium text-white">
+                    {pendingAccessRequestCount > 9 ? "9+" : pendingAccessRequestCount}
+                  </span>
+                )}
               </NavLink>
             ))}
           </div>
+          {project && (
+            <div className="pb-px">
+              <Button variant="ghost" size="sm" asChild className="h-7 px-2 text-xs text-muted-foreground">
+                <Link to="health">
+                  <Activity className="h-3.5 w-3.5 mr-1" />
+                  Status
+                </Link>
+              </Button>
+            </div>
+          )}
           {canShare && project && (
             <div className="pb-px pr-1">
               <Button variant="ghost" size="sm" onClick={() => setShareOpen(true)} className="h-7 px-2 text-xs text-muted-foreground">
@@ -133,6 +188,11 @@ export function ProjectLayout() {
             >
               <Icon className="h-3.5 w-3.5" strokeWidth={1.5} />
               {label}
+              {label === "Access" && pendingAccessRequestCount > 0 && (
+                <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-medium text-white">
+                  {pendingAccessRequestCount > 9 ? "9+" : pendingAccessRequestCount}
+                </span>
+              )}
             </NavLink>
           ))}
         </div>

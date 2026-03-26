@@ -9,6 +9,7 @@ export interface User {
   role: string
   app_role_id: string | null
   is_active: boolean
+  created_at: string
 }
 
 export interface PaginatedUsersResponse {

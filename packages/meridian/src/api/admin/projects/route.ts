@@ -4,6 +4,7 @@ import { createProjectWorkflow } from "../../../workflows/create-project.js"
 
 export const GET = async (req: any, res: Response) => {
   const projectService = req.scope.resolve("projectModuleService") as any
+  const projectMemberService = req.scope.resolve("projectMemberModuleService") as any
   const limit = Math.min(Number(req.query.limit) || 20, 100)
   const offset = Number(req.query.offset) || 0
   const filters: Record<string, unknown> = {}
@@ -20,42 +21,124 @@ export const GET = async (req: any, res: Response) => {
   const isPrivileged = roles.includes("super-admin") || roles.includes("admin")
 
   if (isPrivileged) {
-    const [projects, count] = await projectService.listAndCountProjects(filters, { limit, offset })
-    res.json({ projects, count, limit, offset })
+    // Super-admin org-scope bypass: return all projects unfiltered
+    if (roles.includes("super-admin") && req.query.org_scope === "true") {
+      const [projects, count] = await projectService.listAndCountProjects(filters, { limit, offset })
+      res.json({ projects, count, limit, offset })
+      return
+    }
+
+    const workspaceService = req.scope.resolve("workspaceModuleService") as any
+    const workspaceMemberService = req.scope.resolve("workspaceMemberModuleService") as any
+    const userId: string = req.user?.id
+
+    // Determine which workspace IDs are being queried
+    let queriedWsIds: string[] | null = null
+    if (Array.isArray(filters.workspace_id)) {
+      queriedWsIds = filters.workspace_id as string[]
+    } else if (filters.workspace_id) {
+      queriedWsIds = [filters.workspace_id as string]
+    }
+
+    // Fetch workspace objects to check is_private
+    let workspaces: any[]
+    if (queriedWsIds) {
+      workspaces = (await Promise.all(
+        queriedWsIds.map((id: string) => workspaceService.retrieveWorkspace(id).catch(() => null))
+      )).filter(Boolean)
+    } else {
+      const [all] = await workspaceService.listAndCountWorkspaces({}, { limit: 1000 })
+      workspaces = all
+    }
+
+    // Keep public workspaces + private ones where user is a member
+    const memberWsIds = new Set<string>(await workspaceMemberService.getWorkspaceIdsForUser(userId))
+    const allowedIds = workspaces
+      .filter((ws: any) => !ws.is_private || memberWsIds.has(ws.id))
+      .map((ws: any) => ws.id)
+
+    if (allowedIds.length === 0) {
+      res.json({ projects: [], count: 0, limit, offset })
+      return
+    }
+
+    const privilegedFilters: Record<string, unknown> = { ...filters }
+    privilegedFilters.workspace_id = allowedIds.length === 1 ? allowedIds[0] : allowedIds
+    const [projects, count] = await projectService.listAndCountProjects(privilegedFilters, { limit, offset })
+    const projectIds = projects.map((p: any) => p.id)
+    const pendingCounts = await projectMemberService.getPendingCountsForProjects(projectIds)
+    const enriched = projects.map((p: any) => ({
+      ...p,
+      is_member: true,
+      pending_request_count: pendingCounts.get(p.id) ?? 0,
+      has_pending_request: false,
+    }))
+    res.json({ projects: enriched, count, limit, offset })
     return
   }
 
   const workspaceMemberService = req.scope.resolve("workspaceMemberModuleService") as any
   const teamMemberService = req.scope.resolve("teamMemberModuleService") as any
-  const projectMemberService = req.scope.resolve("projectMemberModuleService") as any
   const userId = req.user?.id
 
-  // Workspace admins see all projects in their workspace
-  if (filters.workspace_id) {
-    const membership = await workspaceMemberService.getMembership(filters.workspace_id as string, userId)
-    if (!membership) {
-      res.status(403).json({ error: { message: "Forbidden — not a member of this workspace" } })
-      return
-    }
-    if (membership.role === "admin") {
-      const [projects, count] = await projectService.listAndCountProjects(filters, { limit, offset })
-      res.json({ projects, count, limit, offset })
-      return
-    }
-  }
-
-  // Members: filter by explicit project access
-  const userTeamIds = await teamMemberService.getUserTeamIds(userId)
-  const accessibleProjectIds = await projectMemberService.getAccessibleProjectIds(userId, userTeamIds)
-
-  if (accessibleProjectIds.length === 0) {
-    res.json({ projects: [], count: 0, limit, offset })
+  if (!filters.workspace_id) {
+    res.status(400).json({ error: { message: "workspace_id is required" } })
     return
   }
 
-  const memberFilters: Record<string, unknown> = { ...filters, id: accessibleProjectIds }
-  const [projects, count] = await projectService.listAndCountProjects(memberFilters, { limit, offset })
-  res.json({ projects, count, limit, offset })
+  const membership = await workspaceMemberService.getMembership(filters.workspace_id as string, userId)
+  if (!membership) {
+    res.status(403).json({ error: { message: "Forbidden — not a member of this workspace" } })
+    return
+  }
+
+  // All workspace members see ALL projects in the workspace
+  const [projects, count] = await projectService.listAndCountProjects(filters, { limit, offset })
+  const projectIds = projects.map((p: any) => p.id)
+
+  // Workspace admins have access to all projects
+  if (membership.role === "admin") {
+    const pendingCounts = await projectMemberService.getPendingCountsForProjects(projectIds)
+    const enriched = projects.map((p: any) => ({
+      ...p,
+      is_member: true,
+      pending_request_count: pendingCounts.get(p.id) ?? 0,
+      has_pending_request: false,
+    }))
+    res.json({ projects: enriched, count, limit, offset })
+    return
+  }
+
+  // Regular members: determine per-project access and pending counts for managed projects
+  const userTeamIds = await teamMemberService.getUserTeamIds(userId)
+  const memberRecords = await projectMemberService.listProjectMembersForProjects(projectIds)
+  const teamRecords = await projectMemberService.listProjectTeamIdsForProjects(projectIds)
+
+  const memberProjectIds = new Set(memberRecords.filter((m: any) => m.user_id === userId).map((m: any) => m.project_id))
+  const teamProjectIds = new Set(
+    userTeamIds.length > 0
+      ? teamRecords.filter((t: any) => userTeamIds.includes(t.team_id)).map((t: any) => t.project_id)
+      : []
+  )
+  const accessibleIds = new Set([...memberProjectIds, ...teamProjectIds])
+
+  // Only fetch pending counts for projects where user is a manager
+  const managedProjectIds = memberRecords
+    .filter((m: any) => m.user_id === userId && m.role === "manager")
+    .map((m: any) => m.project_id)
+  const pendingCounts = await projectMemberService.getPendingCountsForProjects(managedProjectIds)
+
+  // Check which non-member projects the user has a pending access request for
+  const nonMemberIds = projects.filter((p: any) => !accessibleIds.has(p.id)).map((p: any) => p.id)
+  const pendingProjectIds = await projectMemberService.getUserPendingProjectIds(userId, nonMemberIds)
+
+  const enriched = projects.map((p: any) => ({
+    ...p,
+    is_member: accessibleIds.has(p.id),
+    pending_request_count: pendingCounts.get(p.id) ?? 0,
+    has_pending_request: !accessibleIds.has(p.id) && pendingProjectIds.has(p.id),
+  }))
+  res.json({ projects: enriched, count, limit, offset })
 }
 
 export const POST = async (req: any, res: Response, next: NextFunction) => {

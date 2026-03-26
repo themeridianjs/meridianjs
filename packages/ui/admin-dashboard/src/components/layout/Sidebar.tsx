@@ -12,9 +12,11 @@ import {
   Shield,
   BarChart2,
   User as UserIcon,
+  UserPlus,
 } from "lucide-react"
+import { toast } from "sonner"
 import { useProjects } from "@/api/hooks/useProjects"
-import { useWorkspaces } from "@/api/hooks/useWorkspaces"
+import { useWorkspaces, useSearchWorkspaces, useRequestWorkspaceAccess, useWorkspaceAccessRequests } from "@/api/hooks/useWorkspaces"
 import { useAuth } from "@/stores/auth"
 import { useCommandPalette } from "@/stores/command-palette"
 import {
@@ -30,6 +32,7 @@ import {
   SidebarMenuItem,
   SidebarSeparator,
 } from "@/components/ui/sidebar"
+import { useState } from "react"
 import type { ComponentProps } from "react"
 type SidebarProps = ComponentProps<typeof SidebarRoot>
 import {
@@ -40,6 +43,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 // ── Workspace Switcher (header) ───────────────────────────────────────────────
@@ -47,9 +59,38 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 function WorkspaceSwitcher() {
   const { workspace, setWorkspace } = useAuth()
   const { data: workspaces } = useWorkspaces()
+  const { data: allPublic = [] } = useSearchWorkspaces("")
+  const requestAccess = useRequestWorkspaceAccess()
   const navigate = useNavigate()
 
+  // Track which workspaces the user has already requested access to (local state)
+  const [requestedIds, setRequestedIds] = useState<Set<string>>(new Set())
+  const [confirmWorkspace, setConfirmWorkspace] = useState<{ id: string; name: string } | null>(null)
+  const [confirmMessage, setConfirmMessage] = useState("")
+
+  const memberIds = new Set(workspaces?.map((w) => w.id) ?? [])
+  const joinable = allPublic.filter((w) => !memberIds.has(w.id))
+
+  const handleConfirmRequest = () => {
+    if (!confirmWorkspace) return
+    requestAccess.mutate(
+      { workspaceId: confirmWorkspace.id, message: confirmMessage.trim() || undefined },
+      {
+        onSuccess: () => {
+          setRequestedIds((prev) => new Set([...prev, confirmWorkspace.id]))
+          toast.success(`Access request sent for ${confirmWorkspace.name}`)
+          setConfirmWorkspace(null)
+        },
+        onError: (err: any) => {
+          toast.error(err.message ?? "Failed to send request")
+          setConfirmWorkspace(null)
+        },
+      }
+    )
+  }
+
   return (
+    <>
     <SidebarMenu>
       <SidebarMenuItem>
         <DropdownMenu>
@@ -81,30 +122,65 @@ function WorkspaceSwitcher() {
             sideOffset={4}
           >
             <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">
-              Workspaces
+              My workspaces
             </DropdownMenuLabel>
-            {workspaces?.map((w) => (
-              <DropdownMenuItem
-                key={w.id}
-                className="cursor-pointer gap-2 p-2"
-                onClick={() => {
-                  setWorkspace({ id: w.id, name: w.name, slug: w.slug, logo_url: w.logo_url })
-                  navigate(`/${w.slug}/projects`)
-                }}
-              >
-                {w.logo_url ? (
-                  <img src={w.logo_url} alt={w.name} className="size-6 rounded-sm object-cover shrink-0" />
-                ) : (
-                  <div className="flex size-6 items-center justify-center rounded-sm bg-foreground text-background shrink-0">
-                    <span className="text-[10px] font-bold">{w.name[0].toUpperCase()}</span>
-                  </div>
-                )}
-                <span className="flex-1 truncate">{w.name}</span>
-                {w.id === workspace?.id && (
-                  <Check className="size-3.5 text-muted-foreground shrink-0" />
-                )}
-              </DropdownMenuItem>
-            ))}
+            <div className="max-h-48 overflow-y-auto">
+              {workspaces?.map((w) => (
+                <DropdownMenuItem
+                  key={w.id}
+                  className="cursor-pointer gap-2 p-2"
+                  onClick={() => {
+                    setWorkspace({ id: w.id, name: w.name, slug: w.slug, logo_url: w.logo_url })
+                    navigate(`/${w.slug}/projects`)
+                  }}
+                >
+                  {w.logo_url ? (
+                    <img src={w.logo_url} alt={w.name} className="size-6 rounded-sm object-cover shrink-0" />
+                  ) : (
+                    <div className="flex size-6 items-center justify-center rounded-sm bg-foreground text-background shrink-0">
+                      <span className="text-[10px] font-bold">{w.name[0].toUpperCase()}</span>
+                    </div>
+                  )}
+                  <span className="flex-1 truncate">{w.name}</span>
+                  {w.id === workspace?.id && (
+                    <Check className="size-3.5 text-muted-foreground shrink-0" />
+                  )}
+                </DropdownMenuItem>
+              ))}
+            </div>
+
+            {joinable.length > 0 && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">
+                  Other workspaces
+                </DropdownMenuLabel>
+                <div className="max-h-36 overflow-y-auto">
+                  {joinable.map((w) => {
+                    const requested = requestedIds.has(w.id)
+                    return (
+                      <DropdownMenuItem
+                        key={w.id}
+                        className="cursor-pointer gap-2 p-2"
+                        onClick={() => { if (!requested) { setConfirmWorkspace({ id: w.id, name: w.name }); setConfirmMessage("") } }}
+                        disabled={requested}
+                      >
+                        <div className="flex size-6 items-center justify-center rounded-sm bg-muted text-muted-foreground shrink-0">
+                          <span className="text-[10px] font-bold">{w.name[0].toUpperCase()}</span>
+                        </div>
+                        <span className="flex-1 truncate text-muted-foreground">{w.name}</span>
+                        {requested ? (
+                          <span className="text-[10px] text-muted-foreground shrink-0">Requested</span>
+                        ) : (
+                          <UserPlus className="size-3.5 text-muted-foreground shrink-0" />
+                        )}
+                      </DropdownMenuItem>
+                    )
+                  })}
+                </div>
+              </>
+            )}
+
             <DropdownMenuSeparator />
             <DropdownMenuItem
               className="cursor-pointer gap-2 p-2 text-muted-foreground"
@@ -119,6 +195,34 @@ function WorkspaceSwitcher() {
         </DropdownMenu>
       </SidebarMenuItem>
     </SidebarMenu>
+
+    <Dialog open={!!confirmWorkspace} onOpenChange={(open) => { if (!open) setConfirmWorkspace(null) }}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Request access to {confirmWorkspace?.name}?</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3 py-1">
+          <p className="text-sm text-muted-foreground">
+            A request will be sent to the workspace admins. You'll be notified once it's approved.
+          </p>
+          <Input
+            placeholder="Optional message to admins..."
+            value={confirmMessage}
+            onChange={(e) => setConfirmMessage(e.target.value)}
+            className="h-9 text-sm"
+          />
+        </div>
+        <DialogFooter>
+          <Button variant="outline" size="sm" onClick={() => setConfirmWorkspace(null)}>
+            Cancel
+          </Button>
+          <Button size="sm" disabled={requestAccess.isPending} onClick={handleConfirmRequest}>
+            {requestAccess.isPending ? "Sending..." : "Send request"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  </>
   )
 }
 
@@ -204,8 +308,14 @@ function NavUser() {
 export function AppSidebar({ ...props }: SidebarProps) {
   const { workspace: workspaceSlug, projectKey } = useParams<{ workspace: string; projectKey: string }>()
   const { data: projects } = useProjects()
+  const projectPendingCount = (projects ?? []).reduce((s, p) => s + (p.pending_request_count ?? 0), 0)
   const { toggle: openCommandPalette } = useCommandPalette()
-  const { user } = useAuth()
+  const { user, workspace: wsRef } = useAuth()
+  const workspaceId = wsRef?.id ?? ""
+  const _roles: string[] = user?.roles ?? []
+  const _isAdmin = _roles.includes("super-admin") || _roles.includes("admin")
+  const { data: _pendingRequests = [] } = useWorkspaceAccessRequests(workspaceId)
+  const pendingCount = _isAdmin ? _pendingRequests.length : 0
   const location = useLocation()
   const ws = workspaceSlug ?? ""
 
@@ -260,7 +370,12 @@ export function AppSidebar({ ...props }: SidebarProps) {
                 <SidebarMenuButton asChild isActive={isProjectsActive} tooltip="Projects">
                   <NavLink to={`/${ws}/projects`} end>
                     <Layers />
-                    <span>Projects</span>
+                    <span className="flex-1">Projects</span>
+                    {projectPendingCount > 0 && (
+                      <span className="ml-auto flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-medium text-white">
+                        {projectPendingCount > 9 ? "9+" : projectPendingCount}
+                      </span>
+                    )}
                   </NavLink>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -290,7 +405,12 @@ export function AppSidebar({ ...props }: SidebarProps) {
                 <SidebarMenuButton asChild isActive={isSettingsActive} tooltip="Settings">
                   <NavLink to={`/${ws}/settings`}>
                     <Settings />
-                    <span>Workspace settings</span>
+                    <span className="flex-1">Workspace settings</span>
+                    {pendingCount > 0 && (
+                      <span className="ml-auto flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-medium text-white">
+                        {pendingCount > 9 ? "9+" : pendingCount}
+                      </span>
+                    )}
                   </NavLink>
                 </SidebarMenuButton>
               </SidebarMenuItem>

@@ -1,5 +1,46 @@
 # @meridianjs/workflow-engine
 
+## 2.0.0
+
+### Major Changes
+
+- Complete rewrite of the user access flow and the user roles, and minor UI improvments and fixes
+
+### Patch Changes
+
+- Updated dependencies
+  - @meridianjs/types@2.0.0
+
+## 1.31.0
+
+### Minor Changes
+
+- Request to join a workspace
+
+### Patch Changes
+
+- Updated dependencies
+  - @meridianjs/types@1.31.0
+
+## 1.30.0
+
+### Minor Changes
+
+- UI improvements, and reporting issue fixes
+- Fixed the previlaged check logic, and access control logic
+
+### Patch Changes
+
+- Updated dependencies
+- Updated dependencies
+  - @meridianjs/types@1.30.0
+
+## 1.29.0
+
+### Patch Changes
+
+- @meridianjs/types@1.29.0
+
 ## 1.28.0
 
 ### Patch Changes

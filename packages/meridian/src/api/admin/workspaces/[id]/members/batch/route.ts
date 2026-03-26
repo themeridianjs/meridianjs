@@ -61,16 +61,25 @@ export const POST = async (req: any, res: Response, next: NextFunction) => {
         }).catch(() => {})
       }
 
-      // Optionally assign custom app role to all added users
-      if (app_role_id) {
-        try {
-          const userService = req.scope.resolve("userModuleService") as any
+      // Assign custom app role — or default to "User" system role
+      try {
+        const userService = req.scope.resolve("userModuleService") as any
+        if (app_role_id) {
           for (const userId of user_ids) {
             await userService.updateUser(userId, { app_role_id }).catch(() => {})
           }
-        } catch {
-          // Non-fatal
+        } else {
+          const appRoleService = req.scope.resolve("appRoleModuleService") as any
+          const [userRoles] = await appRoleService.listAndCountAppRoles({ name: "User", is_system: true }, { limit: 1 })
+          if (userRoles.length > 0) {
+            const defaultRoleId = userRoles[0].id
+            for (const userId of user_ids) {
+              await userService.updateUser(userId, { app_role_id: defaultRoleId }).catch(() => {})
+            }
+          }
         }
+      } catch {
+        // Non-fatal
       }
 
       res.status(201).json({ added, skipped })

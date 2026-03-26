@@ -51,6 +51,21 @@ export class SseManager {
     }
     if (set.size === 0) this.clients.delete(workspaceId)
   }
+
+  /**
+   * Registers a response as an SSE client for a specific user (no workspace required).
+   * Uses a `user:` prefix to avoid key collisions with workspace IDs.
+   */
+  subscribeUser(userId: string, res: Response): () => void {
+    return this.subscribe(`user:${userId}`, res)
+  }
+
+  /**
+   * Sends an SSE event to all connections for a specific user.
+   */
+  broadcastToUser(userId: string, event: string, data: unknown): void {
+    this.broadcast(`user:${userId}`, event, data)
+  }
 }
 
 /** Singleton shared across all routes and subscribers. */

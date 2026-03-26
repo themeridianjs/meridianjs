@@ -81,14 +81,20 @@ export const POST = async (req: any, res: Response, next: NextFunction) => {
         role: wsRole,
       })
 
-      // Optionally assign custom app role to the user
-      if (app_role_id) {
-        try {
-          const userService = req.scope.resolve("userModuleService") as any
+      // Assign custom app role — or default to "User" system role
+      try {
+        const userService = req.scope.resolve("userModuleService") as any
+        if (app_role_id) {
           await userService.updateUser(user_id, { app_role_id })
-        } catch {
-          // Non-fatal
+        } else {
+          const appRoleService = req.scope.resolve("appRoleModuleService") as any
+          const [userRoles] = await appRoleService.listAndCountAppRoles({ name: "User", is_system: true }, { limit: 1 })
+          if (userRoles.length > 0) {
+            await userService.updateUser(user_id, { app_role_id: userRoles[0].id })
+          }
         }
+      } catch {
+        // Non-fatal
       }
 
       const eventBus = req.scope.resolve("eventBus") as any

@@ -12,3 +12,12 @@ export function createEventSource(token: string, workspaceId: string): EventSour
   const url = `${BASE_URL}/admin/events?token=${encodeURIComponent(token)}&workspaceId=${encodeURIComponent(workspaceId)}`
   return new EventSource(url)
 }
+
+/**
+ * Creates an EventSource in user-only mode (no workspace required).
+ * Used on pages like /awaiting-access where the user has no workspace yet.
+ */
+export function createUserEventSource(token: string): EventSource {
+  const url = `${BASE_URL}/admin/events?token=${encodeURIComponent(token)}&mode=user`
+  return new EventSource(url)
+}

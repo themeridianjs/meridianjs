@@ -18,6 +18,7 @@ interface AssigneeSelectorProps {
   onChange: (ids: string[]) => void
   disabled?: boolean
   users?: AssigneeUser[]
+  emptyLabel?: string
 }
 
 function getInitials(firstName: string, lastName: string, email: string) {
@@ -30,7 +31,7 @@ function getUserName(firstName: string, lastName: string, email: string) {
   return `${firstName ?? ""} ${lastName ?? ""}`.trim() || email
 }
 
-export function AssigneeSelector({ value, onChange, disabled, users: usersProp }: AssigneeSelectorProps) {
+export function AssigneeSelector({ value, onChange, disabled, users: usersProp, emptyLabel = "Assign" }: AssigneeSelectorProps) {
   const [open, setOpen] = useState(false)
   const [localValue, setLocalValue] = useState<string[]>(value)
   const { data: fetchedUsers } = useAllUsers()
@@ -70,7 +71,7 @@ export function AssigneeSelector({ value, onChange, disabled, users: usersProp }
           {assignedUsers.length === 0 ? (
             <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <UserPlus className="h-3.5 w-3.5" />
-              Assign
+              {emptyLabel}
             </span>
           ) : (
             <div className="flex items-center gap-1">

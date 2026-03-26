@@ -384,7 +384,7 @@ export function CommentInput({ issueId, projectId, compact, className, onSuccess
           {/* Editor area */}
           <EditorContent
             editor={editor}
-            className={cn("px-3 py-2.5 text-sm", compact ? "min-h-[68px]" : "min-h-[80px]")}
+            className={cn("px-3 py-2.5 text-sm overflow-y-auto", compact ? "min-h-[68px] max-h-[160px]" : "min-h-[80px] max-h-[200px]")}
           />
         </div>
 

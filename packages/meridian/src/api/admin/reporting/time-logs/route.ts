@@ -33,6 +33,53 @@ export const GET = async (req: any, res: Response) => {
   const filterUserIds = user_ids ? user_ids.split(",").filter(Boolean) : user_id ? [user_id] : []
   const filterProjectIds = project_ids ? project_ids.split(",").filter(Boolean) : project_id ? [project_id] : []
 
+  const isSuperAdmin = roles.includes("super-admin")
+
+  // Super-admin org-scope bypass: skip all workspace privacy filtering
+  if (isSuperAdmin && req.query.org_scope === "true") {
+    const parsedLimit = limit ? parseInt(limit, 10) : 200
+    const parsedOffset = offset ? parseInt(offset, 10) : 0
+    if (filterProjectIds.length > 0) filters.project_id = filterProjectIds
+    if (filterUserIds.length > 0) filters.user_id = filterUserIds
+    const result = await issueService.listTimeLogsForReporting({ ...filters, limit: parsedLimit, offset: parsedOffset })
+    res.json({
+      time_logs: result.time_logs, count: result.count, total_minutes: result.total_minutes,
+      total_employees: result.total_employees, total_projects: result.total_projects,
+      limit: parsedLimit, offset: parsedOffset,
+    })
+    return
+  }
+
+  if (isPrivileged) {
+    const workspaceService = req.scope.resolve("workspaceModuleService") as any
+    const workspaceMemberService = req.scope.resolve("workspaceMemberModuleService") as any
+    const userId: string = req.user?.id
+
+    let workspaces: any[]
+    if (wsIds.length > 0) {
+      workspaces = (await Promise.all(
+        wsIds.map((id) => workspaceService.retrieveWorkspace(id).catch(() => null))
+      )).filter(Boolean)
+    } else {
+      // No explicit workspace filter — scope to all workspaces the user can access
+      const [all] = await workspaceService.listAndCountWorkspaces({}, { limit: 1000 })
+      workspaces = all
+    }
+
+    const memberWsIds = new Set<string>(await workspaceMemberService.getWorkspaceIdsForUser(userId))
+    const allowedIds: string[] = workspaces
+      .filter((ws: any) => !ws.is_private || memberWsIds.has(ws.id))
+      .map((ws: any) => ws.id)
+
+    if (allowedIds.length === 0) {
+      res.json({ time_logs: [], count: 0, total_minutes: 0, total_employees: 0, total_projects: 0, limit: 0, offset: 0 })
+      return
+    }
+
+    if (allowedIds.length === 1) filters.workspace_id = allowedIds[0]
+    else filters.workspace_id = allowedIds
+  }
+
   if (!isPrivileged && wsIds.length > 0) {
     const userId = req.user?.id
     const workspaceMemberService = req.scope.resolve("workspaceMemberModuleService") as WorkspaceMemberModuleService

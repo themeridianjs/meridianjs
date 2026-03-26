@@ -94,6 +94,24 @@ const ACTION_CONFIG: Record<string, {
       return name ? `Deleted status "${name}"` : "Deleted status"
     },
   },
+  health_update_updated: {
+    icon: Pencil,
+    color: "text-amber-500",
+    bg: "bg-amber-50 dark:bg-amber-950/40",
+    label: (changes) => {
+      const title = (changes as any)?.title?.to as string | undefined
+      return title ? `Edited status update "${title}"` : "Edited a status update"
+    },
+  },
+  health_update_deleted: {
+    icon: Trash2,
+    color: "text-red-500",
+    bg: "bg-red-50 dark:bg-red-950/40",
+    label: (changes) => {
+      const title = (changes as any)?.title?.from as string | undefined
+      return title ? `Deleted status update "${title}"` : "Deleted a status update"
+    },
+  },
   updated: {
     icon: Pencil,
     color: "text-amber-500",
@@ -116,6 +134,36 @@ const ACTION_CONFIG: Record<string, {
       if (from && to) return `Transferred project from "${from}" to "${to}"`
       if (to) return `Transferred project to "${to}"`
       return "Transferred project"
+    },
+  },
+  access_requested: {
+    icon: UserPlus,
+    color: "text-blue-500",
+    bg: "bg-blue-50 dark:bg-blue-950/40",
+    label: (changes, userMap) => {
+      const userId = (changes as any)?.user_id as string | undefined
+      const name = userId ? (userMap.get(userId)?.name ?? userId) : "a user"
+      return `${name} requested access`
+    },
+  },
+  access_request_approved: {
+    icon: UserPlus,
+    color: "text-green-600",
+    bg: "bg-green-50 dark:bg-green-950/40",
+    label: (changes, userMap) => {
+      const userId = (changes as any)?.user_id as string | undefined
+      const name = userId ? (userMap.get(userId)?.name ?? userId) : "a user"
+      return `Approved access request from ${name}`
+    },
+  },
+  access_request_denied: {
+    icon: UserX,
+    color: "text-red-500",
+    bg: "bg-red-50 dark:bg-red-950/40",
+    label: (changes, userMap) => {
+      const userId = (changes as any)?.user_id as string | undefined
+      const name = userId ? (userMap.get(userId)?.name ?? userId) : "a user"
+      return `Denied access request from ${name}`
     },
   },
 }
