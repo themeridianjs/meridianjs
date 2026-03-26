@@ -4,13 +4,14 @@ import ProjectModel from "./models/project.js"
 import LabelModel from "./models/label.js"
 import MilestoneModel from "./models/milestone.js"
 import ProjectStatusModel from "./models/project-status.js"
+import ProjectHealthUpdateModel from "./models/project-health-update.js"
 import defaultLoader from "./loaders/default.js"
 
 export const PROJECT_MODULE = "projectModuleService"
 
 export default Module(PROJECT_MODULE, {
   service: ProjectModuleService,
-  models: [ProjectModel, LabelModel, MilestoneModel, ProjectStatusModel],
+  models: [ProjectModel, LabelModel, MilestoneModel, ProjectStatusModel, ProjectHealthUpdateModel],
   loaders: [defaultLoader],
   linkable: {
     project: { tableName: "project", primaryKey: "id" },

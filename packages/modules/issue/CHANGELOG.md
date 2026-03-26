@@ -1,5 +1,16 @@
 # @meridianjs/issue
 
+## 1.6.0
+
+### Minor Changes
+
+- UI improvements & fixes
+
+### Patch Changes
+
+- @meridianjs/types@1.29.0
+- @meridianjs/framework-utils@1.29.0
+
 ## 1.5.0
 
 ### Minor Changes
