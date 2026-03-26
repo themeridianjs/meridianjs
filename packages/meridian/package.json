@@ -1,6 +1,6 @@
 {
   "name": "@meridianjs/meridian",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Default API routes, workflows, links, and subscribers for Meridian applications",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -20,13 +20,13 @@
     "prepublishOnly": "cd ../.. && npm run check:routes && cd packages/meridian && npm run build"
   },
   "dependencies": {
-    "@meridianjs/framework": "^2.0.0",
-    "@meridianjs/framework-utils": "^2.0.0",
-    "@meridianjs/workflow-engine": "^2.0.0",
-    "@meridianjs/types": "^2.0.0",
+    "@meridianjs/framework": "^2.1.0",
+    "@meridianjs/framework-utils": "^2.1.0",
+    "@meridianjs/workflow-engine": "^2.1.0",
+    "@meridianjs/types": "^2.1.0",
     "@meridianjs/user": "^2.0.0",
     "@meridianjs/workspace": "^1.2.1",
-    "@meridianjs/auth": "^2.0.0",
+    "@meridianjs/auth": "^2.1.0",
     "@meridianjs/project": "^2.0.0",
     "@meridianjs/issue": "^2.0.0",
     "@meridianjs/sprint": "^1.0.1",

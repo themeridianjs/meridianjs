@@ -1,5 +1,11 @@
 # @meridianjs/admin-dashboard
 
+## 2.1.0
+
+### Minor Changes
+
+- Code review fixes, and UI improvements and fixes
+
 ## 2.0.0
 
 ### Major Changes
