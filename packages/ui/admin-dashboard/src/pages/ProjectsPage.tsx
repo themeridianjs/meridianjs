@@ -2,9 +2,17 @@ import { useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import { useProjects, useDeleteProject } from "@/api/hooks/useProjects"
 import { useWorkspaces } from "@/api/hooks/useWorkspaces"
+import { useRequestProjectAccess, useCancelProjectAccessRequest } from "@/api/hooks/useProjectAccess"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Input } from "@/components/ui/input"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,7 +23,7 @@ import {
 import { CreateProjectDialog } from "@/components/projects/CreateProjectDialog"
 import { ProjectAccessDialog } from "@/components/projects/ProjectAccessDialog"
 import { TransferProjectDialog } from "@/components/projects/TransferProjectDialog"
-import { Plus, MoreHorizontal, Layers, GitBranch, Trash2, Search, Lock, ArrowRightLeft } from "lucide-react"
+import { Plus, MoreHorizontal, Layers, GitBranch, Trash2, Search, Lock, ArrowRightLeft, UserPlus, X } from "lucide-react"
 import { toast } from "sonner"
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
@@ -24,15 +32,24 @@ export function ProjectsPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [accessProject, setAccessProject] = useState<{ id: string; name: string } | null>(null)
   const [transferProject, setTransferProject] = useState<{ id: string; name: string } | null>(null)
+  const [confirmProject, setConfirmProject] = useState<{ id: string; name: string } | null>(null)
+  const [confirmMessage, setConfirmMessage] = useState("")
+  const [requestedIds, setRequestedIds] = useState<Set<string>>(new Set())
   const [search, setSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "paused" | "archived">("all")
   const { workspace } = useParams<{ workspace: string }>()
   const { data: projects, isLoading } = useProjects()
   const { data: allWorkspaces } = useWorkspaces()
   const deleteProject = useDeleteProject()
+  const requestAccess = useRequestProjectAccess()
+  const cancelAccess = useCancelProjectAccessRequest()
   const navigate = useNavigate()
 
   const currentWorkspace = allWorkspaces?.find((w) => w.slug === workspace)
+
+  // A project is "pending" if server says so OR user requested access this session
+  const isPending = (p: { id: string; has_pending_request?: boolean }) =>
+    p.has_pending_request || requestedIds.has(p.id)
 
   const filtered = (projects ?? []).filter(
     (p) =>
@@ -138,14 +155,27 @@ export function ProjectsPage() {
               <div key={project.id}>
                 {/* Desktop row */}
                 <div
-                  className="hidden md:grid grid-cols-[2fr_1fr_1fr_1fr_40px] items-center px-6 py-3 hover:bg-[#f9fafb] dark:hover:bg-muted/30 cursor-pointer transition-colors group"
-                  onClick={() => navigate(`/${workspace}/projects/${project.identifier}/board`)}
+                  className={cn(
+                    "hidden md:grid grid-cols-[2fr_1fr_1fr_1fr_40px] items-center px-6 py-3 transition-colors group",
+                    project.is_member === false
+                      ? "opacity-60 cursor-default"
+                      : "hover:bg-[#f9fafb] dark:hover:bg-muted/30 cursor-pointer"
+                  )}
+                  onClick={() => project.is_member !== false && navigate(`/${workspace}/projects/${project.identifier}/board`)}
                 >
                   {/* Name */}
                   <div className="flex items-center gap-3 min-w-0">
                     <span className="text-sm font-medium text-foreground truncate">
                       {project.name}
                     </span>
+                    {project.is_member === false && isPending(project) && (
+                      <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 shrink-0">Pending</span>
+                    )}
+                    {(project.pending_request_count ?? 0) > 0 && (
+                      <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-medium text-white shrink-0">
+                        {project.pending_request_count}
+                      </span>
+                    )}
                     {project.description && (
                       <span className="text-xs text-muted-foreground truncate hidden xl:block">
                         {project.description}
@@ -190,37 +220,67 @@ export function ProjectsPage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => navigate(`/${workspace}/projects/${project.identifier}/board`)}>
-                          <Layers className="h-4 w-4" />
-                          Open board
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => navigate(`/${workspace}/projects/${project.identifier}/issues`)}>
-                          <GitBranch className="h-4 w-4" />
-                          View issues
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setAccessProject({ id: project.id, name: project.name })}>
-                          <Lock className="h-4 w-4" />
-                          Manage access
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setTransferProject({ id: project.id, name: project.name })}>
-                          <ArrowRightLeft className="h-4 w-4" />
-                          Transfer to workspace
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="text-destructive focus:text-destructive"
-                          onClick={() => {
-                            if (confirm(`Delete "${project.name}"? This cannot be undone.`)) {
-                              deleteProject.mutate(project.id, {
-                                onSuccess: () => toast.success("Project deleted"),
-                                onError: () => toast.error("Failed to delete project"),
-                              })
-                            }
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          Delete
-                        </DropdownMenuItem>
+                        {project.is_member === false ? (
+                          <>
+                            <DropdownMenuItem
+                              disabled={isPending(project)}
+                              onClick={() => { if (!isPending(project)) { setConfirmProject({ id: project.id, name: project.name }); setConfirmMessage("") } }}
+                            >
+                              <UserPlus className="h-4 w-4" />
+                              {isPending(project) ? "Request pending" : "Request access"}
+                            </DropdownMenuItem>
+                            {isPending(project) && (
+                              <DropdownMenuItem
+                                className="text-destructive focus:text-destructive"
+                                disabled={cancelAccess.isPending}
+                                onClick={() => cancelAccess.mutate(project.id, {
+                                  onSuccess: () => {
+                                    setRequestedIds((prev) => { const next = new Set(prev); next.delete(project.id); return next })
+                                    toast.success("Access request cancelled")
+                                  },
+                                  onError: () => toast.error("Failed to cancel request"),
+                                })}
+                              >
+                                <X className="h-4 w-4" />
+                                Cancel request
+                              </DropdownMenuItem>
+                            )}
+                          </>
+                        ) : (
+                          <>
+                            <DropdownMenuItem onClick={() => navigate(`/${workspace}/projects/${project.identifier}/board`)}>
+                              <Layers className="h-4 w-4" />
+                              Open board
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => navigate(`/${workspace}/projects/${project.identifier}/issues`)}>
+                              <GitBranch className="h-4 w-4" />
+                              View issues
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setAccessProject({ id: project.id, name: project.name })}>
+                              <Lock className="h-4 w-4" />
+                              Manage access
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setTransferProject({ id: project.id, name: project.name })}>
+                              <ArrowRightLeft className="h-4 w-4" />
+                              Transfer to workspace
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-destructive focus:text-destructive"
+                              onClick={() => {
+                                if (confirm(`Delete "${project.name}"? This cannot be undone.`)) {
+                                  deleteProject.mutate(project.id, {
+                                    onSuccess: () => toast.success("Project deleted"),
+                                    onError: () => toast.error("Failed to delete project"),
+                                  })
+                                }
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
@@ -228,8 +288,13 @@ export function ProjectsPage() {
 
                 {/* Mobile card */}
                 <div
-                  className="md:hidden flex items-center gap-3 px-4 py-3 hover:bg-[#f9fafb] dark:hover:bg-muted/30 cursor-pointer transition-colors"
-                  onClick={() => navigate(`/${workspace}/projects/${project.identifier}/issues`)}
+                  className={cn(
+                    "md:hidden flex items-center gap-3 px-4 py-3 transition-colors",
+                    project.is_member === false
+                      ? "opacity-60 cursor-default"
+                      : "hover:bg-[#f9fafb] dark:hover:bg-muted/30 cursor-pointer"
+                  )}
+                  onClick={() => project.is_member !== false && navigate(`/${workspace}/projects/${project.identifier}/issues`)}
                 >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
@@ -263,33 +328,63 @@ export function ProjectsPage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => navigate(`/${workspace}/projects/${project.identifier}/issues`)}>
-                          <GitBranch className="h-4 w-4" />
-                          View issues
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setAccessProject({ id: project.id, name: project.name })}>
-                          <Lock className="h-4 w-4" />
-                          Manage access
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setTransferProject({ id: project.id, name: project.name })}>
-                          <ArrowRightLeft className="h-4 w-4" />
-                          Transfer to workspace
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="text-destructive focus:text-destructive"
-                          onClick={() => {
-                            if (confirm(`Delete "${project.name}"? This cannot be undone.`)) {
-                              deleteProject.mutate(project.id, {
-                                onSuccess: () => toast.success("Project deleted"),
-                                onError: () => toast.error("Failed to delete project"),
-                              })
-                            }
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          Delete
-                        </DropdownMenuItem>
+                        {project.is_member === false ? (
+                          <>
+                            <DropdownMenuItem
+                              disabled={isPending(project)}
+                              onClick={() => { if (!isPending(project)) { setConfirmProject({ id: project.id, name: project.name }); setConfirmMessage("") } }}
+                            >
+                              <UserPlus className="h-4 w-4" />
+                              {isPending(project) ? "Request pending" : "Request access"}
+                            </DropdownMenuItem>
+                            {isPending(project) && (
+                              <DropdownMenuItem
+                                className="text-destructive focus:text-destructive"
+                                disabled={cancelAccess.isPending}
+                                onClick={() => cancelAccess.mutate(project.id, {
+                                  onSuccess: () => {
+                                    setRequestedIds((prev) => { const next = new Set(prev); next.delete(project.id); return next })
+                                    toast.success("Access request cancelled")
+                                  },
+                                  onError: () => toast.error("Failed to cancel request"),
+                                })}
+                              >
+                                <X className="h-4 w-4" />
+                                Cancel request
+                              </DropdownMenuItem>
+                            )}
+                          </>
+                        ) : (
+                          <>
+                            <DropdownMenuItem onClick={() => navigate(`/${workspace}/projects/${project.identifier}/issues`)}>
+                              <GitBranch className="h-4 w-4" />
+                              View issues
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setAccessProject({ id: project.id, name: project.name })}>
+                              <Lock className="h-4 w-4" />
+                              Manage access
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setTransferProject({ id: project.id, name: project.name })}>
+                              <ArrowRightLeft className="h-4 w-4" />
+                              Transfer to workspace
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-destructive focus:text-destructive"
+                              onClick={() => {
+                                if (confirm(`Delete "${project.name}"? This cannot be undone.`)) {
+                                  deleteProject.mutate(project.id, {
+                                    onSuccess: () => toast.success("Project deleted"),
+                                    onError: () => toast.error("Failed to delete project"),
+                                  })
+                                }
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
@@ -313,6 +408,51 @@ export function ProjectsPage() {
           </div>
         )}
       </div>
+
+      <Dialog open={!!confirmProject} onOpenChange={(open) => { if (!open) setConfirmProject(null) }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Request access to {confirmProject?.name}?</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-1">
+            <p className="text-sm text-muted-foreground">
+              A request will be sent to the project managers. You'll be notified once it's approved.
+            </p>
+            <Input
+              placeholder="Optional message..."
+              value={confirmMessage}
+              onChange={(e) => setConfirmMessage(e.target.value)}
+              className="h-9 text-sm"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setConfirmProject(null)}>Cancel</Button>
+            <Button
+              size="sm"
+              disabled={requestAccess.isPending}
+              onClick={() => {
+                if (!confirmProject) return
+                requestAccess.mutate(
+                  { projectId: confirmProject.id, message: confirmMessage.trim() || undefined },
+                  {
+                    onSuccess: () => {
+                      setRequestedIds((prev) => new Set([...prev, confirmProject.id]))
+                      setConfirmProject(null)
+                      toast.success("Access request sent")
+                    },
+                    onError: (err: any) => {
+                      toast.error(err.message ?? "Failed to send request")
+                      setConfirmProject(null)
+                    },
+                  }
+                )
+              }}
+            >
+              {requestAccess.isPending ? "Sending..." : "Send request"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <CreateProjectDialog open={dialogOpen} onClose={() => setDialogOpen(false)} />
 

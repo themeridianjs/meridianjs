@@ -1,8 +1,10 @@
 import type { Response } from "express"
+import { requirePermission } from "@meridianjs/auth"
 import { hasProjectAccess } from "../../../utils/project-access.js"
 
 export const PUT = async (req: any, res: Response) => {
-  const { name, description } = req.body
+  requirePermission("project:update")(req, res, async () => {
+    const { name, description } = req.body
   const issueService = req.scope.resolve("issueModuleService") as any
   const taskListRepo = req.scope.resolve("taskListRepository") as any
   const taskList = await taskListRepo.findOne({ id: req.params.id })
@@ -15,11 +17,13 @@ export const PUT = async (req: any, res: Response) => {
     return
   }
   const updated = await issueService.updateTaskList(req.params.id, { name, description })
-  res.json({ task_list: updated })
+    res.json({ task_list: updated })
+  })
 }
 
 export const DELETE = async (req: any, res: Response) => {
-  const issueService = req.scope.resolve("issueModuleService") as any
+  requirePermission("project:update")(req, res, async () => {
+    const issueService = req.scope.resolve("issueModuleService") as any
   const taskListRepo = req.scope.resolve("taskListRepository") as any
   const taskList = await taskListRepo.findOne({ id: req.params.id })
   if (!taskList) { res.status(404).json({ error: { message: "Task list not found" } }); return }
@@ -30,6 +34,7 @@ export const DELETE = async (req: any, res: Response) => {
     res.status(403).json({ error: { message: "Forbidden" } })
     return
   }
-  await issueService.deleteTaskList(req.params.id)
-  res.status(204).end()
+    await issueService.deleteTaskList(req.params.id)
+    res.status(204).end()
+  })
 }

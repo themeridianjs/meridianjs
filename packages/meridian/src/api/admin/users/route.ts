@@ -2,19 +2,6 @@ import type { Response, NextFunction } from "express"
 
 export const GET = async (req: any, res: Response, next: NextFunction) => {
   try {
-    const roles: string[] = req.user?.roles ?? []
-    const permissions: string[] = req.user?.permissions ?? []
-    const canSearch =
-      roles.includes("super-admin") ||
-      roles.includes("admin") ||
-      permissions.includes("workspace:admin") ||
-      permissions.includes("member:invite")
-
-    if (!canSearch) {
-      res.status(403).json({ error: { message: "Forbidden" } })
-      return
-    }
-
     const userService = req.scope.resolve("userModuleService") as any
     const limit = Math.min(Number(req.query.limit) || 20, 100)
     const offset = Number(req.query.offset) || 0
@@ -29,7 +16,7 @@ export const GET = async (req: any, res: Response, next: NextFunction) => {
       ]
     }
 
-    const [users, count] = await userService.listAndCountUsers(filters, { limit, offset })
+    const [users, count] = await userService.listAndCountUsers(filters, { limit, offset, orderBy: { created_at: "DESC" } })
     const safeUsers = (users as any[]).map(({ password_hash: _, ...u }) => u)
     res.json({ users: safeUsers, count, limit, offset })
   } catch (err) {

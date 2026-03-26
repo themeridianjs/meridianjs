@@ -9,13 +9,15 @@ export interface ReportingMember {
   avatar_url: string | null
 }
 
-export function useReportingMembers(workspaceIds: string[], projectIds: string[]) {
+export function useReportingMembers(workspaceIds: string[], projectIds: string[], options?: { orgScope?: boolean }) {
+  const orgScope = options?.orgScope ?? false
   return useQuery({
-    queryKey: ["reporting", "members", workspaceIds, projectIds],
+    queryKey: ["reporting", "members", workspaceIds, projectIds, orgScope],
     queryFn: () => {
       const params = new URLSearchParams()
       if (workspaceIds.length) params.set("workspace_ids", workspaceIds.join(","))
       if (projectIds.length) params.set("project_ids", projectIds.join(","))
+      if (orgScope) params.set("org_scope", "true")
       return api.get<{ members: ReportingMember[] }>(`/admin/reporting/members?${params}`)
     },
     select: (data) => data.members,

@@ -4,7 +4,7 @@ import { Zap, GitBranch, LayoutDashboard, Lock, CalendarRange, BarChart2, Share2
 import type { LucideIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useProjectByKey } from "@/api/hooks/useProjects"
-import { useProjectAccess } from "@/api/hooks/useProjectAccess"
+import { useProjectAccess, useProjectAccessRequests } from "@/api/hooks/useProjectAccess"
 import { useProjectHealthUpdates, type ProjectHealthUpdate } from "@/api/hooks/useProjectHealth"
 import { useAuth } from "@/stores/auth"
 import { Button } from "@/components/ui/button"
@@ -44,6 +44,8 @@ export function ProjectLayout() {
   const { data: project, error } = useProjectByKey(projectKey ?? "")
   const { user } = useAuth()
   const { data: projectAccess } = useProjectAccess(project?.id ?? "")
+  const { data: accessRequestsData } = useProjectAccessRequests(project?.id ?? "")
+  const pendingAccessRequestCount = (accessRequestsData?.requests ?? []).filter((r) => r.status === "pending").length
   const { data: healthUpdates } = useProjectHealthUpdates(project?.id)
   const latestHealth = healthUpdates?.[0] ?? null
   const [shareOpen, setShareOpen] = useState(false)
@@ -142,6 +144,11 @@ export function ProjectLayout() {
               >
                 <Icon className="h-3.5 w-3.5" strokeWidth={1.5} />
                 {label}
+                {label === "Access" && pendingAccessRequestCount > 0 && (
+                  <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-medium text-white">
+                    {pendingAccessRequestCount > 9 ? "9+" : pendingAccessRequestCount}
+                  </span>
+                )}
               </NavLink>
             ))}
           </div>
@@ -181,6 +188,11 @@ export function ProjectLayout() {
             >
               <Icon className="h-3.5 w-3.5" strokeWidth={1.5} />
               {label}
+              {label === "Access" && pendingAccessRequestCount > 0 && (
+                <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-medium text-white">
+                  {pendingAccessRequestCount > 9 ? "9+" : pendingAccessRequestCount}
+                </span>
+              )}
             </NavLink>
           ))}
         </div>

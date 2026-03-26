@@ -3,6 +3,7 @@ import { randomBytes } from "node:crypto"
 import type { Response } from "express"
 import { storeExchangeCode } from "../_exchange-store.js"
 import { validateEmailDomain } from "../../register/_domain-check.js"
+import { applyPendingInvites } from "../../_apply-pending-invites.js"
 
 /**
  * GET /auth/google/callback?code=...&state=...
@@ -191,6 +192,23 @@ export const GET = async (req: any, res: Response) => {
     try {
       const invitationService = req.scope.resolve("invitationModuleService") as any
       await invitationService.updateInvitation(inviteRecord.id, { status: "accepted" })
+    } catch {
+      // Non-fatal
+    }
+  } else {
+    // No explicit invite flow — check for pending invitations by email
+    // (user registered via Google OAuth without clicking an invite link)
+    try {
+      const userService = req.scope.resolve("userModuleService") as any
+      const existing = await userService.retrieveUserByEmail(profile.email).catch(() => null)
+      if (existing?.id) {
+        const applied = await applyPendingInvites(req.scope, existing.id, profile.email)
+        if (applied) {
+          // Re-sign the JWT with a fresh DB read so the token reflects the upgraded role/permissions
+          const authService = req.scope.resolve("authModuleService") as any
+          authResult = await authService.issueToken(existing.id)
+        }
+      }
     } catch {
       // Non-fatal
     }

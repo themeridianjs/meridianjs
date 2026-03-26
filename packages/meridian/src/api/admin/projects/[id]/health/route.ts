@@ -1,4 +1,5 @@
 import type { Response } from "express"
+import { requirePermission } from "@meridianjs/auth"
 import { hasProjectAccess } from "../../../../utils/project-access.js"
 
 export const GET = async (req: any, res: Response) => {
@@ -15,7 +16,8 @@ export const GET = async (req: any, res: Response) => {
 }
 
 export const POST = async (req: any, res: Response) => {
-  const { health, title, summary, collaborators, report_date } = req.body
+  requirePermission("project:update")(req, res, async () => {
+    const { health, title, summary, collaborators, report_date } = req.body
   if (!health || !title) {
     res.status(400).json({ error: { message: "health and title are required" } })
     return
@@ -42,5 +44,6 @@ export const POST = async (req: any, res: Response) => {
     collaborators: JSON.stringify(Array.isArray(collaborators) ? collaborators : []),
   })
   const update = { ...raw, collaborators: raw.collaborators ? JSON.parse(raw.collaborators) : [] }
-  res.status(201).json({ update })
+    res.status(201).json({ update })
+  })
 }

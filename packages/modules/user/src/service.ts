@@ -13,6 +13,17 @@ export class UserModuleService extends MeridianService({ User: UserModel, Team: 
     this.container = container
   }
 
+  /** Retrieve a user by ID with a fresh DB read, bypassing the identity map cache. */
+  async retrieveUserFresh(userId: string): Promise<any | null> {
+    const orm = this.container.resolve<any>("userOrm")
+    const freshEm = orm.em.fork()
+    try {
+      return await freshEm.findOne("user", { id: userId })
+    } catch {
+      return null
+    }
+  }
+
   /** Find a user by email. Returns null if not found. */
   async retrieveUserByEmail(email: string): Promise<any | null> {
     const userRepository = this.container.resolve<any>("userRepository")

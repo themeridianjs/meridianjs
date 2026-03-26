@@ -1,5 +1,5 @@
-import { Outlet, useNavigate } from "react-router-dom"
-import { Settings2, ArrowLeft, ChevronsUpDown, LogOut } from "lucide-react"
+import { Outlet, useNavigate, useLocation, NavLink } from "react-router-dom"
+import { Settings2, ArrowLeft, ChevronsUpDown, LogOut, BarChart2 } from "lucide-react"
 import { useAuth } from "@/stores/auth"
 import { ThemeToggle } from "@/components/theme/ThemeToggle"
 import {
@@ -78,9 +78,11 @@ function OrgSettingsNavUser() {
 }
 
 function OrgSettingsSidebar() {
-  const { workspace } = useAuth()
+  const { workspace, user } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const ws = workspace?.slug ?? ""
+  const isSuperAdmin = user?.roles?.includes("super-admin") ?? false
 
   return (
     <SidebarRoot collapsible="offcanvas" variant="inset">
@@ -113,6 +115,24 @@ function OrgSettingsSidebar() {
                   <span>Back to workspace</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={location.pathname === "/org/settings"} tooltip="Settings">
+                  <NavLink to="/org/settings">
+                    <Settings2 />
+                    <span>Settings</span>
+                  </NavLink>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              {isSuperAdmin && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={location.pathname === "/org/reports"} tooltip="Org Reports">
+                    <NavLink to="/org/reports">
+                      <BarChart2 />
+                      <span>Org Reports</span>
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

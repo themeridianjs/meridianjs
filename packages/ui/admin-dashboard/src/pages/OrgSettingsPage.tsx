@@ -647,10 +647,11 @@ function MembersTab() {
       </Dialog>
 
       {/* Column headers — desktop only */}
-      <div className="hidden md:grid grid-cols-[1fr_160px_200px_40px] gap-4 px-6 py-2 border-b border-border bg-muted/20">
+      <div className="hidden md:grid grid-cols-[1fr_160px_200px_100px_40px] gap-4 px-6 py-2 border-b border-border bg-muted/20">
         <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">User</span>
         <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">Global role</span>
         <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">Custom role</span>
+        <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">Joined</span>
         <span />
       </div>
 
@@ -778,7 +779,7 @@ function MembersTab() {
             return (
               <div key={user.id} className="border-b border-border hover:bg-muted/20 transition-colors group">
                 {/* Desktop row */}
-                <div className="hidden md:grid grid-cols-[1fr_160px_200px_40px] gap-4 items-center px-6 py-3">
+                <div className="hidden md:grid grid-cols-[1fr_160px_200px_100px_40px] gap-4 items-center px-6 py-3">
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="h-7 w-7 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center text-xs font-semibold text-zinc-600 dark:text-zinc-300 shrink-0">
                       {initials}
@@ -794,6 +795,9 @@ function MembersTab() {
                   </div>
                   {globalRoleSelect}
                   {appRoleSelect}
+                  <span className="text-xs text-muted-foreground tabular-nums">
+                    {user.created_at ? format(new Date(user.created_at), "MMM d, yyyy") : "—"}
+                  </span>
                   <div className="flex justify-end opacity-0 group-hover:opacity-100 transition-opacity">
                     {actionsMenu}
                   </div>

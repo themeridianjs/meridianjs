@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from "react"
+import React, { useState, useEffect, useMemo, useRef } from "react"
 import { useSearchParams } from "react-router-dom"
 import {
   useWorkspaces,
@@ -18,8 +18,11 @@ import {
   useTeamMembers,
   useAddTeamMember,
   useRemoveTeamMember,
+  useWorkspaceAccessRequests,
+  useHandleAccessRequest,
   type Invitation,
   type WorkspaceMember,
+  type AccessRequest,
 } from "@/api/hooks/useWorkspaces"
 import { useUsers } from "@/api/hooks/useUsers"
 import { useDebounce } from "@/lib/hooks/use-debounce"
@@ -1368,13 +1371,88 @@ function TeamsTab({ workspaceId }: { workspaceId: string }) {
   )
 }
 
+// ── Access Requests Tab ────────────────────────────────────────────────────────
+
+function AccessRequestsTab({ workspaceId }: { workspaceId: string }) {
+  const { data: requests = [], isLoading } = useWorkspaceAccessRequests(workspaceId)
+  const handle = useHandleAccessRequest(workspaceId)
+
+  const act = (requestId: string, action: "approve" | "deny") => {
+    handle.mutate(
+      { requestId, action },
+      {
+        onSuccess: () => toast.success(action === "approve" ? "Access approved" : "Request denied"),
+        onError: (err: any) => toast.error(err.message ?? "Failed to update request"),
+      }
+    )
+  }
+
+  if (isLoading) {
+    return (
+      <div className="p-6 space-y-3">
+        {[1, 2].map((i) => <Skeleton key={i} className="h-12 w-full" />)}
+      </div>
+    )
+  }
+
+  if (requests.length === 0) {
+    return (
+      <div className="p-10 text-center text-sm text-muted-foreground">
+        No pending access requests.
+      </div>
+    )
+  }
+
+  return (
+    <div className="divide-y divide-border">
+      {requests.map((req: AccessRequest) => {
+        const name = req.user
+          ? [req.user.first_name, req.user.last_name].filter(Boolean).join(" ") || req.user.email
+          : req.user_id
+        return (
+          <div key={req.id} className="flex items-center justify-between gap-4 px-6 py-3">
+            <div className="min-w-0">
+              <p className="text-sm font-medium truncate">{name}</p>
+              {req.user?.email && (
+                <p className="text-xs text-muted-foreground truncate">{req.user.email}</p>
+              )}
+              {req.message && (
+                <p className="text-xs text-muted-foreground mt-0.5 italic truncate">"{req.message}"</p>
+              )}
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-xs"
+                disabled={handle.isPending}
+                onClick={() => act(req.id, "deny")}
+              >
+                Deny
+              </Button>
+              <Button
+                size="sm"
+                className="h-7 text-xs"
+                disabled={handle.isPending}
+                onClick={() => act(req.id, "approve")}
+              >
+                Approve
+              </Button>
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
-const VALID_TABS = ["general", "members", "teams"] as const
+const VALID_TABS = ["general", "members", "teams", "access-requests"] as const
 type WorkspaceTab = typeof VALID_TABS[number]
 
 export function WorkspaceSettingsPage() {
-  const { workspace: wsRef } = useAuth()
+  const { workspace: wsRef, user } = useAuth()
   const workspaceId = wsRef?.id ?? ""
   const [searchParams, setSearchParams] = useSearchParams()
   const tabParam = searchParams.get("tab")
@@ -1382,11 +1460,42 @@ export function WorkspaceSettingsPage() {
     VALID_TABS.includes(tabParam as WorkspaceTab) ? (tabParam as WorkspaceTab) : "general"
   )
 
+  const roles: string[] = user?.roles ?? []
+  const isGlobalAdmin = roles.includes("super-admin") || roles.includes("admin")
+
+  // Fetch membership to check workspace-level admin role
+  const { data: members = [] } = useWorkspaceMembers(workspaceId)
+  const myMembership = members.find((m: WorkspaceMember) => m.user_id === user?.id)
+  const isWorkspaceAdmin = isGlobalAdmin || myMembership?.role === "admin"
+
   const handleTabChange = (tab: WorkspaceTab) => {
     setActiveTab(tab)
     setSearchParams({ tab }, { replace: true })
   }
   const [inviteOpen, setInviteOpen] = useState(false)
+
+  const visibleTabs: WorkspaceTab[] = isWorkspaceAdmin
+    ? ["general", "members", "teams", "access-requests"]
+    : ["general", "members", "teams"]
+
+  const { data: pendingRequests = [] } = useWorkspaceAccessRequests(workspaceId)
+  const pendingCount = isWorkspaceAdmin ? pendingRequests.length : 0
+
+  const tabLabel: Record<WorkspaceTab, React.ReactNode> = {
+    general: "General",
+    members: "Members",
+    teams: "Teams",
+    "access-requests": (
+      <span className="flex items-center gap-1.5">
+        Access Requests
+        {pendingCount > 0 && (
+          <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-medium text-white">
+            {pendingCount > 9 ? "9+" : pendingCount}
+          </span>
+        )}
+      </span>
+    ),
+  }
 
   return (
     <div className="p-2 pb-24 md:pb-2">
@@ -1396,18 +1505,18 @@ export function WorkspaceSettingsPage() {
         {/* Tab nav row */}
         <div className="flex items-center justify-between border-b border-border px-2">
           <div className="flex overflow-x-auto scrollbar-none">
-            {(["general", "members", "teams"] as const).map((tab) => (
+            {visibleTabs.map((tab) => (
               <button
                 key={tab}
                 onClick={() => handleTabChange(tab)}
                 className={cn(
-                  "h-12 px-4 text-sm font-medium border-b-2 transition-colors capitalize whitespace-nowrap shrink-0",
+                  "h-12 px-4 text-sm font-medium border-b-2 transition-colors whitespace-nowrap shrink-0",
                   activeTab === tab
                     ? "border-foreground text-foreground"
                     : "border-transparent text-muted-foreground hover:text-foreground"
                 )}
               >
-                {tab}
+                {tabLabel[tab]}
               </button>
             ))}
           </div>
@@ -1426,6 +1535,9 @@ export function WorkspaceSettingsPage() {
           <MembersTab workspaceId={workspaceId} onInvite={() => setInviteOpen(true)} />
         )}
         {activeTab === "teams" && <TeamsTab workspaceId={workspaceId} />}
+        {activeTab === "access-requests" && isWorkspaceAdmin && (
+          <AccessRequestsTab workspaceId={workspaceId} />
+        )}
       </div>
 
       <WidgetZone zone="workspace.settings.after" props={{ workspaceId }} />

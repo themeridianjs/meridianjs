@@ -19,6 +19,9 @@ export interface Project {
   metadata?: Record<string, unknown> | null
   created_at: string
   updated_at: string
+  is_member?: boolean
+  pending_request_count?: number
+  has_pending_request?: boolean
 }
 
 interface ProjectsResponse {
@@ -52,17 +55,19 @@ export const projectKeys = {
   activities: (id: string) => [...projectKeys.all, id, "activities"] as const,
 }
 
-export function useProjects(options?: { allWorkspaces?: boolean; workspaceIds?: string[] }) {
+export function useProjects(options?: { allWorkspaces?: boolean; workspaceIds?: string[]; orgScope?: boolean }) {
   const { workspace } = useAuth()
   const wsIds = options?.workspaceIds
-  const scopeToWorkspace = !options?.allWorkspaces && !wsIds?.length
+  const orgScope = options?.orgScope ?? false
+  const scopeToWorkspace = !options?.allWorkspaces && !wsIds?.length && !orgScope
   const wsId = scopeToWorkspace ? workspace?.id : undefined
   return useQuery({
-    queryKey: [...projectKeys.list(), wsId ?? wsIds ?? "all"],
+    queryKey: [...projectKeys.list(), wsId ?? wsIds ?? (orgScope ? "org" : "all")],
     queryFn: () => {
       const params = new URLSearchParams()
       if (wsId) params.set("workspace_id", wsId)
       else if (wsIds?.length) params.set("workspace_ids", wsIds.join(","))
+      if (orgScope) params.set("org_scope", "true")
       const qs = params.toString() ? `?${params}` : ""
       return api.get<ProjectsResponse>(`/admin/projects${qs}`)
     },

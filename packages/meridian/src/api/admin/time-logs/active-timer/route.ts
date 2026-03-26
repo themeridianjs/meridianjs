@@ -1,4 +1,5 @@
 import type { Response } from "express"
+import { requirePermission } from "@meridianjs/auth"
 import { sseManager } from "@meridianjs/framework"
 
 export const GET = async (req: any, res: Response) => {
@@ -41,16 +42,18 @@ export const GET = async (req: any, res: Response) => {
 }
 
 export const POST = async (req: any, res: Response) => {
-  const issueService = req.scope.resolve("issueModuleService") as any
-  const userId = req.user?.id ?? "system"
+  requirePermission("issue:update")(req, res, async () => {
+    const issueService = req.scope.resolve("issueModuleService") as any
+    const userId = req.user?.id ?? "system"
 
-  const stopped = await issueService.stopTimerForUser(userId)
-  if (!stopped) {
-    res.status(404).json({ error: { message: "No active timer found." } })
-    return
-  }
-  if (stopped.workspace_id) {
-    sseManager.broadcast(stopped.workspace_id, "timer.stopped", { issue_id: stopped.issue_id, user_id: userId })
-  }
-  res.json({ time_log: stopped })
+    const stopped = await issueService.stopTimerForUser(userId)
+    if (!stopped) {
+      res.status(404).json({ error: { message: "No active timer found." } })
+      return
+    }
+    if (stopped.workspace_id) {
+      sseManager.broadcast(stopped.workspace_id, "timer.stopped", { issue_id: stopped.issue_id, user_id: userId })
+    }
+    res.json({ time_log: stopped })
+  })
 }

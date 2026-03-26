@@ -56,6 +56,36 @@ export function useRealtimeEvents(): void {
       invalidate([["notifications"]])
     })
 
+    es.addEventListener("workspace.access_requested", () => {
+      invalidate([["workspaces", workspace?.id, "access-requests"], ["notifications"]])
+    })
+
+    es.addEventListener("workspace.access_request_resolved", () => {
+      invalidate([
+        ["workspaces", workspace?.id, "access-requests"],
+        ["workspaces"],
+        ["notifications"],
+      ])
+    })
+
+    es.addEventListener("project.access_requested", (e: MessageEvent) => {
+      const data = JSON.parse(e.data ?? "{}")
+      invalidate([
+        ["projects"],
+        ["projects", data.project_id, "access-requests"],
+        ["notifications"],
+      ])
+    })
+
+    es.addEventListener("project.access_request_resolved", (e: MessageEvent) => {
+      const data = JSON.parse(e.data ?? "{}")
+      invalidate([
+        ["projects"],
+        ["projects", data.project_id, "access-requests"],
+        ["notifications"],
+      ])
+    })
+
     es.onerror = () => {
       // EventSource auto-reconnects on error; nothing to do here
     }

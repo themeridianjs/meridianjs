@@ -1,4 +1,5 @@
 import type { Response } from "express"
+import { requirePermission } from "@meridianjs/auth"
 import { hasProjectAccess } from "../../../../utils/project-access.js"
 
 function toKey(name: string): string {
@@ -18,7 +19,8 @@ export const GET = async (req: any, res: Response) => {
 }
 
 export const POST = async (req: any, res: Response) => {
-  const { name, color, category } = req.body
+  requirePermission("project:update")(req, res, async () => {
+    const { name, color, category } = req.body
   if (!name || !color || !category) {
     res.status(400).json({ error: { message: "name, color, and category are required" } })
     return
@@ -35,5 +37,6 @@ export const POST = async (req: any, res: Response) => {
   const status = await svc.createProjectStatus({
     project_id: req.params.id, name, key: toKey(name), color, category, position,
   })
-  res.status(201).json({ status })
+    res.status(201).json({ status })
+  })
 }

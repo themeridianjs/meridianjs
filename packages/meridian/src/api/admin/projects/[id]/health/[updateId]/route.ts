@@ -1,4 +1,5 @@
 import type { Response } from "express"
+import { requirePermission } from "@meridianjs/auth"
 import { hasProjectAccess } from "../../../../../utils/project-access.js"
 
 export const GET = async (req: any, res: Response) => {
@@ -16,7 +17,8 @@ export const GET = async (req: any, res: Response) => {
 }
 
 export const PUT = async (req: any, res: Response) => {
-  const { health, title, summary, collaborators, report_date } = req.body
+  requirePermission("project:update")(req, res, async () => {
+    const { health, title, summary, collaborators, report_date } = req.body
   const svc = req.scope.resolve("projectModuleService") as any
   const activityService = req.scope.resolve("activityModuleService") as any
   const project = await svc.retrieveProject(req.params.id).catch(() => null)
@@ -54,11 +56,13 @@ export const PUT = async (req: any, res: Response) => {
     workspace_id: project.workspace_id, changes,
   }).catch(() => {})
 
-  res.json({ update: updated })
+    res.json({ update: updated })
+  })
 }
 
 export const DELETE = async (req: any, res: Response) => {
-  const svc = req.scope.resolve("projectModuleService") as any
+  requirePermission("project:update")(req, res, async () => {
+    const svc = req.scope.resolve("projectModuleService") as any
   const activityService = req.scope.resolve("activityModuleService") as any
   const project = await svc.retrieveProject(req.params.id).catch(() => null)
   if (!project) { res.status(404).json({ error: { message: "Project not found" } }); return }
@@ -81,5 +85,6 @@ export const DELETE = async (req: any, res: Response) => {
     },
   }).catch(() => {})
 
-  res.status(204).send()
+    res.status(204).send()
+  })
 }

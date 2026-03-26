@@ -14,22 +14,28 @@ import { sseManager } from "@meridianjs/framework"
  */
 export const GET = async (req: any, res: Response) => {
   const workspaceId = req.query.workspaceId as string | undefined
+  const mode = req.query.mode as string | undefined
 
-  if (!workspaceId) {
+  // User-only mode: no workspace required, receives user-scoped events
+  const isUserMode = mode === "user"
+
+  if (!isUserMode && !workspaceId) {
     res.status(400).json({ error: { message: "workspaceId query param required" } })
     return
   }
 
-  // Validate the user actually belongs to this workspace
-  const workspaceMemberService = req.scope.resolve("workspaceMemberModuleService") as any
-  const [members] = await workspaceMemberService.listAndCountWorkspaceMembers(
-    { workspace_id: workspaceId, user_id: req.user.id },
-    { limit: 1 }
-  )
+  if (!isUserMode) {
+    // Validate the user actually belongs to this workspace
+    const workspaceMemberService = req.scope.resolve("workspaceMemberModuleService") as any
+    const [members] = await workspaceMemberService.listAndCountWorkspaceMembers(
+      { workspace_id: workspaceId, user_id: req.user.id },
+      { limit: 1 }
+    )
 
-  if (members.length === 0) {
-    res.status(403).json({ error: { message: "You are not a member of this workspace" } })
-    return
+    if (members.length === 0) {
+      res.status(403).json({ error: { message: "You are not a member of this workspace" } })
+      return
+    }
   }
 
   res.setHeader("Content-Type", "text/event-stream")
@@ -44,7 +50,9 @@ export const GET = async (req: any, res: Response) => {
     try { res.write(": heartbeat\n\n") } catch { clearInterval(heartbeat) }
   }, 30_000)
 
-  const unsubscribe = sseManager.subscribe(workspaceId, res)
+  const unsubscribe = isUserMode
+    ? sseManager.subscribe(`user:${req.user.id}`, res)
+    : sseManager.subscribe(workspaceId!, res)
 
   req.on("close", () => {
     clearInterval(heartbeat)

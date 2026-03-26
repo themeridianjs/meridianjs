@@ -14,8 +14,45 @@ export const GET = async (req: any, res: Response) => {
   const wsIdsParam = req.query.workspace_ids as string | undefined
   const projIdsParam = req.query.project_ids as string | undefined
 
-  const wsIds = wsIdsParam ? wsIdsParam.split(",").filter(Boolean) : []
+  const rawWsIds = wsIdsParam ? wsIdsParam.split(",").filter(Boolean) : []
   const projIds = projIdsParam ? projIdsParam.split(",").filter(Boolean) : []
+
+  // Super-admin org-scope bypass: return members from all workspaces without privacy filtering
+  const roles: string[] = req.user?.roles ?? []
+  if (roles.includes("super-admin") && req.query.org_scope === "true") {
+    let userIdSet = new Set<string>()
+    if (rawWsIds.length > 0) {
+      const wsMembers = await workspaceMemberService.listWorkspaceMembers(
+        { workspace_id: rawWsIds.length === 1 ? rawWsIds[0] : rawWsIds } as any
+      )
+      for (const m of wsMembers as any[]) userIdSet.add(m.user_id)
+    } else {
+      const [allMembers] = await (workspaceMemberService as any).listAndCountWorkspaceMembers({}, { limit: 5000 })
+      for (const m of allMembers as any[]) userIdSet.add(m.user_id)
+    }
+    if (userIdSet.size === 0) { res.json({ members: [] }); return }
+    const userMapResult = await (userService as any).listUsersByIds([...userIdSet])
+    const members = [...userIdSet].map((id) => {
+      const u = userMapResult.get(id)
+      if (!u) return null
+      return { id: u.id, email: u.email, first_name: u.first_name, last_name: u.last_name, avatar_url: u.avatar_url ?? null }
+    }).filter(Boolean)
+    res.json({ members })
+    return
+  }
+
+  // Filter workspace IDs to only those the user can access (public + private where member)
+  let wsIds = rawWsIds
+  if (rawWsIds.length > 0) {
+    const workspaceService = req.scope.resolve("workspaceModuleService") as any
+    const workspaces = (await Promise.all(
+      rawWsIds.map((id) => workspaceService.retrieveWorkspace(id).catch(() => null))
+    )).filter(Boolean)
+    const memberWsIds = new Set<string>(await workspaceMemberService.getWorkspaceIdsForUser(userId))
+    wsIds = workspaces
+      .filter((ws: any) => !ws.is_private || memberWsIds.has(ws.id))
+      .map((ws: any) => ws.id)
+  }
 
   let userIdSet = new Set<string>()
 

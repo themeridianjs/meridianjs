@@ -1,4 +1,5 @@
 import type { Response } from "express"
+import { requirePermission } from "@meridianjs/auth"
 
 /** Check if the caller is allowed to manage share settings for this project. */
 async function canManageShare(req: any, project: { id: string; workspace_id: string }): Promise<boolean> {
@@ -17,8 +18,9 @@ async function canManageShare(req: any, project: { id: string; workspace_id: str
 }
 
 export const POST = async (req: any, res: Response) => {
-  const projectService = req.scope.resolve("projectModuleService") as any
-  const project = await projectService.retrieveProject(req.params.id).catch(() => null)
+  requirePermission("project:manage_access")(req, res, async () => {
+    const projectService = req.scope.resolve("projectModuleService") as any
+    const project = await projectService.retrieveProject(req.params.id).catch(() => null)
   if (!project) { res.status(404).json({ error: { message: "Project not found" } }); return }
 
   if (!await canManageShare(req, project)) {
@@ -38,11 +40,13 @@ export const POST = async (req: any, res: Response) => {
     changes: { share_url: { from: null, to: shareUrl } },
   }).catch(() => {})
 
-  res.json({ share_url: shareUrl, project: updated })
+    res.json({ share_url: shareUrl, project: updated })
+  })
 }
 
 export const DELETE = async (req: any, res: Response) => {
-  const projectService = req.scope.resolve("projectModuleService") as any
+  requirePermission("project:manage_access")(req, res, async () => {
+    const projectService = req.scope.resolve("projectModuleService") as any
   const project = await projectService.retrieveProject(req.params.id).catch(() => null)
   if (!project) { res.status(404).json({ error: { message: "Project not found" } }); return }
 
@@ -60,5 +64,6 @@ export const DELETE = async (req: any, res: Response) => {
     workspace_id: project.workspace_id,
   }).catch(() => {})
 
-  res.json({ project: updated })
+    res.json({ project: updated })
+  })
 }

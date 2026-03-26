@@ -23,6 +23,7 @@ export interface ReportingFilters {
   to?: string
   limit?: number
   offset?: number
+  org_scope?: boolean
 }
 
 export const reportingKeys = {
@@ -39,6 +40,8 @@ export function useReportingTimeLogs(filters: ReportingFilters, options?: { enab
         if (!v) return
         if ((k === "workspace_ids" || k === "user_ids" || k === "project_ids") && Array.isArray(v)) {
           if (v.length > 0) params.set(k, v.join(","))
+        } else if (typeof v === "boolean") {
+          if (v) params.set(k, "true")
         } else if (typeof v === "string") {
           params.set(k, v)
         } else if (typeof v === "number") {

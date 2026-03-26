@@ -136,6 +136,36 @@ const ACTION_CONFIG: Record<string, {
       return "Transferred project"
     },
   },
+  access_requested: {
+    icon: UserPlus,
+    color: "text-blue-500",
+    bg: "bg-blue-50 dark:bg-blue-950/40",
+    label: (changes, userMap) => {
+      const userId = (changes as any)?.user_id as string | undefined
+      const name = userId ? (userMap.get(userId)?.name ?? userId) : "a user"
+      return `${name} requested access`
+    },
+  },
+  access_request_approved: {
+    icon: UserPlus,
+    color: "text-green-600",
+    bg: "bg-green-50 dark:bg-green-950/40",
+    label: (changes, userMap) => {
+      const userId = (changes as any)?.user_id as string | undefined
+      const name = userId ? (userMap.get(userId)?.name ?? userId) : "a user"
+      return `Approved access request from ${name}`
+    },
+  },
+  access_request_denied: {
+    icon: UserX,
+    color: "text-red-500",
+    bg: "bg-red-50 dark:bg-red-950/40",
+    label: (changes, userMap) => {
+      const userId = (changes as any)?.user_id as string | undefined
+      const name = userId ? (userMap.get(userId)?.name ?? userId) : "a user"
+      return `Denied access request from ${name}`
+    },
+  },
 }
 
 const FALLBACK_CONFIG = {

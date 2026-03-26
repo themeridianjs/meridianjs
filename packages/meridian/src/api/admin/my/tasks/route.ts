@@ -7,26 +7,40 @@ export const GET = async (req: any, res: Response) => {
   const limit = Math.min(Number(req.query.limit) || 50, 200)
   const offset = Number(req.query.offset) || 0
 
-  // Broad fetch — then post-filter by assignee
-  let [issues, count] = await issueService.listAndCountIssues(
-    {},
-    { limit: 500, offset: 0, orderBy: { updated_at: "DESC" } }
-  )
-
   const userId = req.user?.id
   if (!userId) {
     res.status(401).json({ error: { message: "Unauthorized" } })
     return
   }
 
-  // Filter to only issues assigned to the current user
-  issues = issues.filter((i: any) => (i.assignee_ids ?? []).includes(userId))
+  // Determine accessible workspaces: public ones + private ones where user is a member
+  const workspaceService = req.scope.resolve("workspaceModuleService") as any
+  const workspaceMemberService = req.scope.resolve("workspaceMemberModuleService") as any
+  const [allWorkspaces] = await workspaceService.listAndCountWorkspaces({}, { limit: 1000 })
+  const memberWsIds = new Set<string>(await workspaceMemberService.getWorkspaceIdsForUser(userId))
+  let accessibleWsIds: string[] = (allWorkspaces as any[])
+    .filter((ws: any) => !ws.is_private || memberWsIds.has(ws.id))
+    .map((ws: any) => ws.id)
 
-  // Filter by workspace_id(s)
+  // If caller passed workspace_id filter, intersect with accessible IDs
   if (req.query.workspace_id) {
-    const wsIds = (req.query.workspace_id as string).split(",").filter(Boolean)
-    issues = issues.filter((i: any) => wsIds.includes(i.workspace_id))
+    const requested = (req.query.workspace_id as string).split(",").filter(Boolean)
+    const accessibleSet = new Set(accessibleWsIds)
+    accessibleWsIds = requested.filter((id) => accessibleSet.has(id))
   }
+
+  if (accessibleWsIds.length === 0) {
+    res.json({ issues: [], count: 0, limit, offset })
+    return
+  }
+
+  const wsFilter = accessibleWsIds.length === 1 ? accessibleWsIds[0] : { $in: accessibleWsIds }
+
+  // Fetch issues assigned to this user within accessible workspaces
+  let [issues, count] = await issueService.listAndCountIssues(
+    { workspace_id: wsFilter, assignee_ids: { $contains: userId } },
+    { limit: 500, offset: 0, orderBy: { updated_at: "DESC" } }
+  )
 
   // Apply optional filters
   if (req.query.priority) {

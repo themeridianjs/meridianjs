@@ -37,11 +37,26 @@ export const GET = async (req: any, res: Response) => {
 
   // Batch-fetch all member users in a single query
   const userMap = await userService.listUsersByIds(members.map((m: any) => m.user_id))
+
+  // Resolve app role names for all members
+  let appRoleMap = new Map<string, string>()
+  try {
+    const appRoleService = req.scope.resolve("appRoleModuleService") as any
+    const roleIds = [...new Set(
+      [...userMap.values()].map((u: any) => u.app_role_id).filter(Boolean)
+    )]
+    if (roleIds.length > 0) {
+      const [roles] = await appRoleService.listAndCountAppRoles({ id: roleIds }, { limit: roleIds.length })
+      for (const r of roles) appRoleMap.set(r.id, r.name)
+    }
+  } catch { /* app-role module may not be loaded */ }
+
   const enrichedMembers = members.map((m: any) => {
     const user = userMap.get(m.user_id) ?? null
+    const appRoleName = user?.app_role_id ? (appRoleMap.get(user.app_role_id) ?? null) : null
     return user
-      ? { id: m.id, user_id: m.user_id, role: m.role, user: { id: user.id, email: user.email, first_name: user.first_name, last_name: user.last_name } }
-      : { id: m.id, user_id: m.user_id, role: m.role, user: null }
+      ? { id: m.id, user_id: m.user_id, role: m.role, app_role_name: appRoleName, user: { id: user.id, email: user.email, first_name: user.first_name, last_name: user.last_name, app_role_id: user.app_role_id ?? null } }
+      : { id: m.id, user_id: m.user_id, role: m.role, app_role_name: null, user: null }
   })
 
   const enrichedTeams = await Promise.all(

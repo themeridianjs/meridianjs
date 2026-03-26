@@ -1,8 +1,10 @@
 import type { Response } from "express"
+import { requirePermission } from "@meridianjs/auth"
 import { hasProjectAccess } from "../../../../../../utils/project-access.js"
 
 export const POST = async (req: any, res: Response) => {
-  const svc = req.scope.resolve("projectModuleService") as any
+  requirePermission("project:update")(req, res, async () => {
+    const svc = req.scope.resolve("projectModuleService") as any
   const userService = req.scope.resolve("userModuleService") as any
   const workspaceService = req.scope.resolve("workspaceModuleService") as any
 
@@ -70,5 +72,6 @@ export const POST = async (req: any, res: Response) => {
 
   await Promise.all(emailPromises)
 
-  res.json({ sent: emailPromises.length })
+    res.json({ sent: emailPromises.length })
+  })
 }
