@@ -1,41 +1,7 @@
 import type { Response, NextFunction } from "express"
-import { resolveProjectAndAccess } from "../../../../utils/project-access.js"
 
-export const GET = async (req: any, res: Response, next: NextFunction) => {
-  try {
-    const result = await resolveProjectAndAccess(req, res)
-    if (!result) return
-    if (!result.isAuthorized) {
-      res.status(403).json({ error: { message: "Forbidden — project manager or admin role required" } })
-      return
-    }
-
-    const projectMemberService = req.scope.resolve("projectMemberModuleService") as any
-    const userService = req.scope.resolve("userModuleService") as any
-
-    const requests = await projectMemberService.listPendingAccessRequests(req.params.id)
-    const userMap = await userService.listUsersByIds(requests.map((r: any) => r.user_id))
-
-    const enriched = requests.map((r: any) => ({
-      id: r.id,
-      project_id: r.project_id,
-      user_id: r.user_id,
-      message: r.message,
-      status: r.status,
-      created_at: r.created_at,
-      user: userMap.get(r.user_id)
-        ? (() => {
-            const u = userMap.get(r.user_id)
-            return { id: u.id, email: u.email, first_name: u.first_name, last_name: u.last_name }
-          })()
-        : null,
-    }))
-
-    res.json({ requests: enriched })
-  } catch (err) {
-    next(err)
-  }
-}
+// Workspace member submits or cancels a project access request using the project identifier.
+// This lets the client avoid needing the project ID from a prior (forbidden) fetch.
 
 export const POST = async (req: any, res: Response, next: NextFunction) => {
   try {
@@ -43,9 +9,10 @@ export const POST = async (req: any, res: Response, next: NextFunction) => {
     const projectMemberService = req.scope.resolve("projectMemberModuleService") as any
     const workspaceMemberService = req.scope.resolve("workspaceMemberModuleService") as any
 
-    const project = await projectService.retrieveProject(req.params.id).catch(() => null)
+    const identifier = req.params.identifier
+    const project = await projectService.retrieveProjectByIdentifier(identifier).catch(() => null)
     if (!project) {
-      res.status(404).json({ error: { message: "Project not found" } })
+      res.status(404).json({ error: { message: `Project "${identifier}" not found` } })
       return
     }
 
@@ -109,17 +76,6 @@ export const POST = async (req: any, res: Response, next: NextFunction) => {
       // Non-fatal
     }
 
-    try {
-      const activityService = req.scope.resolve("activityModuleService") as any
-      await activityService.createActivity({
-        entity_type: "project", entity_id: project.id,
-        actor_id: userId,
-        action: "access_requested",
-        workspace_id: project.workspace_id,
-        changes: { user_id: userId },
-      })
-    } catch {}
-
     const eventBus = req.scope.resolve("eventBus") as any
     eventBus.emit({
       name: "project.access_requested",
@@ -132,13 +88,20 @@ export const POST = async (req: any, res: Response, next: NextFunction) => {
   }
 }
 
-// User cancels their own pending request (no requestId needed)
 export const DELETE = async (req: any, res: Response, next: NextFunction) => {
   try {
+    const projectService = req.scope.resolve("projectModuleService") as any
     const projectMemberService = req.scope.resolve("projectMemberModuleService") as any
-    const userId: string = req.user?.id
 
-    const existing = await projectMemberService.getPendingRequest(req.params.id, userId)
+    const identifier = req.params.identifier
+    const project = await projectService.retrieveProjectByIdentifier(identifier).catch(() => null)
+    if (!project) {
+      res.status(404).json({ error: { message: `Project "${identifier}" not found` } })
+      return
+    }
+
+    const userId: string = req.user?.id
+    const existing = await projectMemberService.getPendingRequest(project.id, userId)
     if (!existing) {
       res.status(404).json({ error: { message: "No pending access request found" } })
       return
@@ -146,15 +109,11 @@ export const DELETE = async (req: any, res: Response, next: NextFunction) => {
 
     await projectMemberService.deleteAccessRequest(existing.id)
 
-    const projectService = req.scope.resolve("projectModuleService") as any
-    const project = await projectService.retrieveProject(req.params.id).catch(() => null)
-    if (project) {
-      const eventBus = req.scope.resolve("eventBus") as any
-      eventBus.emit({
-        name: "project.access_request_cancelled",
-        data: { project_id: project.id, workspace_id: project.workspace_id, user_id: userId, request_id: existing.id },
-      }).catch(() => {})
-    }
+    const eventBus = req.scope.resolve("eventBus") as any
+    eventBus.emit({
+      name: "project.access_request_cancelled",
+      data: { project_id: project.id, workspace_id: project.workspace_id, user_id: userId, request_id: existing.id },
+    }).catch(() => {})
 
     res.status(204).end()
   } catch (err) {

@@ -37,6 +37,8 @@ import { GoogleCallbackPage } from "@/pages/GoogleCallbackPage"
 import { ProfilePage } from "@/pages/ProfilePage"
 import { ForgotPasswordPage } from "@/pages/ForgotPasswordPage"
 import { ResetPasswordPage } from "@/pages/ResetPasswordPage"
+import { RequestProjectAccessPage } from "@/pages/RequestProjectAccessPage"
+import { RequestWorkspaceAccessPage } from "@/pages/RequestWorkspaceAccessPage"
 
 const ProjectTimelinePage = lazy(() => import("@/pages/ProjectTimelinePage").then(m => ({ default: m.ProjectTimelinePage })))
 const ProjectHealthPage = lazy(() => import("@/pages/ProjectHealthPage").then(m => ({ default: m.ProjectHealthPage })))
@@ -164,13 +166,12 @@ function WorkspaceLayout() {
       // Still refetching — wait for fresh data before redirecting
       return
     } else if (workspaces.length > 0) {
-      // Current workspace not accessible, switch to first available
-      setWorkspace({ id: workspaces[0].id, name: workspaces[0].name, slug: workspaces[0].slug, logo_url: workspaces[0].logo_url })
-      navigate(`/${workspaces[0].slug}/projects`, { replace: true })
+      // User has workspaces but not this one — let them request access
+      navigate(`/request-workspace-access/${slugParam}`, { replace: true })
     } else {
-      // No accessible workspaces at all — clear stale ref and redirect
+      // No accessible workspaces at all — let them request access to the specific slug they tried
       setWorkspace(null)
-      navigate("/awaiting-access", { replace: true })
+      navigate(slugParam ? `/request-workspace-access/${slugParam}` : "/awaiting-access", { replace: true })
     }
   }, [workspaces, orgWorkspaces, slugParam, isLoading, isFetching, orgLoading, isSuperAdmin, workspace?.id, navigate, setWorkspace, user])
 
@@ -313,6 +314,16 @@ export function App() {
         }
       />
 
+      {/* Request workspace access — navigated to a workspace the user doesn't belong to */}
+      <Route
+        path="/request-workspace-access/:slug"
+        element={
+          <RequireAuth>
+            <RequestWorkspaceAccessPage />
+          </RequireAuth>
+        }
+      />
+
       {/* Index — redirect to workspace */}
       <Route
         index
@@ -347,6 +358,8 @@ export function App() {
           <Route path="health" element={<Suspense fallback={<div className="flex items-center justify-center h-full text-sm text-muted-foreground">Loading…</div>}><ProjectHealthPage /></Suspense>} />
           <Route path="health/:reportId" element={<Suspense fallback={<div className="flex items-center justify-center h-full text-sm text-muted-foreground">Loading…</div>}><HealthReportDetailPage /></Suspense>} />
         </Route>
+        {/* Sibling of ProjectLayout — renders in AppShell without the project tab bar */}
+        <Route path="projects/:projectKey/request-access" element={<RequestProjectAccessPage />} />
         <Route path="my-tasks" element={<MyTasksPage />} />
         <Route path="notifications" element={<NotificationsPage />} />
         <Route path="reporting" element={<Suspense fallback={<div className="flex items-center justify-center h-full text-sm text-muted-foreground">Loading…</div>}><WorkspaceReportingPage /></Suspense>} />

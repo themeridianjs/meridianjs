@@ -62,12 +62,15 @@ export function ProjectLayout() {
   )
   const canShare = isPrivileged || isProjectManager
 
-  // Redirect to projects list if access is denied or project doesn't exist
+  // Redirect on access denied or not found
   useEffect(() => {
-    if (error && error instanceof ApiError && (error.status === 403 || error.status === 404)) {
+    if (!error || !(error instanceof ApiError)) return
+    if (error.status === 404) {
       navigate(`/${ws}/projects`, { replace: true })
+    } else if (error.status === 403) {
+      navigate(`/${ws}/projects/${projectKey}/request-access`, { replace: true })
     }
-  }, [error, ws, navigate])
+  }, [error, ws, navigate, projectKey])
 
   useEffect(() => {
     const tab = searchParams.get("tab")

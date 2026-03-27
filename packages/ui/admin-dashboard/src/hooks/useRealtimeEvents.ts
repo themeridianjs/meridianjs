@@ -86,6 +86,22 @@ export function useRealtimeEvents(): void {
       ])
     })
 
+    es.addEventListener("project.access_request_cancelled", (e: MessageEvent) => {
+      const data = JSON.parse(e.data ?? "{}")
+      invalidate([
+        ["projects"],
+        ["projects", data.project_id, "access-requests"],
+        ["notifications"],
+      ])
+    })
+
+    es.addEventListener("workspace.access_request_cancelled", () => {
+      invalidate([
+        ["workspaces", workspace?.id, "access-requests"],
+        ["notifications"],
+      ])
+    })
+
     es.onerror = () => {
       // EventSource auto-reconnects on error; nothing to do here
     }
