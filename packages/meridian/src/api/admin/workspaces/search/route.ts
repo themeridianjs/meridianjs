@@ -12,7 +12,11 @@ export const GET = async (req: any, res: Response) => {
   )
 
   const filtered = q
-    ? workspaces.filter((w: any) => w.name.toLowerCase().includes(q))
+    ? workspaces.filter(
+        (w: any) =>
+          w.name.toLowerCase().includes(q) ||
+          w.slug.toLowerCase().includes(q)
+      )
     : workspaces
 
   const limited = filtered.slice(0, 20)
