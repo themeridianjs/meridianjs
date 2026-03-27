@@ -5,16 +5,27 @@ import { CSS } from "@dnd-kit/utilities"
 import type { Issue } from "@/api/hooks/useIssues"
 import { IssueCard } from "./IssueCard"
 import { cn } from "@/lib/utils"
-import { Circle, CheckCircle2, Clock, GripVertical, MoreHorizontal } from "lucide-react"
+import { Circle, CheckCircle2, Clock, GripVertical, MoreHorizontal, Check } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
 type Category = "backlog" | "unstarted" | "started" | "completed" | "cancelled"
+
+const CATEGORIES: { value: Category; label: string }[] = [
+  { value: "backlog",   label: "Backlog" },
+  { value: "unstarted", label: "Not Started" },
+  { value: "started",   label: "In Progress" },
+  { value: "completed", label: "Done" },
+  { value: "cancelled", label: "Cancelled" },
+]
 
 function hexToRgba(hex: string, alpha: number): string {
   const clean = hex.replace("#", "")
@@ -47,6 +58,7 @@ interface KanbanColumnProps {
   onIssueClick?: (issue: Issue) => void
   onRename?: () => void
   onDelete?: () => void
+  onUpdateCategory?: (statusId: string, category: Category) => void
   isRenaming?: boolean
   renameValue?: string
   onRenameChange?: (v: string) => void
@@ -56,7 +68,7 @@ interface KanbanColumnProps {
 
 export function KanbanColumn({
   id, label, color, category, issues, childCounts, sortable, onIssueClick,
-  onRename, onDelete,
+  onRename, onDelete, onUpdateCategory,
   isRenaming, renameValue, onRenameChange, onRenameSubmit, onRenameCancel,
 }: KanbanColumnProps) {
   const { setNodeRef: setDropRef, isOver } = useDroppable({ id })
@@ -88,7 +100,7 @@ export function KanbanColumn({
   const bgOverColor = hexToRgba(color, 0.16)
   const ringColor = hexToRgba(color, 0.35)
 
-  const showMenu = !!(onRename || onDelete)
+  const showMenu = !!(onRename || onDelete || onUpdateCategory)
 
   return (
     <div
@@ -140,13 +152,29 @@ export function KanbanColumn({
                 <MoreHorizontal className="h-3.5 w-3.5" />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-40">
+            <DropdownMenuContent align="end" className="w-44">
               {onRename && (
                 <DropdownMenuItem onClick={onRename}>
                   Rename
                 </DropdownMenuItem>
               )}
-              {onRename && onDelete && <DropdownMenuSeparator />}
+              {onUpdateCategory && (
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>Change category</DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent>
+                    {CATEGORIES.map(({ value, label: catLabel }) => (
+                      <DropdownMenuItem
+                        key={value}
+                        onClick={() => onUpdateCategory(id, value)}
+                      >
+                        {catLabel}
+                        {category === value && <Check className="ml-auto h-3 w-3" />}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+              )}
+              {onDelete && (onRename || onUpdateCategory) && <DropdownMenuSeparator />}
               {onDelete && (
                 <DropdownMenuItem
                   className="text-destructive focus:text-destructive"
