@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes, useNavigate, useParams, useLocation } from "react-router-dom"
 import { useEffect, useRef, lazy, Suspense, type ReactNode } from "react"
+import Logo from "@/components/Logo"
 import { useQueryClient } from "@tanstack/react-query"
 import { useAuth } from "@/stores/auth"
 import { useWorkspaces } from "@/api/hooks/useWorkspaces"
@@ -118,7 +119,7 @@ function WorkspaceRedirect() {
 
   return (
     <div className="min-h-screen flex items-center justify-center">
-      <span className="text-sm text-muted-foreground">Loading...</span>
+      <Logo width={48} height={48} showText={false} loading />
     </div>
   )
 }
@@ -179,7 +180,7 @@ function WorkspaceLayout() {
   if (resolving || !workspace || workspace.slug !== slugParam) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <span className="text-sm text-muted-foreground">Loading...</span>
+        <Logo width={48} height={48} showText={false} loading />
       </div>
     )
   }
