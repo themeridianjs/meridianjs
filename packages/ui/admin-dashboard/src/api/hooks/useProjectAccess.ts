@@ -130,6 +130,28 @@ export function useRequestProjectAccess() {
   })
 }
 
+export function useRequestProjectAccessByKey() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ identifier, message }: { identifier: string; message?: string }) =>
+      api.post<{ access_request: ProjectAccessRequest }>(`/admin/projects/by-identifier/${encodeURIComponent(identifier)}/access-requests`, { message }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["projects"] })
+    },
+  })
+}
+
+export function useCancelProjectAccessRequestByKey() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (identifier: string) =>
+      api.delete(`/admin/projects/by-identifier/${encodeURIComponent(identifier)}/access-requests`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["projects"] })
+    },
+  })
+}
+
 export function useHandleProjectAccessRequest(projectId: string) {
   const qc = useQueryClient()
   return useMutation({

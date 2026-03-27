@@ -1,30 +1,28 @@
 import { useState } from "react"
-import { useParams, useLocation, Link } from "react-router-dom"
+import { useParams, Link } from "react-router-dom"
 import { Lock, Clock, ArrowLeft, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { useRequestProjectAccess, useCancelProjectAccessRequest } from "@/api/hooks/useProjectAccess"
+import {
+  useRequestProjectAccessByKey,
+  useCancelProjectAccessRequestByKey,
+} from "@/api/hooks/useProjectAccess"
 import { ApiError } from "@/api/client"
 import { toast } from "sonner"
 
 export function RequestProjectAccessPage() {
   const { projectKey, workspace: ws } = useParams<{ projectKey: string; workspace: string }>()
-  const location = useLocation()
-  const state = location.state as { projectId?: string; projectName?: string } | null
-
-  const projectId = state?.projectId ?? null
-  const projectName = state?.projectName ?? projectKey ?? "this project"
 
   const [message, setMessage] = useState("")
   const [isPending, setIsPending] = useState(false)
 
-  const requestAccess = useRequestProjectAccess()
-  const cancelRequest = useCancelProjectAccessRequest()
+  const requestAccess = useRequestProjectAccessByKey()
+  const cancelRequest = useCancelProjectAccessRequestByKey()
 
   const handleRequest = () => {
-    if (!projectId) return
+    if (!projectKey) return
     requestAccess.mutate(
-      { projectId, message: message.trim() || undefined },
+      { identifier: projectKey, message: message.trim() || undefined },
       {
         onSuccess: () => setIsPending(true),
         onError: (err) => {
@@ -39,8 +37,8 @@ export function RequestProjectAccessPage() {
   }
 
   const handleCancel = () => {
-    if (!projectId) return
-    cancelRequest.mutate(projectId, {
+    if (!projectKey) return
+    cancelRequest.mutate(projectKey, {
       onSuccess: () => {
         setIsPending(false)
         setMessage("")
@@ -67,26 +65,14 @@ export function RequestProjectAccessPage() {
             <Lock className="h-6 w-6 text-muted-foreground" />
           </div>
           <div>
-            <h1 className="text-lg font-semibold">{projectName}</h1>
+            <h1 className="text-lg font-semibold">{projectKey}</h1>
             <p className="text-sm text-muted-foreground mt-1">
-              You don't have access to this project.
-              {projectId ? " Request access from the project managers." : ""}
+              You don't have access to this project. Request access from the project managers.
             </p>
           </div>
         </div>
 
-        {!projectId && (
-          <div className="bg-muted/40 border border-border rounded-lg p-4 text-center">
-            <p className="text-sm text-muted-foreground">
-              Unable to load project details. This link may be incomplete.
-            </p>
-            <Button asChild variant="outline" size="sm" className="mt-3">
-              <Link to={`/${ws}/projects`}>Browse projects</Link>
-            </Button>
-          </div>
-        )}
-
-        {projectId && isPending && (
+        {isPending ? (
           <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4 space-y-3">
             <div className="flex items-center gap-2">
               <Clock className="h-4 w-4 text-amber-600 shrink-0" />
@@ -108,9 +94,7 @@ export function RequestProjectAccessPage() {
               {cancelRequest.isPending ? "Cancelling..." : "Cancel request"}
             </Button>
           </div>
-        )}
-
-        {projectId && !isPending && (
+        ) : (
           <div className="bg-white dark:bg-card border border-border rounded-lg p-4 space-y-3">
             <Textarea
               placeholder="Optional message to project managers..."

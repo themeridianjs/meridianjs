@@ -68,11 +68,7 @@ export function ProjectLayout() {
     if (error.status === 404) {
       navigate(`/${ws}/projects`, { replace: true })
     } else if (error.status === 403) {
-      const data = error.data as { project_id?: string; project_name?: string } | undefined
-      navigate(`/${ws}/projects/${projectKey}/request-access`, {
-        replace: true,
-        state: { projectId: data?.project_id ?? null, projectName: data?.project_name ?? null },
-      })
+      navigate(`/${ws}/projects/${projectKey}/request-access`, { replace: true })
     }
   }, [error, ws, navigate, projectKey])
 

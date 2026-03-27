@@ -1,27 +1,38 @@
-import type { Response } from "express"
+import type { Response, NextFunction } from "express"
 import { assertWorkspaceAdmin } from "../../../../../utils/workspace-access.js"
 import { assignDefaultUserRole } from "../../../../../utils/assign-default-role.js"
 
 // Owner cancels their own pending request
-export const DELETE = async (req: any, res: Response) => {
-  const workspaceMemberService = req.scope.resolve("workspaceMemberModuleService") as any
+export const DELETE = async (req: any, res: Response, next: NextFunction) => {
+  try {
+    const workspaceMemberService = req.scope.resolve("workspaceMemberModuleService") as any
 
-  const accessRequest = await workspaceMemberService.getAccessRequest(req.params.requestId)
-  if (!accessRequest || accessRequest.workspace_id !== req.params.id) {
-    res.status(404).json({ error: { message: "Access request not found" } })
-    return
-  }
-  if (accessRequest.user_id !== req.user?.id) {
-    res.status(403).json({ error: { message: "Forbidden — can only cancel your own request" } })
-    return
-  }
-  if (accessRequest.status !== "pending") {
-    res.status(409).json({ error: { message: "Request is no longer pending" } })
-    return
-  }
+    const accessRequest = await workspaceMemberService.getAccessRequest(req.params.requestId)
+    if (!accessRequest || accessRequest.workspace_id !== req.params.id) {
+      res.status(404).json({ error: { message: "Access request not found" } })
+      return
+    }
+    if (accessRequest.user_id !== req.user?.id) {
+      res.status(403).json({ error: { message: "Forbidden — can only cancel your own request" } })
+      return
+    }
+    if (accessRequest.status !== "pending") {
+      res.status(409).json({ error: { message: "Request is no longer pending" } })
+      return
+    }
 
-  await workspaceMemberService.deleteAccessRequest(req.params.requestId)
-  res.status(204).end()
+    await workspaceMemberService.deleteAccessRequest(req.params.requestId)
+
+    const eventBus = req.scope.resolve("eventBus") as any
+    eventBus.emit({
+      name: "workspace.access_request_cancelled",
+      data: { workspace_id: req.params.id, user_id: accessRequest.user_id, request_id: req.params.requestId },
+    }).catch(() => {})
+
+    res.status(204).end()
+  } catch (err) {
+    next(err)
+  }
 }
 
 export const PATCH = async (req: any, res: Response) => {

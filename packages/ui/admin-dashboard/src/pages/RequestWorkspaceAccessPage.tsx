@@ -49,19 +49,32 @@ export function RequestWorkspaceAccessPage() {
   const requestAccess = useRequestWorkspaceAccess()
   const cancelRequest = useCancelWorkspaceAccessRequest()
 
+  // Poll workspaces as fallback; also used to redirect once access is granted
   const { data: myWorkspaces } = useWorkspaces({
     refetchInterval: isPending ? 60_000 : false,
   })
 
+  // Auto-redirect when workspace membership is confirmed (poll or SSE-triggered refetch)
   useEffect(() => {
-    if (myWorkspaces && myWorkspaces.length > 0 && isPending) {
-      const w = myWorkspaces[0]
-      setWorkspace({ id: w.id, name: w.name, slug: w.slug, logo_url: w.logo_url ?? null })
-      navigate(`/${w.slug}/projects`, { replace: true })
+    if (!myWorkspaces) return
+    const granted = myWorkspaces.find((w) => w.slug === slug)
+    if (granted) {
+      setWorkspace({ id: granted.id, name: granted.name, slug: granted.slug, logo_url: granted.logo_url ?? null })
+      navigate(`/${granted.slug}/projects`, { replace: true })
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [myWorkspaces])
 
+  // Auto-redirect if search result already shows is_member (e.g. user revisits after approval)
+  useEffect(() => {
+    if (workspace?.is_member) {
+      navigate(`/${workspace.slug}/projects`, { replace: true })
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workspace?.is_member])
+
+  // SSE: listen on user-scoped channel for approval (this page is outside WorkspaceLayout,
+  // so useRealtimeEvents is not running — we need our own connection here)
   useEffect(() => {
     if (!token) return
     const es = createUserEventSource(token)
@@ -86,7 +99,6 @@ export function RequestWorkspaceAccessPage() {
         onSuccess: (data) => {
           setIsPending(true)
           setPendingRequestId(data.access_request.id)
-          queryClient.invalidateQueries({ queryKey: ["workspaces", "my-access-requests"] })
         },
         onError: (err) => {
           if (err instanceof ApiError && err.status === 409) {
@@ -156,9 +168,11 @@ export function RequestWorkspaceAccessPage() {
               </div>
               <div>
                 <h1 className="text-lg font-semibold">{workspace.name}</h1>
-                <p className="text-sm text-muted-foreground mt-1">
-                  You don't have access to this workspace.
-                </p>
+                {!workspace.is_member && (
+                  <p className="text-sm text-muted-foreground mt-1">
+                    You don't have access to this workspace.
+                  </p>
+                )}
               </div>
             </div>
 

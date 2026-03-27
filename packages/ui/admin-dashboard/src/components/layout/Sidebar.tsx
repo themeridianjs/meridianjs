@@ -70,8 +70,7 @@ function WorkspaceSwitcher() {
   const [confirmMessage, setConfirmMessage] = useState("")
 
   const sortedWorkspaces = [...(workspaces ?? [])].sort((a, b) => a.name.localeCompare(b.name))
-  const myWorkspaceIds = new Set((workspaces ?? []).map((w) => w.id))
-  const joinable = allPublic.filter((w) => !w.is_member && !myWorkspaceIds.has(w.id)).sort((a, b) => a.name.localeCompare(b.name))
+  const joinable = allPublic.filter((w) => !w.is_member).sort((a, b) => a.name.localeCompare(b.name))
 
   const handleConfirmRequest = () => {
     if (!confirmWorkspace) return

@@ -209,80 +209,83 @@ export function ProjectsPage() {
                   </span>
                   {/* Actions */}
                   <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
+                    {project.is_member === false ? (
+                      isPending(project) ? (
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs text-muted-foreground">Pending</span>
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            className="h-6 w-6 text-muted-foreground"
+                            disabled={cancelAccess.isPending}
+                            onClick={() => cancelAccess.mutate(project.id, {
+                              onSuccess: () => {
+                                setRequestedIds((prev) => { const next = new Set(prev); next.delete(project.id); return next })
+                                toast.success("Access request cancelled")
+                              },
+                              onError: () => toast.error("Failed to cancel request"),
+                            })}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ) : (
                         <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          className="h-7 w-7 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-xs"
+                          onClick={() => { setConfirmProject({ id: project.id, name: project.name }); setConfirmMessage("") }}
                         >
-                          <MoreHorizontal className="h-4 w-4" />
+                          <UserPlus className="h-3 w-3" />
+                          Request access
                         </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        {project.is_member === false ? (
-                          <>
-                            <DropdownMenuItem
-                              disabled={isPending(project)}
-                              onClick={() => { if (!isPending(project)) { setConfirmProject({ id: project.id, name: project.name }); setConfirmMessage("") } }}
-                            >
-                              <UserPlus className="h-4 w-4" />
-                              {isPending(project) ? "Request pending" : "Request access"}
-                            </DropdownMenuItem>
-                            {isPending(project) && (
-                              <DropdownMenuItem
-                                className="text-destructive focus:text-destructive"
-                                disabled={cancelAccess.isPending}
-                                onClick={() => cancelAccess.mutate(project.id, {
-                                  onSuccess: () => {
-                                    setRequestedIds((prev) => { const next = new Set(prev); next.delete(project.id); return next })
-                                    toast.success("Access request cancelled")
-                                  },
-                                  onError: () => toast.error("Failed to cancel request"),
-                                })}
-                              >
-                                <X className="h-4 w-4" />
-                                Cancel request
-                              </DropdownMenuItem>
-                            )}
-                          </>
-                        ) : (
-                          <>
-                            <DropdownMenuItem onClick={() => navigate(`/${workspace}/projects/${project.identifier}/board`)}>
-                              <Layers className="h-4 w-4" />
-                              Open board
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => navigate(`/${workspace}/projects/${project.identifier}/issues`)}>
-                              <GitBranch className="h-4 w-4" />
-                              View issues
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setAccessProject({ id: project.id, name: project.name })}>
-                              <Lock className="h-4 w-4" />
-                              Manage access
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setTransferProject({ id: project.id, name: project.name })}>
-                              <ArrowRightLeft className="h-4 w-4" />
-                              Transfer to workspace
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              className="text-destructive focus:text-destructive"
-                              onClick={() => {
-                                if (confirm(`Delete "${project.name}"? This cannot be undone.`)) {
-                                  deleteProject.mutate(project.id, {
-                                    onSuccess: () => toast.success("Project deleted"),
-                                    onError: () => toast.error("Failed to delete project"),
-                                  })
-                                }
-                              }}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                              Delete
-                            </DropdownMenuItem>
-                          </>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                      )
+                    ) : (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            className="h-7 w-7 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => navigate(`/${workspace}/projects/${project.identifier}/board`)}>
+                            <Layers className="h-4 w-4" />
+                            Open board
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => navigate(`/${workspace}/projects/${project.identifier}/issues`)}>
+                            <GitBranch className="h-4 w-4" />
+                            View issues
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setAccessProject({ id: project.id, name: project.name })}>
+                            <Lock className="h-4 w-4" />
+                            Manage access
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setTransferProject({ id: project.id, name: project.name })}>
+                            <ArrowRightLeft className="h-4 w-4" />
+                            Transfer to workspace
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="text-destructive focus:text-destructive"
+                            onClick={() => {
+                              if (confirm(`Delete "${project.name}"? This cannot be undone.`)) {
+                                deleteProject.mutate(project.id, {
+                                  onSuccess: () => toast.success("Project deleted"),
+                                  onError: () => toast.error("Failed to delete project"),
+                                })
+                              }
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
                   </div>
                 </div>
 
@@ -321,72 +324,74 @@ export function ProjectsPage() {
                     </div>
                   </div>
                   <div onClick={(e) => e.stopPropagation()}>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon-sm" className="h-8 w-8 text-muted-foreground">
-                          <MoreHorizontal className="h-4 w-4" />
+                    {project.is_member === false ? (
+                      isPending(project) ? (
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs text-muted-foreground">Pending</span>
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            className="h-7 w-7 text-muted-foreground"
+                            disabled={cancelAccess.isPending}
+                            onClick={() => cancelAccess.mutate(project.id, {
+                              onSuccess: () => {
+                                setRequestedIds((prev) => { const next = new Set(prev); next.delete(project.id); return next })
+                                toast.success("Access request cancelled")
+                              },
+                              onError: () => toast.error("Failed to cancel request"),
+                            })}
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-8 text-xs"
+                          onClick={() => { setConfirmProject({ id: project.id, name: project.name }); setConfirmMessage("") }}
+                        >
+                          Request access
                         </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        {project.is_member === false ? (
-                          <>
-                            <DropdownMenuItem
-                              disabled={isPending(project)}
-                              onClick={() => { if (!isPending(project)) { setConfirmProject({ id: project.id, name: project.name }); setConfirmMessage("") } }}
-                            >
-                              <UserPlus className="h-4 w-4" />
-                              {isPending(project) ? "Request pending" : "Request access"}
-                            </DropdownMenuItem>
-                            {isPending(project) && (
-                              <DropdownMenuItem
-                                className="text-destructive focus:text-destructive"
-                                disabled={cancelAccess.isPending}
-                                onClick={() => cancelAccess.mutate(project.id, {
-                                  onSuccess: () => {
-                                    setRequestedIds((prev) => { const next = new Set(prev); next.delete(project.id); return next })
-                                    toast.success("Access request cancelled")
-                                  },
-                                  onError: () => toast.error("Failed to cancel request"),
-                                })}
-                              >
-                                <X className="h-4 w-4" />
-                                Cancel request
-                              </DropdownMenuItem>
-                            )}
-                          </>
-                        ) : (
-                          <>
-                            <DropdownMenuItem onClick={() => navigate(`/${workspace}/projects/${project.identifier}/issues`)}>
-                              <GitBranch className="h-4 w-4" />
-                              View issues
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setAccessProject({ id: project.id, name: project.name })}>
-                              <Lock className="h-4 w-4" />
-                              Manage access
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setTransferProject({ id: project.id, name: project.name })}>
-                              <ArrowRightLeft className="h-4 w-4" />
-                              Transfer to workspace
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              className="text-destructive focus:text-destructive"
-                              onClick={() => {
-                                if (confirm(`Delete "${project.name}"? This cannot be undone.`)) {
-                                  deleteProject.mutate(project.id, {
-                                    onSuccess: () => toast.success("Project deleted"),
-                                    onError: () => toast.error("Failed to delete project"),
-                                  })
-                                }
-                              }}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                              Delete
-                            </DropdownMenuItem>
-                          </>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                      )
+                    ) : (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon-sm" className="h-8 w-8 text-muted-foreground">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => navigate(`/${workspace}/projects/${project.identifier}/issues`)}>
+                            <GitBranch className="h-4 w-4" />
+                            View issues
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setAccessProject({ id: project.id, name: project.name })}>
+                            <Lock className="h-4 w-4" />
+                            Manage access
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setTransferProject({ id: project.id, name: project.name })}>
+                            <ArrowRightLeft className="h-4 w-4" />
+                            Transfer to workspace
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="text-destructive focus:text-destructive"
+                            onClick={() => {
+                              if (confirm(`Delete "${project.name}"? This cannot be undone.`)) {
+                                deleteProject.mutate(project.id, {
+                                  onSuccess: () => toast.success("Project deleted"),
+                                  onError: () => toast.error("Failed to delete project"),
+                                })
+                              }
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
                   </div>
                 </div>
               </div>

@@ -9,12 +9,7 @@ export const GET = async (req: any, res: Response) => {
   if (!project) { res.status(404).json({ error: { message: `Project "${identifier}" not found` } }); return }
 
   if (!await hasProjectAccess(req, project)) {
-    res.status(403).json({
-      error: { message: "Forbidden" },
-      project_id: project.id,
-      project_name: project.name,
-      project_identifier: project.identifier,
-    })
+    res.status(403).json({ error: { message: "Forbidden" } })
     return
   }
 
