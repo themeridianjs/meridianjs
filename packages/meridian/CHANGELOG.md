@@ -1,5 +1,19 @@
 # @meridianjs/meridian
 
+## 2.2.0
+
+### Minor Changes
+
+- Fixed the notification clickable issue
+
+### Patch Changes
+
+- @meridianjs/types@2.2.0
+- @meridianjs/framework-utils@2.2.0
+- @meridianjs/framework@2.2.0
+- @meridianjs/workflow-engine@2.2.0
+- @meridianjs/auth@2.2.0
+
 ## 2.1.0
 
 ### Minor Changes

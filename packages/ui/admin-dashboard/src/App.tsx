@@ -129,14 +129,38 @@ function WorkspaceLayout() {
   const navigate = useNavigate()
   const { data: workspaces, isLoading, isFetching } = useWorkspaces()
 
+  const isSuperAdmin = user?.roles?.includes("super-admin") || user?.roles?.includes("admin")
+  // If the slug isn't in the user's regular workspace list and user is privileged,
+  // fire an org-scoped query to find any workspace (e.g. cross-workspace notification links).
+  const needsOrgFallback = !isLoading && workspaces && !workspaces.find((w) => w.slug === slugParam) && isSuperAdmin
+  const { data: orgWorkspaces, isLoading: orgLoading } = useWorkspaces(
+    needsOrgFallback ? { orgScope: true } : false
+  )
+
   useEffect(() => {
     if (isLoading || !workspaces) return
+
     const found = workspaces.find((w) => w.slug === slugParam)
     if (found) {
       if (found.id !== workspace?.id) {
         setWorkspace({ id: found.id, name: found.name, slug: found.slug, logo_url: found.logo_url })
       }
-    } else if (isFetching) {
+      return
+    }
+
+    // Super-admin fallback: check org-scoped workspaces
+    if (isSuperAdmin) {
+      if (orgLoading || !orgWorkspaces) return // still loading org list
+      const orgFound = orgWorkspaces.find((w) => w.slug === slugParam)
+      if (orgFound) {
+        if (orgFound.id !== workspace?.id) {
+          setWorkspace({ id: orgFound.id, name: orgFound.name, slug: orgFound.slug, logo_url: orgFound.logo_url })
+        }
+        return
+      }
+    }
+
+    if (isFetching) {
       // Still refetching — wait for fresh data before redirecting
       return
     } else if (workspaces.length > 0) {
@@ -148,9 +172,10 @@ function WorkspaceLayout() {
       setWorkspace(null)
       navigate("/awaiting-access", { replace: true })
     }
-  }, [workspaces, slugParam, isLoading, isFetching, workspace?.id, navigate, setWorkspace, user])
+  }, [workspaces, orgWorkspaces, slugParam, isLoading, isFetching, orgLoading, isSuperAdmin, workspace?.id, navigate, setWorkspace, user])
 
-  if (isLoading || !workspace || workspace.slug !== slugParam) {
+  const resolving = isLoading || (needsOrgFallback && orgLoading)
+  if (resolving || !workspace || workspace.slug !== slugParam) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <span className="text-sm text-muted-foreground">Loading...</span>

@@ -10,7 +10,7 @@ export interface Notification {
   message: string
   read: boolean
   created_at: string
-  metadata?: Record<string, string> | null
+  metadata?: Record<string, unknown> | null
 }
 
 interface NotificationsResponse {

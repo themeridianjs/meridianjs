@@ -1,5 +1,11 @@
 # @meridianjs/admin-dashboard
 
+## 2.2.0
+
+### Minor Changes
+
+- Fixed the notification clickable issue
+
 ## 2.1.0
 
 ### Minor Changes

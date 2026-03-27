@@ -1,6 +1,5 @@
 import { useNavigate, useParams } from "react-router-dom"
 import { useNotifications, useMarkAsRead, useMarkAllAsRead } from "@/api/hooks/useNotifications"
-import { useProjects } from "@/api/hooks/useProjects"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Bell, CheckCheck, GitBranch, Layers, MessageSquare, UserPlus, Zap } from "lucide-react"
@@ -25,40 +24,41 @@ function formatTime(dateStr: string): string {
   return format(date, "MMM d, yyyy")
 }
 
+function getMetadataString(value: unknown): string | null {
+  return typeof value === "string" && value.length > 0 ? value : null
+}
+
 export function NotificationsPage() {
   const { workspace } = useParams<{ workspace: string }>()
   const navigate = useNavigate()
 
   const { data: notifications, isLoading } = useNotifications()
-  const { data: projects = [] } = useProjects()
   const markAsRead = useMarkAsRead()
   const markAllAsRead = useMarkAllAsRead()
 
   const unreadCount = notifications?.filter((n) => !n.read).length ?? 0
 
-  // project_id → identifier lookup from cached projects list
-  const projectById = Object.fromEntries(projects.map((p) => [p.id, p]))
-
   function getLink(notification: NonNullable<typeof notifications>[number]): string | null {
-    if (notification.entity_type === "issue" && notification.metadata?.project_id) {
-      const project = projectById[notification.metadata.project_id]
-      if (project) return `/${workspace}/projects/${project.identifier}/issues/${notification.entity_id}`
+    const metadata = notification.metadata ?? {}
+    const workspaceSlug = getMetadataString(metadata.workspace_slug) ?? workspace ?? null
+    const projectIdentifier = getMetadataString(metadata.project_identifier)
+
+    if (notification.entity_type === "issue" && workspaceSlug && projectIdentifier) {
+      return `/${workspaceSlug}/projects/${projectIdentifier}/issues/${notification.entity_id}`
     }
     if (notification.entity_type === "project") {
-      const project = projectById[notification.entity_id]
-      if (project) return `/${workspace}/projects/${project.identifier}/board`
+      if (workspaceSlug && projectIdentifier) return `/${workspaceSlug}/projects/${projectIdentifier}/board`
     }
     if (notification.entity_type === "workspace_access_request") {
-      const slug = notification.metadata?.workspace_slug ?? workspace
-      return `/${slug}/settings?tab=access-requests`
+      if (workspaceSlug) return `/${workspaceSlug}/settings?tab=access-requests`
     }
-    if (notification.entity_type === "project_access_request" && notification.metadata?.project_id) {
-      const project = projectById[notification.metadata.project_id]
-      if (project) return `/${workspace}/projects/${project.identifier}/access`
-    }
-    if (notification.entity_type === "project_access_resolved" && notification.metadata?.project_id) {
-      const project = projectById[notification.metadata.project_id]
-      if (project) return `/${workspace}/projects/${project.identifier}/access`
+    if (
+      (notification.entity_type === "project_access_request" ||
+        notification.entity_type === "project_access_resolved") &&
+      workspaceSlug &&
+      projectIdentifier
+    ) {
+      return `/${workspaceSlug}/projects/${projectIdentifier}/access`
     }
     return null
   }
