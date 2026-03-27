@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from "react"
+import { useMutation } from "@tanstack/react-query"
 import {
   DndContext,
   DragOverlay,
@@ -120,6 +121,15 @@ export function KanbanBoard({
 
   const deleteStatus = useDeleteProjectStatus(projectId)
   const updateStatus = useUpdateProjectStatus(projectId, renamingStatusId ?? "")
+  const updateCategoryMutation = useMutation({
+    mutationFn: ({ statusId, category }: { statusId: string; category: string }) =>
+      api.put(`/admin/projects/${projectId}/statuses/${statusId}`, { category }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["projects", projectId, "statuses"] })
+      toast.success("Category updated")
+    },
+    onError: () => toast.error("Failed to update category"),
+  })
 
   const childCounts = useMemo(() => {
     const map = new Map<string, number>()
@@ -473,6 +483,9 @@ export function KanbanBoard({
                 setRenameValue(status.name)
               }}
               onDelete={readOnly ? undefined : () => handleDeleteStatus(status)}
+              onUpdateCategory={readOnly ? undefined : (statusId, category) =>
+                updateCategoryMutation.mutate({ statusId, category })
+              }
               isRenaming={renamingStatusId === status.id}
               renameValue={renamingStatusId === status.id ? renameValue : ""}
               onRenameChange={setRenameValue}
