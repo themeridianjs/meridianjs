@@ -6,7 +6,7 @@ import { getAccessibleWorkspaceIds } from "../../utils/workspace-access.js"
 export const GET = async (req: any, res: Response) => {
   const projectService = req.scope.resolve("projectModuleService") as any
   const projectMemberService = req.scope.resolve("projectMemberModuleService") as any
-  const limit = Math.min(Number(req.query.limit) || 20, 100)
+  const limit = Math.min(Number(req.query.limit) || 20, 500)
   const offset = Number(req.query.offset) || 0
   const filters: Record<string, unknown> = {}
   if (req.query.workspace_id) {

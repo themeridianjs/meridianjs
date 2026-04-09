@@ -45,6 +45,7 @@ const ProjectTimelinePage = lazy(() => import("@/pages/ProjectTimelinePage").the
 const ProjectHealthPage = lazy(() => import("@/pages/ProjectHealthPage").then(m => ({ default: m.ProjectHealthPage })))
 const HealthReportDetailPage = lazy(() => import("@/pages/HealthReportDetailPage").then(m => ({ default: m.HealthReportDetailPage })))
 const WorkspaceReportingPage = lazy(() => import("@/pages/WorkspaceReportingPage").then(m => ({ default: m.WorkspaceReportingPage })))
+const TimesheetPage = lazy(() => import("@/pages/TimesheetPage").then(m => ({ default: m.TimesheetPage })))
 
 function RequireAuth({ children }: { children: ReactNode }) {
   const { isAuthenticated } = useAuth()
@@ -293,6 +294,7 @@ export function App() {
         }
       >
         <Route index element={<ProfilePage />} />
+        <Route path="timesheets" element={<Suspense fallback={<div className="flex items-center justify-center h-full text-sm text-muted-foreground">Loading…</div>}><TimesheetPage /></Suspense>} />
       </Route>
 
       {/* Workspace setup — auth required, no workspace needed */}

@@ -1,5 +1,19 @@
 # @meridianjs/meridian
 
+## 2.5.0
+
+### Minor Changes
+
+- Timesheets page, and timelogs project name "unknown fix"
+
+### Patch Changes
+
+- @meridianjs/types@2.5.0
+- @meridianjs/framework-utils@2.5.0
+- @meridianjs/framework@2.5.0
+- @meridianjs/workflow-engine@2.5.0
+- @meridianjs/auth@2.5.0
+
 ## 2.4.0
 
 ### Minor Changes

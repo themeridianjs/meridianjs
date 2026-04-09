@@ -1,5 +1,11 @@
 # @meridianjs/admin-dashboard
 
+## 2.5.0
+
+### Minor Changes
+
+- Timesheets page, and timelogs project name "unknown fix"
+
 ## 2.4.0
 
 ## 2.3.0

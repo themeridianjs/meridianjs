@@ -13,6 +13,7 @@ import {
   BarChart2,
   User as UserIcon,
   Lock,
+  Clock,
 } from "lucide-react"
 import { toast } from "sonner"
 import { useProjects } from "@/api/hooks/useProjects"
@@ -288,6 +289,13 @@ function NavUser() {
             >
               <UserIcon className="size-4" />
               Profile
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="cursor-pointer gap-2"
+              onClick={() => navigate("/profile/timesheets")}
+            >
+              <Clock className="size-4" />
+              Timesheets
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem

@@ -1,5 +1,5 @@
-import { Outlet, useNavigate } from "react-router-dom"
-import { User, ArrowLeft, ChevronsUpDown, LogOut } from "lucide-react"
+import { Outlet, useNavigate, NavLink, useLocation } from "react-router-dom"
+import { User, ArrowLeft, Clock, ChevronsUpDown, LogOut } from "lucide-react"
 import { useAuth } from "@/stores/auth"
 import { ThemeToggle } from "@/components/theme/ThemeToggle"
 import {
@@ -119,6 +119,33 @@ function ProfileSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <NavLink to="/profile" end>
+                  {({ isActive }) => (
+                    <SidebarMenuButton isActive={isActive} tooltip="Profile">
+                      <User />
+                      <span>Profile</span>
+                    </SidebarMenuButton>
+                  )}
+                </NavLink>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <NavLink to="/profile/timesheets">
+                  {({ isActive }) => (
+                    <SidebarMenuButton isActive={isActive} tooltip="Timesheets">
+                      <Clock />
+                      <span>Timesheets</span>
+                    </SidebarMenuButton>
+                  )}
+                </NavLink>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
       </SidebarContent>
 
       <SidebarFooter>
@@ -129,6 +156,11 @@ function ProfileSidebar() {
 }
 
 export function ProfileLayout() {
+  const location = useLocation()
+  const isTimesheets = location.pathname.includes("/timesheets")
+  const pageTitle = isTimesheets ? "Timesheets" : "Profile"
+  const PageIcon = isTimesheets ? Clock : User
+
   return (
     <SidebarProvider>
       <ProfileSidebar />
@@ -138,8 +170,8 @@ export function ProfileLayout() {
             <SidebarTrigger className="-ml-1" />
             <Separator orientation="vertical" className="mx-2 data-[orientation=vertical]:h-4" />
             <div className="flex items-center gap-2 text-sm">
-              <User className="h-4 w-4 text-indigo-600 dark:text-indigo-400" strokeWidth={1.5} />
-              <span className="font-medium">Profile</span>
+              <PageIcon className="h-4 w-4 text-indigo-600 dark:text-indigo-400" strokeWidth={1.5} />
+              <span className="font-medium">{pageTitle}</span>
             </div>
             <div className="ml-auto">
               <ThemeToggle />

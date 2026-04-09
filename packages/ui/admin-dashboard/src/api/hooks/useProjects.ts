@@ -55,19 +55,21 @@ export const projectKeys = {
   activities: (id: string) => [...projectKeys.all, id, "activities"] as const,
 }
 
-export function useProjects(options?: { allWorkspaces?: boolean; workspaceIds?: string[]; orgScope?: boolean }) {
+export function useProjects(options?: { allWorkspaces?: boolean; workspaceIds?: string[]; orgScope?: boolean; limit?: number }) {
   const { workspace } = useAuth()
   const wsIds = options?.workspaceIds
   const orgScope = options?.orgScope ?? false
+  const limit = options?.limit
   const scopeToWorkspace = !options?.allWorkspaces && !wsIds?.length && !orgScope
   const wsId = scopeToWorkspace ? workspace?.id : undefined
   return useQuery({
-    queryKey: [...projectKeys.list(), wsId ?? wsIds ?? (orgScope ? "org" : "all")],
+    queryKey: [...projectKeys.list(), wsId ?? wsIds ?? (orgScope ? "org" : "all"), limit],
     queryFn: () => {
       const params = new URLSearchParams()
       if (wsId) params.set("workspace_id", wsId)
       else if (wsIds?.length) params.set("workspace_ids", wsIds.join(","))
       if (orgScope) params.set("org_scope", "true")
+      if (limit) params.set("limit", String(limit))
       const qs = params.toString() ? `?${params}` : ""
       return api.get<ProjectsResponse>(`/admin/projects${qs}`)
     },
