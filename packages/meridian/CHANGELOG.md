@@ -1,5 +1,34 @@
 # @meridianjs/meridian
 
+## 2.4.0
+
+### Minor Changes
+
+- Fixed the google login issue
+
+### Patch Changes
+
+- @meridianjs/types@2.4.0
+- @meridianjs/framework-utils@2.4.0
+- @meridianjs/framework@2.4.0
+- @meridianjs/workflow-engine@2.4.0
+- @meridianjs/auth@2.4.0
+
+## 2.3.0
+
+### Minor Changes
+
+- Project request access page, loading logo, status category update option
+- 186a89d: Request access page and UI improvements related to this
+
+### Patch Changes
+
+- @meridianjs/types@2.3.0
+- @meridianjs/framework-utils@2.3.0
+- @meridianjs/framework@2.3.0
+- @meridianjs/workflow-engine@2.3.0
+- @meridianjs/auth@2.3.0
+
 ## 2.2.0
 
 ### Minor Changes

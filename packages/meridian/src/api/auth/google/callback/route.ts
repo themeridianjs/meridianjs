@@ -122,10 +122,37 @@ export const GET = async (req: any, res: Response) => {
     }
   }
 
-  // For register flow (non-invite), check if open registration is enabled before exchanging code
+  // Exchange code for Google profile (moved before registration checks so we
+  // can look up the user for the "login" flow and fall back to registration)
+  let profile: { googleId: string; email: string; firstName: string | null; lastName: string | null; picture: string | null }
+  try {
+    profile = await googleOAuthService.exchangeCode(code)
+  } catch (err: any) {
+    errorRedirect(err.message ?? "Failed to authenticate with Google")
+    return
+  }
+
+  // Determine whether this Google user already exists in the system.
+  // For "login" flow: if the user doesn't exist, we fall back to
+  // registration logic so that users on the login page can still
+  // auto-register when open registration is enabled.
+  let isNewUser = false
+  if (flow === "login" && !inviteRecord) {
+    const userService = req.scope.resolve("userModuleService") as any
+    const byGoogleId = await userService.retrieveUserByGoogleId(profile.googleId).catch(() => null)
+    if (!byGoogleId) {
+      const byEmail = await userService.retrieveUserByEmail(profile.email.toLowerCase().trim()).catch(() => null)
+      if (!byEmail) {
+        isNewUser = true
+      }
+    }
+  }
+
+  // Check open registration for register flow OR login flow with a new user
+  const needsRegistrationCheck = (flow === "register" || isNewUser) && !inviteRecord
   let regConfig: { enabled: boolean; allowedDomains: string[] } | undefined
   let registerUserCount = 0
-  if (flow === "register" && !inviteRecord) {
+  if (needsRegistrationCheck) {
     const cfg = req.scope.resolve("config") as any
     regConfig = cfg?.projectConfig?.registration
     try {
@@ -141,17 +168,8 @@ export const GET = async (req: any, res: Response) => {
     }
   }
 
-  // Exchange code for Google profile
-  let profile: { googleId: string; email: string; firstName: string | null; lastName: string | null; picture: string | null }
-  try {
-    profile = await googleOAuthService.exchangeCode(code)
-  } catch (err: any) {
-    errorRedirect(err.message ?? "Failed to authenticate with Google")
-    return
-  }
-
   // Domain check for open registration (after we have the profile email)
-  if (flow === "register" && !inviteRecord && registerUserCount > 0 && regConfig?.enabled) {
+  if (needsRegistrationCheck && registerUserCount > 0 && regConfig?.enabled) {
     try {
       validateEmailDomain(profile.email, regConfig.allowedDomains)
     } catch {
@@ -169,7 +187,7 @@ export const GET = async (req: any, res: Response) => {
   }
 
   // Perform login / register
-  const autoRegister = flow === "register" && !inviteRecord
+  const autoRegister = (flow === "register" || isNewUser) && !inviteRecord
   let authResult: { token: string }
   try {
     const authService = req.scope.resolve("authModuleService") as any

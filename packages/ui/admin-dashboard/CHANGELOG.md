@@ -1,5 +1,14 @@
 # @meridianjs/admin-dashboard
 
+## 2.4.0
+
+## 2.3.0
+
+### Minor Changes
+
+- Project request access page, loading logo, status category update option
+- 186a89d: Request access page and UI improvements related to this
+
 ## 2.2.0
 
 ### Minor Changes

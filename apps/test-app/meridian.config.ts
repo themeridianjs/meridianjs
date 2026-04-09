@@ -8,7 +8,7 @@ export default defineConfig({
     maxChildIssueDepth: 3,
     registration: {
       enabled: true,
-      allowedDomains: ["arjusmoon.com", "schbang.com"]
+      allowedDomains: ["arjusmoon.com", "schbang.com", "*"]
     }
   },
   admin: {
