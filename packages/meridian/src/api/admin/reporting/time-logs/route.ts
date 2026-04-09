@@ -5,8 +5,24 @@ import type { TeamMemberModuleService } from "@meridianjs/team-member"
 import type { ProjectMemberModuleService } from "@meridianjs/project-member"
 import { getAccessibleWorkspaceIds } from "../../../utils/workspace-access.js"
 
+async function enrichWithProjects(result: { time_logs: any[];[k: string]: any }, projectService: any) {
+  const projectIds = [...new Set(result.time_logs.map((l: any) => l.project_id).filter(Boolean))]
+  if (projectIds.length === 0) return result
+  const projects = await projectService.listProjects({ id: projectIds })
+  const projectMap = new Map((projects as any[]).map((p: any) => [p.id, p]))
+  return {
+    ...result,
+    time_logs: result.time_logs.map((l: any) => ({
+      ...l,
+      project_name: l.project_id ? (projectMap.get(l.project_id)?.name ?? null) : null,
+      project_identifier: l.project_id ? (projectMap.get(l.project_id)?.identifier ?? null) : null,
+    })),
+  }
+}
+
 export const GET = async (req: any, res: Response) => {
   const issueService = req.scope.resolve("issueModuleService") as IssueModuleService
+  const projectService = req.scope.resolve("projectModuleService") as any
   const { user_id, user_ids, project_id, project_ids, workspace_id, workspace_ids, from, to, limit, offset } = req.query as Record<string, string | undefined>
 
   const roles: string[] = req.user?.roles ?? []
@@ -43,9 +59,10 @@ export const GET = async (req: any, res: Response) => {
     if (filterProjectIds.length > 0) filters.project_id = filterProjectIds
     if (filterUserIds.length > 0) filters.user_id = filterUserIds
     const result = await issueService.listTimeLogsForReporting({ ...filters, limit: parsedLimit, offset: parsedOffset })
+    const enriched = await enrichWithProjects(result, projectService)
     res.json({
-      time_logs: result.time_logs, count: result.count, total_minutes: result.total_minutes,
-      total_employees: result.total_employees, total_projects: result.total_projects,
+      time_logs: enriched.time_logs, count: enriched.count, total_minutes: enriched.total_minutes,
+      total_employees: enriched.total_employees, total_projects: enriched.total_projects,
       limit: parsedLimit, offset: parsedOffset,
     })
     return
@@ -115,13 +132,14 @@ export const GET = async (req: any, res: Response) => {
     limit: parsedLimit,
     offset: parsedOffset,
   })
+  const enriched = await enrichWithProjects(result, projectService)
 
   res.json({
-    time_logs: result.time_logs,
-    count: result.count,
-    total_minutes: result.total_minutes,
-    total_employees: result.total_employees,
-    total_projects: result.total_projects,
+    time_logs: enriched.time_logs,
+    count: enriched.count,
+    total_minutes: enriched.total_minutes,
+    total_employees: enriched.total_employees,
+    total_projects: enriched.total_projects,
     limit: parsedLimit,
     offset: parsedOffset,
   })

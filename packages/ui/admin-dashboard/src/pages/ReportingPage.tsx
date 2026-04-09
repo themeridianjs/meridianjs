@@ -67,7 +67,6 @@ export function ReportingPage({ workspaceId, orgScope = false }: { workspaceId?:
   const fromStr = from ? format(from, "yyyy-MM-dd") : undefined
   const toStr = to ? format(to, "yyyy-MM-dd") : undefined
 
-  const projectMap = useMemo(() => new Map(projects.map((p) => [p.id, p])), [projects])
   const workspaceMap = useMemo(() => new Map(workspaces.map((w) => [w.id, w])), [workspaces])
 
   const effectiveWsIds = workspaceId
@@ -117,18 +116,22 @@ export function ReportingPage({ workspaceId, orgScope = false }: { workspaceId?:
   // Chart: time by project (top 8) — computed from current page
   const byProjectChart = useMemo(() => {
     const map = new Map<string, number>()
+    const nameMap = new Map<string, string>()
     for (const log of timeLogs) {
       const key = log.project_id ?? "__none__"
       map.set(key, (map.get(key) ?? 0) + (log.duration_minutes ?? 0))
+      if (log.project_id && log.project_name && !nameMap.has(key)) {
+        nameMap.set(key, log.project_name)
+      }
     }
     return Array.from(map.entries())
       .map(([key, minutes]) => ({
-        name: key === "__none__" ? "No project" : (projectMap.get(key)?.name ?? "Unknown"),
+        name: key === "__none__" ? "No project" : (nameMap.get(key) ?? "Unknown"),
         minutes,
       }))
       .sort((a, b) => b.minutes - a.minutes)
       .slice(0, 8)
-  }, [timeLogs, projectMap])
+  }, [timeLogs])
 
   const userOptions = useMemo(
     () =>
@@ -330,7 +333,6 @@ export function ReportingPage({ workspaceId, orgScope = false }: { workspaceId?:
               </thead>
               <tbody className="divide-y divide-border">
                 {timeLogs.map((log) => {
-                  const proj = log.project_id ? projectMap.get(log.project_id) : undefined
                   const logWs = workspaceMap.get(log.workspace_id)?.slug ?? ws
                   const userName = userMap?.get(log.user_id)?.name ?? log.user_id.slice(0, 8) + "…"
                   return (
@@ -340,12 +342,12 @@ export function ReportingPage({ workspaceId, orgScope = false }: { workspaceId?:
                       </td>
                       <td className="px-6 py-3 text-xs font-medium">{userName}</td>
                       <td className="px-6 py-3 text-xs text-muted-foreground">
-                        {proj?.name ?? (log.project_id ? "Unknown" : "—")}
+                        {log.project_name ?? (log.project_id ? "Unknown" : "—")}
                       </td>
                       <td className="px-6 py-3">
                         {log.issue_identifier ? (
                           <Link
-                            to={`/${logWs}/projects/${proj?.identifier}/issues/${log.issue_id}`}
+                            to={`/${logWs}/projects/${log.project_identifier}/issues/${log.issue_id}`}
                             className="font-mono text-xs text-indigo-600 dark:text-indigo-400 hover:underline"
                           >
                             {log.issue_identifier}

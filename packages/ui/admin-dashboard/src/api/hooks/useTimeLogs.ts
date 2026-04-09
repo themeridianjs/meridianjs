@@ -17,6 +17,7 @@ export interface TimeLog {
   /** Enriched by reporting API only */
   issue_identifier?: string | null
   issue_title?: string | null
+  project_name?: string | null
   project_identifier?: string | null
 }
 
