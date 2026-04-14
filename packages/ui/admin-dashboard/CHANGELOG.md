@@ -1,5 +1,11 @@
 # @meridianjs/admin-dashboard
 
+## 2.6.0
+
+### Minor Changes
+
+- Added team dashboard
+
 ## 2.5.0
 
 ### Minor Changes

@@ -1,5 +1,19 @@
 # @meridianjs/meridian
 
+## 2.6.0
+
+### Minor Changes
+
+- Added team dashboard
+
+### Patch Changes
+
+- @meridianjs/types@2.6.0
+- @meridianjs/framework-utils@2.6.0
+- @meridianjs/framework@2.6.0
+- @meridianjs/workflow-engine@2.6.0
+- @meridianjs/auth@2.6.0
+
 ## 2.5.0
 
 ### Minor Changes

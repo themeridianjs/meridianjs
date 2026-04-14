@@ -17,8 +17,14 @@ import { MonthGrid } from "@/components/timesheets/MonthGrid"
 import { WeekGrid } from "@/components/timesheets/WeekGrid"
 import { AddSpentTimeDialog } from "@/components/timesheets/AddSpentTimeDialog"
 
-export function TimesheetPage() {
+interface TimesheetPageProps {
+  userId?: string
+  readOnly?: boolean
+}
+
+export function TimesheetPage({ userId: userIdProp, readOnly }: TimesheetPageProps = {}) {
   const { user } = useAuth()
+  const effectiveUserId = userIdProp ?? user?.id
   const [currentDate, setCurrentDate] = useState(new Date())
   const [view, setView] = useState<"month" | "week">("month")
   const [addDialogOpen, setAddDialogOpen] = useState(false)
@@ -46,14 +52,16 @@ export function TimesheetPage() {
   }, [year, month, currentDate, view])
 
   // Fetch time logs for the visible range
+  // When viewing another user's data (userIdProp provided), use org_scope to bypass workspace filtering
   const { data: reportingData } = useReportingTimeLogs(
     {
-      user_id: user?.id,
+      user_id: effectiveUserId,
       from,
       to,
       limit: 1000,
+      org_scope: !!userIdProp,
     },
-    { enabled: !!user?.id },
+    { enabled: !!effectiveUserId },
   )
 
   const timeLogs = reportingData?.time_logs ?? []
@@ -88,7 +96,7 @@ export function TimesheetPage() {
     return { totalLoggedMinutes: logged, totalExpectedMinutes: expected }
   }, [timeLogs, currentDate, view, workingDays, holidays])
 
-  const handleClickDay = (date: Date) => {
+  const handleClickDay = readOnly ? undefined : (date: Date) => {
     setAddDialogDate(date)
     setAddDialogOpen(true)
   }
@@ -106,7 +114,7 @@ export function TimesheetPage() {
           view={view}
           onNavigate={setCurrentDate}
           onViewChange={setView}
-          onAddTime={handleAddTime}
+          onAddTime={readOnly ? undefined : handleAddTime}
         />
         <TimesheetSummary
           totalLoggedMinutes={totalLoggedMinutes}
@@ -133,11 +141,13 @@ export function TimesheetPage() {
         )}
       </div>
 
-      <AddSpentTimeDialog
-        open={addDialogOpen}
-        onOpenChange={setAddDialogOpen}
-        defaultDate={addDialogDate}
-      />
+      {!readOnly && (
+        <AddSpentTimeDialog
+          open={addDialogOpen}
+          onOpenChange={setAddDialogOpen}
+          defaultDate={addDialogDate}
+        />
+      )}
     </div>
   )
 }

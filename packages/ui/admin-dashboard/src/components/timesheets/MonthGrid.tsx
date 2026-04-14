@@ -14,7 +14,7 @@ interface MonthGridProps {
   logsByDate: Map<string, TimeLog[]>
   workingDays: WorkingDays
   holidays: OrgHoliday[]
-  onClickDay: (date: Date) => void
+  onClickDay?: (date: Date) => void
 }
 
 export function MonthGrid({

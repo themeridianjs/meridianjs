@@ -9,6 +9,7 @@ import { useRealtimeEvents } from "@/hooks/useRealtimeEvents"
 import { AppShell } from "@/components/layout/AppShell"
 import { ProjectLayout } from "@/components/layout/ProjectLayout"
 import { ReportingLayout } from "@/components/layout/ReportingLayout"
+import { TeamDashboardLayout } from "@/components/layout/TeamDashboardLayout"
 import { OrgSettingsLayout } from "@/components/layout/OrgSettingsLayout"
 import { ProfileLayout } from "@/components/layout/ProfileLayout"
 import { CommandPalette } from "@/components/CommandPalette"
@@ -46,6 +47,7 @@ const ProjectHealthPage = lazy(() => import("@/pages/ProjectHealthPage").then(m 
 const HealthReportDetailPage = lazy(() => import("@/pages/HealthReportDetailPage").then(m => ({ default: m.HealthReportDetailPage })))
 const WorkspaceReportingPage = lazy(() => import("@/pages/WorkspaceReportingPage").then(m => ({ default: m.WorkspaceReportingPage })))
 const TimesheetPage = lazy(() => import("@/pages/TimesheetPage").then(m => ({ default: m.TimesheetPage })))
+const TeamDashboardPage = lazy(() => import("@/pages/TeamDashboardPage").then(m => ({ default: m.TeamDashboardPage })))
 
 function RequireAuth({ children }: { children: ReactNode }) {
   const { isAuthenticated } = useAuth()
@@ -266,6 +268,20 @@ export function App() {
         }
       >
         <Route index element={<ReportingPage />} />
+      </Route>
+
+      {/* Team Dashboard — admin/privileged only */}
+      <Route
+        path="/team"
+        element={
+          <RequireAuth>
+            <RequireAdmin>
+              <TeamDashboardLayout />
+            </RequireAdmin>
+          </RequireAuth>
+        }
+      >
+        <Route index element={<Suspense fallback={<div className="flex items-center justify-center h-full text-sm text-muted-foreground">Loading...</div>}><TeamDashboardPage /></Suspense>} />
       </Route>
 
       {/* Org — admin/super-admin only */}

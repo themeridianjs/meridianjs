@@ -7,7 +7,7 @@ interface TimesheetHeaderProps {
   view: "month" | "week"
   onNavigate: (date: Date) => void
   onViewChange: (view: "month" | "week") => void
-  onAddTime: () => void
+  onAddTime?: () => void
 }
 
 export function TimesheetHeader({
@@ -70,10 +70,12 @@ export function TimesheetHeader({
           </button>
         </div>
 
-        <Button size="sm" className="h-8 gap-1.5" onClick={onAddTime}>
-          <Plus className="h-3.5 w-3.5" />
-          Add spent time
-        </Button>
+        {onAddTime && (
+          <Button size="sm" className="h-8 gap-1.5" onClick={onAddTime}>
+            <Plus className="h-3.5 w-3.5" />
+            Add spent time
+          </Button>
+        )}
       </div>
     </div>
   )

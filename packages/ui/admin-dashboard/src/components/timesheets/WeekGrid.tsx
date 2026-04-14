@@ -11,7 +11,7 @@ interface WeekGridProps {
   logsByDate: Map<string, TimeLog[]>
   workingDays: WorkingDays
   holidays: OrgHoliday[]
-  onClickDay: (date: Date) => void
+  onClickDay?: (date: Date) => void
 }
 
 export function WeekGrid({

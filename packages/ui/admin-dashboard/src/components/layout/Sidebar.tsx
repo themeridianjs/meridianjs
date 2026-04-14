@@ -12,6 +12,7 @@ import {
   Shield,
   BarChart2,
   User as UserIcon,
+  Users,
   Lock,
   Clock,
 } from "lucide-react"
@@ -335,6 +336,7 @@ export function AppSidebar({ ...props }: SidebarProps) {
   const isRolesActive = location.pathname.includes("/roles")
   const isWorkspaceReportingActive = location.pathname === `/${ws}/reporting`
   const isGlobalReportingActive = location.pathname.startsWith("/reporting")
+  const isTeamDashboardActive = location.pathname.startsWith("/team")
   const isOrgSettingsActive = location.pathname.startsWith("/org/settings")
   const isSuperAdmin = user?.roles?.includes("super-admin") ?? false
   const isGlobalAdmin = isSuperAdmin || (user?.roles?.includes("admin") ?? false)
@@ -471,6 +473,14 @@ export function AppSidebar({ ...props }: SidebarProps) {
                       <NavLink to="/reporting">
                         <BarChart2 />
                         <span>Global Reports</span>
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={isTeamDashboardActive} tooltip="Team Dashboard">
+                      <NavLink to="/team">
+                        <Users />
+                        <span>Team Dashboard</span>
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
