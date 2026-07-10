@@ -9,7 +9,9 @@ export async function runBuild(): Promise<void> {
     process.exit(1)
   }
 
-  console.log(chalk.dim("  → Type-checking project..."))
+  // Meridian apps run directly via tsx (see `meridian start`), so there is no
+  // compile/emit step — `build` validates the project by type-checking it.
+  console.log(chalk.dim("  → Validating project (type-check; Meridian runs .ts directly via tsx)..."))
   console.log()
 
   const result = await execa("npx", ["tsc", "--noEmit"], {
@@ -24,5 +26,5 @@ export async function runBuild(): Promise<void> {
   }
 
   console.log()
-  console.log(chalk.green("  ✓ Type check passed"))
+  console.log(chalk.green("  ✓ Type check passed — project is ready to run with `meridian start`"))
 }

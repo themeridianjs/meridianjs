@@ -60,7 +60,14 @@ export async function runDev(): Promise<void> {
     {
       cwd: rootDir,
       stdio: "inherit",
-      env: { ...process.env, NODE_ENV: process.env.NODE_ENV ?? "development", FORCE_COLOR: "1" },
+      env: {
+        ...process.env,
+        NODE_ENV: process.env.NODE_ENV ?? "development",
+        // Auto-sync schema in dev (additive/safe). Production must use
+        // migrations — sync is off unless MERIDIAN_DB_SYNC is set.
+        MERIDIAN_DB_SYNC: process.env.MERIDIAN_DB_SYNC ?? "1",
+        FORCE_COLOR: "1",
+      },
     }
   )
 
@@ -73,8 +80,10 @@ export async function runDev(): Promise<void> {
   process.on("SIGTERM", () => shutdown("SIGTERM"))
 
   await apiProc.catch((err: any) => {
+    // Always shut the dashboard server down first — a bare `throw` below would
+    // otherwise leave it listening and orphan the port.
+    dashServer?.close()
     if (err.signal === "SIGINT" || err.signal === "SIGTERM") {
-      dashServer?.close()
       process.exit(0)
     }
     throw err

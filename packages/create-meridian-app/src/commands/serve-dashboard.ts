@@ -72,7 +72,10 @@ export async function buildAdminExtensions(
   const entryPoint = path.join(rootDir, "src", "admin", "widgets", "index.tsx")
   if (!existsSync(entryPoint)) return null
 
-  const outfile = path.join(os.tmpdir(), `meridian-ext-${Date.now()}.js`)
+  // Isolated temp dir avoids same-millisecond name collisions between
+  // concurrent invocations and cleans up sourcemap siblings too.
+  const outDir = fs.mkdtempSync(path.join(os.tmpdir(), "meridian-ext-"))
+  const outfile = path.join(outDir, "bundle.js")
   try {
     await esbuild.build({
       entryPoints: [entryPoint],
@@ -83,13 +86,9 @@ export async function buildAdminExtensions(
       plugins: [makeReactWindowPlugin()],
       logLevel: "silent",
     })
-    const buf = fs.readFileSync(outfile)
-    fs.unlinkSync(outfile)
-    return buf
-  } catch (err) {
-    // Clean up temp file if it was created
-    if (existsSync(outfile)) fs.unlinkSync(outfile)
-    throw err
+    return fs.readFileSync(outfile)
+  } finally {
+    fs.rmSync(outDir, { recursive: true, force: true })
   }
 }
 

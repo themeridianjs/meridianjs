@@ -3,6 +3,29 @@
  * self-contained (no extra file-copy step needed after npm install).
  */
 
+import { createRequire } from "node:module"
+
+/**
+ * The version range to pin scaffolded @meridianjs/* dependencies to.
+ *
+ * Uses this CLI's own version (the core framework packages are published in
+ * lockstep with it), as a caret range so patch/minor updates flow but a
+ * breaking major can't silently break a brand-new project on first install —
+ * which is exactly what "latest" did.
+ */
+function meridianDepRange(): string {
+  try {
+    const require = createRequire(import.meta.url)
+    const version: string = require("../../package.json").version
+    return `^${version}`
+  } catch {
+    // Fallback: still avoid "latest" — pin to the current major/minor line.
+    return "^2.6.0"
+  }
+}
+
+const MERIDIAN_DEP = meridianDepRange()
+
 export type OptionalModuleId =
   | "google-oauth"
   | "email-sendgrid"
@@ -39,20 +62,20 @@ export function renderPackageJson(vars: ProjectTemplateVars): string {
         ...(vars.seedDemo ? { "seed:demo": "node --import tsx/esm src/scripts/seed-demo.ts" } : {}),
       },
       dependencies: {
-        "@meridianjs/meridian": "latest",
-        "@meridianjs/framework": "latest",
-        "@meridianjs/framework-utils": "latest",
-        "@meridianjs/types": "latest",
-        "@meridianjs/auth": "latest",
-        "@meridianjs/event-bus-local": "latest",
+        "@meridianjs/meridian": MERIDIAN_DEP,
+        "@meridianjs/framework": MERIDIAN_DEP,
+        "@meridianjs/framework-utils": MERIDIAN_DEP,
+        "@meridianjs/types": MERIDIAN_DEP,
+        "@meridianjs/auth": MERIDIAN_DEP,
+        "@meridianjs/event-bus-local": MERIDIAN_DEP,
         "dotenv": "^16.0.0",
-        ...(vars.dashboard ? { "@meridianjs/admin-dashboard": "latest" } : {}),
+        ...(vars.dashboard ? { "@meridianjs/admin-dashboard": MERIDIAN_DEP } : {}),
         ...Object.fromEntries(
-          vars.optionalModules.map((id) => [`@meridianjs/${id}`, "latest"])
+          vars.optionalModules.map((id) => [`@meridianjs/${id}`, MERIDIAN_DEP])
         ),
       },
       devDependencies: {
-        "create-meridian-app": "latest",
+        "create-meridian-app": MERIDIAN_DEP,
         typescript: "^5.4.0",
         tsx: "^4.0.0",
         "@types/node": "^22.0.0",
