@@ -4,6 +4,12 @@ import type { Response } from "express"
  * Manages Server-Sent Event (SSE) connections grouped by workspace.
  * Subscribers call broadcast() after mutations; the frontend receives live updates
  * and invalidates the relevant TanStack Query cache entries.
+ *
+ * LIMITATION — single process only: connected clients and broadcasts live in
+ * this process's memory. In a multi-instance deployment a mutation on instance
+ * A will NOT reach SSE clients connected to instance B. To fan out across
+ * instances, back broadcast() with a Redis pub/sub channel (publish on
+ * broadcast, and have each instance subscribe and re-broadcast locally).
  */
 export class SseManager {
   private clients: Map<string, Set<Response>> = new Map()

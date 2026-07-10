@@ -26,7 +26,7 @@ export { ConsoleLogger } from "./logger.js"
 export { createServer, registerErrorHandling } from "./server.js"
 
 // Rate limiting
-export { authRateLimit, oauthRateLimit, apiRateLimit } from "./rate-limit.js"
+export { authRateLimit, oauthRateLimit, apiRateLimit, createRateLimit } from "./rate-limit.js"
 
 // Input validation
 export { validate } from "./validate.js"

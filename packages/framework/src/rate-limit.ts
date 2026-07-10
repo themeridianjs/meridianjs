@@ -1,9 +1,30 @@
-import rateLimit from "express-rate-limit"
+import rateLimit, { type Store, type Options } from "express-rate-limit"
+
+/**
+ * IMPORTANT — multi-instance deployments:
+ * These limiters use express-rate-limit's default in-memory store, so counters
+ * are PER PROCESS. Behind N processes/pods the effective limit is `max × N`,
+ * which weakens brute-force protection. For horizontal scaling, build the
+ * limiters with a shared store (e.g. `rate-limit-redis`) via `createRateLimit`
+ * and register those in your middlewares.ts instead of the defaults below:
+ *
+ *   import { RedisStore } from "rate-limit-redis"
+ *   const store = new RedisStore({ sendCommand: (...a) => redis.call(...a) })
+ *   export const authLimit = createRateLimit({ windowMs: 60_000, max: 10, store })
+ */
 
 const sharedOpts = {
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: { message: "Too many requests" } },
+}
+
+/**
+ * Builds a rate limiter with the shared defaults. Pass a `store` (e.g. a Redis
+ * store) to share counters across processes.
+ */
+export function createRateLimit(opts: Partial<Options> & { windowMs: number; max: number; store?: Store }) {
+  return rateLimit({ ...sharedOpts, ...opts })
 }
 
 /**

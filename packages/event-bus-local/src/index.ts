@@ -12,6 +12,8 @@ import type { IEventBus, EventMessage, SubscriberFn, ModuleDefinition } from "@m
  */
 export class LocalEventBus implements IEventBus {
   private emitter: EventEmitter
+  /** Maps each user handler to the wrapper registered on the emitter, per event. */
+  private wrappers = new Map<string, Map<SubscriberFn, (args: any) => void>>()
 
   constructor() {
     this.emitter = new EventEmitter()
@@ -33,24 +35,39 @@ export class LocalEventBus implements IEventBus {
   }
 
   subscribe(eventName: string, handler: SubscriberFn): void {
-    this.emitter.on(eventName, (args: { event: EventMessage }) => {
+    let forEvent = this.wrappers.get(eventName)
+    if (!forEvent) {
+      forEvent = new Map()
+      this.wrappers.set(eventName, forEvent)
+    }
+    // Dedup: subscribing the same handler twice (e.g. hot reload) is a no-op.
+    if (forEvent.has(handler)) return
+
+    const wrapper = (args: { event: EventMessage }) => {
       Promise.resolve(handler(args as any)).catch((err) => {
         console.error(
           `[LocalEventBus] Unhandled error in subscriber for "${eventName}":`,
           err
         )
       })
-    })
+    }
+    forEvent.set(handler, wrapper)
+    this.emitter.on(eventName, wrapper)
   }
 
-  unsubscribe(eventName: string, _handler: SubscriberFn): void {
-    // With anonymous wrappers, we remove all listeners for the event.
-    // Use @meridianjs/event-bus-redis for fine-grained removal in production.
-    this.emitter.removeAllListeners(eventName)
+  unsubscribe(eventName: string, handler: SubscriberFn): void {
+    const forEvent = this.wrappers.get(eventName)
+    const wrapper = forEvent?.get(handler)
+    if (wrapper) {
+      this.emitter.removeListener(eventName, wrapper)
+      forEvent!.delete(handler)
+      if (forEvent!.size === 0) this.wrappers.delete(eventName)
+    }
   }
 
   async close(): Promise<void> {
     this.emitter.removeAllListeners()
+    this.wrappers.clear()
   }
 }
 

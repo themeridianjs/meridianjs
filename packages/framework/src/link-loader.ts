@@ -97,20 +97,27 @@ class LinkService {
 
   async create(
     linkTableName: string,
-    leftId: string,
-    rightId: string,
-    data?: Record<string, unknown>
+    _leftId: string,
+    _rightId: string,
+    _data?: Record<string, unknown>
   ): Promise<void> {
-    // DB operations deferred to Phase 2 when MikroORM is wired up
-    this.logger?.debug(`Link.create: ${linkTableName} ${leftId} → ${rightId}`)
+    // Not yet implemented — throw rather than silently no-op so callers that
+    // rely on link persistence fail loudly instead of losing data.
+    throw new Error(
+      `LinkService.create is not implemented (attempted on "${linkTableName}"). ` +
+      `Link persistence is not available in this build.`
+    )
   }
 
   async dismiss(
     linkTableName: string,
-    leftId: string,
-    rightId: string
+    _leftId: string,
+    _rightId: string
   ): Promise<void> {
-    this.logger?.debug(`Link.dismiss: ${linkTableName} ${leftId} → ${rightId}`)
+    throw new Error(
+      `LinkService.dismiss is not implemented (attempted on "${linkTableName}"). ` +
+      `Link persistence is not available in this build.`
+    )
   }
 
   getDefinitions(): LinkDefinition[] {
@@ -130,8 +137,11 @@ class QueryService implements IQuery {
   ) {}
 
   async graph<T = unknown>(options: QueryGraphOptions): Promise<{ data: T[] }> {
-    // Full implementation in Phase 2 with DB access
-    this.logger?.debug(`Query.graph: ${options.entity}`, { fields: options.fields })
-    return { data: [] }
+    // Not yet implemented — throw rather than return an empty result set, which
+    // callers would mistake for "no matching data".
+    throw new Error(
+      `QueryService.graph is not implemented (attempted on "${options.entity}"). ` +
+      `Cross-module graph queries are not available in this build.`
+    )
   }
 }

@@ -16,6 +16,22 @@ export interface RedisEventBusOptions {
 }
 
 /**
+ * Thrown when a job's event has no handler in this process. Causes BullMQ to
+ * retry (and eventually park the job in the failed set) rather than silently
+ * marking it complete.
+ *
+ * NOTE: this bus assumes a HOMOGENEOUS deployment — every process loads every
+ * subscriber. Heterogeneous worker pools that split subscribers across
+ * processes should move to per-event queue names (see README).
+ */
+export class UnhandledEventError extends Error {
+  constructor(eventName: string) {
+    super(`No subscriber registered in this process for event "${eventName}"`)
+    this.name = "UnhandledEventError"
+  }
+}
+
+/**
  * Resolves options whether the class was constructed directly with an options
  * object or by the Meridian module loader with (container, moduleOptions).
  */
@@ -85,17 +101,20 @@ export class RedisEventBus implements IEventBus {
       async (job) => {
         const eventMsg = job.data as EventMessage
         const handlers = this.handlers.get(eventMsg.name)
-        if (!handlers || handlers.size === 0) return
+        if (!handlers || handlers.size === 0) {
+          // No handler in THIS process. In a homogeneous deployment every
+          // process registers every subscriber, so this only happens for a
+          // genuinely unhandled event or a heterogeneous rollout. Throw so
+          // BullMQ retries (a retry may land on a process that can handle it)
+          // and the job ends up in the failed set — never silently completed.
+          throw new UnhandledEventError(eventMsg.name)
+        }
 
+        // A subscriber that throws must fail the job (BullMQ retry), so do NOT
+        // swallow errors here. The container is injected by the subscriber
+        // loader's wrapper — the bus only supplies the event.
         await Promise.all(
-          [...handlers].map((handler) =>
-            handler({ event: eventMsg, container: null as any }).catch((err) => {
-              console.error(
-                `[RedisEventBus] Unhandled error in subscriber for "${eventMsg.name}":`,
-                err
-              )
-            })
-          )
+          [...handlers].map((handler) => handler({ event: eventMsg } as any))
         )
       },
       {
@@ -106,6 +125,14 @@ export class RedisEventBus implements IEventBus {
 
     this.worker.on("error", (err) => {
       console.error("[RedisEventBus] Worker error:", err)
+    })
+
+    this.worker.on("failed", (job, err) => {
+      console.error(
+        `[RedisEventBus] Job failed for event "${job?.data?.name ?? "unknown"}" ` +
+        `(attempt ${job?.attemptsMade}):`,
+        err?.message ?? err
+      )
     })
   }
 

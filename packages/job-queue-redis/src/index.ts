@@ -42,6 +42,7 @@ export class RedisScheduler implements IScheduler {
   private readonly prefix: string
   private readonly queues = new Map<string, Queue>()
   private readonly workers = new Map<string, Worker>()
+  private readonly workerConnections = new Map<string, IORedis>()
 
   /**
    * Accepts either the options object directly (`new RedisScheduler({ url })`)
@@ -98,13 +99,18 @@ export class RedisScheduler implements IScheduler {
       }
     )
 
+    // Each worker gets its own connection: BullMQ workers issue blocking
+    // commands (BRPOPLPUSH), so sharing one ioredis connection across workers
+    // causes head-of-line blocking between them.
+    const workerConnection = this.connection.duplicate()
+
     const worker = new Worker(
       queueName,
       async () => {
         await fn()
       },
       {
-        connection: this.connection as any,
+        connection: workerConnection as any,
         concurrency: 1, // jobs run sequentially per name
       }
     )
@@ -119,6 +125,7 @@ export class RedisScheduler implements IScheduler {
 
     this.queues.set(config.name, queue)
     this.workers.set(config.name, worker)
+    this.workerConnections.set(config.name, workerConnection)
   }
 
   async close(): Promise<void> {
@@ -126,6 +133,9 @@ export class RedisScheduler implements IScheduler {
       ...[...this.workers.values()].map((w) => w.close()),
       ...[...this.queues.values()].map((q) => q.close()),
     ])
+    await Promise.all(
+      [...this.workerConnections.values()].map((c) => c.quit().catch(() => {}))
+    )
     await this.connection.quit()
   }
 }
