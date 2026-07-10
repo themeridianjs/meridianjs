@@ -23,9 +23,12 @@ function getUserName(firstName: string, lastName: string, email: string) {
 
 export function UserSelector({ value, onChange }: UserSelectorProps) {
   const [open, setOpen] = useState(false)
-  const { data: users } = useAllUsers()
+  const { data: allUsers } = useAllUsers()
 
-  const selectedUser = value ? (users ?? []).find((u) => u.id === value) : null
+  // Hide deactivated users from the picker, but still resolve a previously
+  // selected (now-deactivated) user's name for display.
+  const users = (allUsers ?? []).filter((u) => u.is_active !== false)
+  const selectedUser = value ? (allUsers ?? []).find((u) => u.id === value) : null
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -64,7 +67,7 @@ export function UserSelector({ value, onChange }: UserSelectorProps) {
           <CommandList>
             <CommandEmpty className="text-xs py-4">No users found.</CommandEmpty>
             <CommandGroup>
-              {(users ?? []).map((user) => {
+              {users.map((user) => {
                 const selected = value === user.id
                 const name = getUserName(user.first_name, user.last_name, user.email)
                 const initials = getInitials(user.first_name, user.last_name, user.email)

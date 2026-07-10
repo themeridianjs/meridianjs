@@ -23,3 +23,5 @@ export default Module(ISSUE_MODULE, {
 })
 
 export { IssueModuleService }
+export { aggregateTimeLogs } from "./reporting.js"
+export type { TimeLogUserGroup, TimeLogProjectGroup, TimeLogAggregates } from "./reporting.js"

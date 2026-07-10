@@ -43,6 +43,9 @@ export const GET = async (req: any, res: Response, next: NextFunction) => {
       first_name: u.first_name,
       last_name: u.last_name,
       avatar_url: u.avatar_url ?? null,
+      // Deactivated users stay in the payload — name lookups on historical
+      // data need them — but expose the flag so pickers can hide them.
+      is_active: u.is_active !== false,
     }))
     res.json({ users: mapped, count: mapped.length })
   } catch (err) {

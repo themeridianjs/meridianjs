@@ -221,7 +221,14 @@ const CategoryIcon = ({ category, color }: { category: Category; color: string }
   }
 }
 
-function TeamTasksKanbanBoard({ issues }: { issues: TeamTaskIssue[] }) {
+function TeamTasksKanbanBoard({
+  issues,
+  categoryCounts,
+}: {
+  issues: TeamTaskIssue[]
+  /** Full-set per-category totals from the server; omit while searching so badges reflect visible cards. */
+  categoryCounts?: Record<string, number>
+}) {
   const grouped = useMemo(() => {
     const map: Record<string, TeamTaskIssue[]> = {}
     for (const col of CATEGORY_COLUMNS) map[col.key] = []
@@ -250,7 +257,7 @@ function TeamTasksKanbanBoard({ issues }: { issues: TeamTaskIssue[] }) {
                 className="ml-1 text-[11px] font-medium rounded-full px-1.5 py-0.5 tabular-nums min-w-[18px] text-center"
                 style={{ backgroundColor: hexToRgba(col.color, 0.12), color: col.color }}
               >
-                {colIssues.length}
+                {categoryCounts ? (categoryCounts[col.key] ?? 0) : colIssues.length}
               </span>
             </div>
             <div
@@ -439,7 +446,15 @@ function TasksTab({ userId }: { userId: string }) {
     return f
   }, [selectedWorkspaceIds, priorityFilter, typeFilter, categoryFilter])
 
-  const { data: issues, isLoading } = useTeamTasks(userId, filters)
+  const {
+    issues,
+    count,
+    categoryCounts,
+    isLoading,
+    hasNextPage,
+    fetchNextPage,
+    isFetchingNextPage,
+  } = useTeamTasks(userId, filters)
 
   const toggleView = (v: "list" | "board") => {
     setView(v)
@@ -447,7 +462,6 @@ function TasksTab({ userId }: { userId: string }) {
   }
 
   const filtered = useMemo(() => {
-    if (!issues) return []
     if (!search) return issues
     const q = search.toLowerCase()
     return issues.filter((i) => {
@@ -465,7 +479,23 @@ function TasksTab({ userId }: { userId: string }) {
     <>
       <div className="flex items-center justify-between px-6 py-3 border-b border-border shrink-0">
         <span className="text-sm text-muted-foreground">
-          {filtered.length} task{filtered.length !== 1 ? "s" : ""}
+          {search ? (
+            <>{filtered.length} task{filtered.length !== 1 ? "s" : ""} matching</>
+          ) : (
+            <>{count} task{count !== 1 ? "s" : ""}</>
+          )}
+          {!search && issues.length < count && (
+            <>
+              {" · showing "}{issues.length}{" — "}
+              <button
+                onClick={() => fetchNextPage()}
+                disabled={!hasNextPage || isFetchingNextPage}
+                className="underline underline-offset-2 hover:text-foreground disabled:opacity-50"
+              >
+                {isFetchingNextPage ? "Loading…" : "Load more"}
+              </button>
+            </>
+          )}
         </span>
         <div className="flex items-center gap-1 bg-muted rounded-lg p-0.5">
           <button
@@ -572,7 +602,7 @@ function TasksTab({ userId }: { userId: string }) {
               ))}
             </div>
           ) : (
-            <TeamTasksKanbanBoard issues={filtered} />
+            <TeamTasksKanbanBoard issues={filtered} categoryCounts={search ? undefined : categoryCounts} />
           )}
         </div>
       </div>
@@ -614,10 +644,10 @@ function TasksTab({ userId }: { userId: string }) {
           ) : filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <p className="text-sm font-medium mb-1">
-                {(issues ?? []).length === 0 ? "No tasks assigned to this user" : "No tasks match your filters"}
+                {issues.length === 0 ? "No tasks assigned to this user" : "No tasks match your filters"}
               </p>
               <p className="text-sm text-muted-foreground">
-                {(issues ?? []).length === 0
+                {issues.length === 0
                   ? "Issues assigned to this user will appear here."
                   : "Try adjusting your search or filters."}
               </p>

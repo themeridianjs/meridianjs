@@ -21,6 +21,7 @@
     "build": "tsup src/index.ts --format esm,cjs --dts --clean",
     "dev": "tsup src/index.ts --format esm,cjs --dts --watch",
     "typecheck": "tsc --noEmit",
+    "test": "vitest run",
     "clean": "rm -rf dist",
     "prepublishOnly": "npm run build"
   },
@@ -32,7 +33,8 @@
   },
   "devDependencies": {
     "tsup": "^8.3.5",
-    "typescript": "*"
+    "typescript": "*",
+    "vitest": "*"
   },
   "files": [
     "dist"

@@ -41,11 +41,21 @@ export const GET = async (req: any, res: Response) => {
     issueFilters.type = types.length === 1 ? types[0] : { $in: types }
   }
 
-  // Fetch issues assigned to this user within accessible workspaces
-  let [issues, count] = await issueService.listAndCountIssues(
-    issueFilters,
-    { limit: 500, offset: 0, orderBy: { updated_at: "DESC" } }
-  )
+  // Fetch the COMPLETE assigned set in batches — counts and the JS category
+  // filter below must operate on all rows, not a truncated window.
+  const BATCH = 500
+  const HARD_CAP = 5000
+  let issues: any[] = []
+  let dbCount = 0
+  do {
+    const [batch, total] = await issueService.listAndCountIssues(
+      issueFilters,
+      { limit: BATCH, offset: issues.length, orderBy: { updated_at: "DESC" } }
+    )
+    dbCount = total
+    issues = issues.concat(batch)
+    if (batch.length === 0) break
+  } while (issues.length < dbCount && issues.length < HARD_CAP)
 
   // Collect unique project IDs for enrichment
   const projectIds = [...new Set(issues.map((i: any) => i.project_id))] as string[]
@@ -88,14 +98,21 @@ export const GET = async (req: any, res: Response) => {
     }
   })
 
+  // Per-category totals over the FULL enriched set — exact column counts
+  // regardless of how many rows the client has paged in.
+  const category_counts: Record<string, number> = {}
+  for (const i of enriched) {
+    category_counts[i._status.category] = (category_counts[i._status.category] ?? 0) + 1
+  }
+
   // Apply category filter after enrichment
   if (req.query.category) {
     const categories = (req.query.category as string).split(",").filter(Boolean)
     const filtered = enriched.filter((i: any) => categories.includes(i._status.category))
-    res.json({ issues: filtered.slice(offset, offset + limit), count: filtered.length, limit, offset })
+    res.json({ issues: filtered.slice(offset, offset + limit), count: filtered.length, limit, offset, category_counts })
     return
   }
 
-  count = enriched.length
-  res.json({ issues: enriched.slice(offset, offset + limit), count, limit, offset })
+  const count = enriched.length
+  res.json({ issues: enriched.slice(offset, offset + limit), count, limit, offset, category_counts })
 }

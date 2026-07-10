@@ -167,7 +167,7 @@ export function MyTasksPage() {
     return f
   }, [selectedWorkspaceIds, priorityFilter, typeFilter, categoryFilter])
 
-  const { data: issues, isLoading } = useMyTasks(filters)
+  const { issues, count, isLoading, hasNextPage, fetchNextPage, isFetchingNextPage } = useMyTasks(filters)
 
   const toggleView = (v: "list" | "board") => {
     setView(v)
@@ -176,7 +176,6 @@ export function MyTasksPage() {
 
   // Client-side search filter
   const filtered = useMemo(() => {
-    if (!issues) return []
     if (!search) return issues
     const q = search.toLowerCase()
     return issues.filter(
@@ -199,7 +198,24 @@ export function MyTasksPage() {
     <>
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
-        <h1 className="text-lg font-semibold text-foreground">My Tasks</h1>
+        <div className="flex items-baseline gap-2">
+          <h1 className="text-lg font-semibold text-foreground">My Tasks</h1>
+          <span className="text-sm text-muted-foreground">
+            {search ? `${filtered.length} matching` : `${count} task${count !== 1 ? "s" : ""}`}
+            {!search && issues.length < count && (
+              <>
+                {" · showing "}{issues.length}{" — "}
+                <button
+                  onClick={() => fetchNextPage()}
+                  disabled={!hasNextPage || isFetchingNextPage}
+                  className="underline underline-offset-2 hover:text-foreground disabled:opacity-50"
+                >
+                  {isFetchingNextPage ? "Loading…" : "Load more"}
+                </button>
+              </>
+            )}
+          </span>
+        </div>
         <div className="flex items-center gap-1 bg-muted rounded-lg p-0.5">
           <button
             onClick={() => toggleView("list")}
@@ -356,10 +372,10 @@ export function MyTasksPage() {
             ) : filtered.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center">
                 <p className="text-sm font-medium mb-1">
-                  {(issues ?? []).length === 0 ? "No tasks assigned to you" : "No tasks match your filters"}
+                  {issues.length === 0 ? "No tasks assigned to you" : "No tasks match your filters"}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  {(issues ?? []).length === 0
+                  {issues.length === 0
                     ? "Issues assigned to you across all projects will appear here."
                     : "Try adjusting your search or filters."}
                 </p>

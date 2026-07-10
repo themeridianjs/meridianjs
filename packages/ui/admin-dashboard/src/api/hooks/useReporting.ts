@@ -3,12 +3,27 @@ import { api } from "../client"
 import { buildQuery } from "@/lib/buildQuery"
 import type { TimeLog } from "./useTimeLogs"
 
+export interface TimeLogUserGroup {
+  user_id: string
+  total_minutes: number
+}
+
+export interface TimeLogProjectGroup {
+  /** null = time logged without a project */
+  project_id: string | null
+  total_minutes: number
+  project_name: string | null
+}
+
 interface ReportingTimeLogsResponse {
   time_logs: TimeLog[]
   count: number
   total_minutes: number
   total_employees: number
   total_projects: number
+  /** Full-set aggregates (sorted desc) — page-independent, used by the charts. */
+  by_user: TimeLogUserGroup[]
+  by_project: TimeLogProjectGroup[]
   limit: number
   offset: number
 }

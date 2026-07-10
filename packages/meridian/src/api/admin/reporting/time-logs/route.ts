@@ -7,8 +7,18 @@ import { getAccessibleWorkspaceIds } from "../../../utils/workspace-access.js"
 import { ROLES } from "@meridianjs/types"
 import { isGlobalAdmin } from "../../../utils/project-access.js"
 
-async function enrichWithProjects(result: { time_logs: any[];[k: string]: any }, projectService: any) {
-  const projectIds = [...new Set(result.time_logs.map((l: any) => l.project_id).filter(Boolean))]
+async function enrichWithProjects(
+  result: { time_logs: any[]; by_project?: any[]; [k: string]: any },
+  projectService: any
+) {
+  // by_project groups can reference projects that aren't on the current page,
+  // so the name lookup covers the union of both sets.
+  const projectIds = [
+    ...new Set([
+      ...result.time_logs.map((l: any) => l.project_id),
+      ...(result.by_project ?? []).map((g: any) => g.project_id),
+    ].filter(Boolean)),
+  ]
   if (projectIds.length === 0) return result
   const projects = await projectService.listProjects({ id: projectIds })
   const projectMap = new Map((projects as any[]).map((p: any) => [p.id, p]))
@@ -18,6 +28,10 @@ async function enrichWithProjects(result: { time_logs: any[];[k: string]: any },
       ...l,
       project_name: l.project_id ? (projectMap.get(l.project_id)?.name ?? null) : null,
       project_identifier: l.project_id ? (projectMap.get(l.project_id)?.identifier ?? null) : null,
+    })),
+    by_project: (result.by_project ?? []).map((g: any) => ({
+      ...g,
+      project_name: g.project_id ? (projectMap.get(g.project_id)?.name ?? null) : null,
     })),
   }
 }
@@ -44,7 +58,14 @@ export const GET = async (req: any, res: Response) => {
   if (from || to) {
     const dateFilter: Record<string, unknown> = {}
     if (from) dateFilter.$gte = new Date(from)
-    if (to) dateFilter.$lte = new Date(to)
+    if (to) {
+      // "to" arrives as yyyy-MM-dd (UTC midnight); an inclusive $lte would
+      // exclude logs later that day (timer-stopped logs carry a time
+      // component). Use an exclusive bound on the next day instead.
+      const end = new Date(to)
+      end.setUTCDate(end.getUTCDate() + 1)
+      dateFilter.$lt = end
+    }
     filters.logged_date = dateFilter
   }
 
@@ -65,6 +86,7 @@ export const GET = async (req: any, res: Response) => {
     res.json({
       time_logs: enriched.time_logs, count: enriched.count, total_minutes: enriched.total_minutes,
       total_employees: enriched.total_employees, total_projects: enriched.total_projects,
+      by_user: enriched.by_user, by_project: enriched.by_project,
       limit: parsedLimit, offset: parsedOffset,
     })
     return
@@ -74,7 +96,7 @@ export const GET = async (req: any, res: Response) => {
     const allowedIds = await getAccessibleWorkspaceIds(req, wsIds.length > 0 ? wsIds : undefined)
 
     if (allowedIds.length === 0) {
-      res.json({ time_logs: [], count: 0, total_minutes: 0, total_employees: 0, total_projects: 0, limit: 0, offset: 0 })
+      res.json({ time_logs: [], count: 0, total_minutes: 0, total_employees: 0, total_projects: 0, by_user: [], by_project: [], limit: 0, offset: 0 })
       return
     }
 
@@ -97,7 +119,7 @@ export const GET = async (req: any, res: Response) => {
         { workspace_id: wsIds.length === 1 ? wsIds[0] : wsIds, user_id: userId } as any
       )
       if ((memberships as any[]).length === 0) {
-        res.json({ time_logs: [], count: 0, total_minutes: 0, total_employees: 0, total_projects: 0, limit: 0, offset: 0 })
+        res.json({ time_logs: [], count: 0, total_minutes: 0, total_employees: 0, total_projects: 0, by_user: [], by_project: [], limit: 0, offset: 0 })
         return
       }
     }
@@ -107,13 +129,13 @@ export const GET = async (req: any, res: Response) => {
       const accessible = new Set(allAccessibleProjectIds)
       const allowed = filterProjectIds.filter((id) => accessible.has(id))
       if (allowed.length === 0) {
-        res.json({ time_logs: [], count: 0, total_minutes: 0, total_employees: 0, total_projects: 0, limit: 0, offset: 0 })
+        res.json({ time_logs: [], count: 0, total_minutes: 0, total_employees: 0, total_projects: 0, by_user: [], by_project: [], limit: 0, offset: 0 })
         return
       }
       filters.project_id = allowed
     } else {
       if (allAccessibleProjectIds.length === 0) {
-        res.json({ time_logs: [], count: 0, total_minutes: 0, total_employees: 0, total_projects: 0, limit: 0, offset: 0 })
+        res.json({ time_logs: [], count: 0, total_minutes: 0, total_employees: 0, total_projects: 0, by_user: [], by_project: [], limit: 0, offset: 0 })
         return
       }
       filters.project_id = allAccessibleProjectIds
@@ -142,6 +164,8 @@ export const GET = async (req: any, res: Response) => {
     total_minutes: enriched.total_minutes,
     total_employees: enriched.total_employees,
     total_projects: enriched.total_projects,
+    by_user: enriched.by_user,
+    by_project: enriched.by_project,
     limit: parsedLimit,
     offset: parsedOffset,
   })

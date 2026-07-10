@@ -1,5 +1,6 @@
 import { MeridianService } from "@meridianjs/framework-utils"
 import type { MeridianContainer } from "@meridianjs/types"
+import { aggregateTimeLogs, type TimeLogUserGroup, type TimeLogProjectGroup } from "./reporting.js"
 import IssueModel from "./models/issue.js"
 import CommentModel from "./models/comment.js"
 import AttachmentModel from "./models/attachment.js"
@@ -313,6 +314,13 @@ export class IssueModuleService extends MeridianService({
   /** Query time logs for reporting — supports filtering by user, project, workspace, and date range.
    *  Each returned entry is enriched with `issue_identifier` and `issue_title`.
    *  Returns paginated results plus aggregates computed over the full filtered set. */
+  /**
+   * List time logs with full-set aggregates for the reporting pages.
+   *
+   * Invariants: `total_projects` counts distinct NON-null project_ids, while
+   * `by_project` keeps a `project_id: null` bucket so that the sum of
+   * `by_project[].total_minutes` always equals `total_minutes`.
+   */
   async listTimeLogsForReporting(filters: {
     user_id?: string | string[]
     workspace_id?: string | string[]
@@ -326,6 +334,8 @@ export class IssueModuleService extends MeridianService({
     total_minutes: number
     total_employees: number
     total_projects: number
+    by_user: TimeLogUserGroup[]
+    by_project: TimeLogProjectGroup[]
   }> {
     const repo = this.container.resolve<any>("timeLogRepository")
     const issueRepo = this.container.resolve<any>("issueRepository")
@@ -341,9 +351,9 @@ export class IssueModuleService extends MeridianService({
     let issueCache: Map<string, any> | null = null
     if (filters.project_id) {
       const projectIds = Array.isArray(filters.project_id) ? filters.project_id : [filters.project_id]
-      const issues = await issueRepo.find({ project_id: { $in: projectIds } })
+      const issues = await issueRepo.find({ project_id: { $in: projectIds }, deleted_at: null })
       if ((issues as any[]).length === 0) {
-        return { time_logs: [], count: 0, total_minutes: 0, total_employees: 0, total_projects: 0 }
+        return { time_logs: [], count: 0, total_minutes: 0, total_employees: 0, total_projects: 0, by_user: [], by_project: [] }
       }
       issueCache = new Map((issues as any[]).map((i: any) => [i.id, i]))
       where.issue_id = { $in: [...issueCache.keys()] }
@@ -352,18 +362,11 @@ export class IssueModuleService extends MeridianService({
     // Fetch all matching logs for aggregation
     const allLogs: any[] = await repo.find(where, { orderBy: { logged_date: "DESC" } })
     if (allLogs.length === 0) {
-      return { time_logs: [], count: 0, total_minutes: 0, total_employees: 0, total_projects: 0 }
+      return { time_logs: [], count: 0, total_minutes: 0, total_employees: 0, total_projects: 0, by_user: [], by_project: [] }
     }
 
     // Compute aggregates over the full result set
-    let totalMinutes = 0
-    const employeeSet = new Set<string>()
-    const projectSet = new Set<string>()
-    for (const l of allLogs) {
-      totalMinutes += l.duration_minutes ?? 0
-      employeeSet.add(l.user_id)
-      if (l.project_id) projectSet.add(l.project_id)
-    }
+    const { totalMinutes, employeeCount, projectCount, byUser, byProject } = aggregateTimeLogs(allLogs)
 
     // Apply pagination
     const limit = filters.limit ?? 200
@@ -387,8 +390,10 @@ export class IssueModuleService extends MeridianService({
       time_logs: enrichedLogs,
       count: allLogs.length,
       total_minutes: totalMinutes,
-      total_employees: employeeSet.size,
-      total_projects: projectSet.size,
+      total_employees: employeeCount,
+      total_projects: projectCount,
+      by_user: byUser,
+      by_project: byProject,
     }
   }
 

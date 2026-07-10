@@ -129,6 +129,8 @@ interface UserMapEntry {
   first_name: string
   last_name: string
   avatar_url: string | null
+  /** false for deactivated users — kept in the map for historical name lookups. */
+  is_active: boolean
 }
 
 interface UserMapResponse {
@@ -141,6 +143,7 @@ export interface LightweightUser {
   first_name: string
   last_name: string
   avatar_url: string | null
+  is_active: boolean
 }
 
 export function useAllUsers() {

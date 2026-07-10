@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from "react"
 import { Link } from "react-router-dom"
 import { format } from "date-fns"
+import { formatUtcDate } from "@/lib/time-utils"
 import { BarChart2, Clock, Users, Layers, CalendarRange, Building2, ChevronLeft, ChevronRight } from "lucide-react"
 import { useReportingTimeLogs } from "@/api/hooks/useReporting"
 import { useUserMap } from "@/api/hooks/useUsers"
@@ -98,40 +99,25 @@ export function ReportingPage({ workspaceId, orgScope = false }: { workspaceId?:
   const uniqueProjectCount = data?.total_projects ?? 0
   const totalCount = data?.count ?? 0
 
-  // Chart: time by employee (top 8) — computed from current page
-  const byEmployeeChart = useMemo(() => {
-    const map = new Map<string, number>()
-    for (const log of timeLogs) {
-      map.set(log.user_id, (map.get(log.user_id) ?? 0) + (log.duration_minutes ?? 0))
-    }
-    return Array.from(map.entries())
-      .map(([userId, minutes]) => ({
-        name: userMap?.get(userId)?.name ?? "Unknown",
-        minutes,
-      }))
-      .sort((a, b) => b.minutes - a.minutes)
-      .slice(0, 8)
-  }, [timeLogs, userMap])
+  // Charts use the server's full-set aggregates (already sorted desc) so they
+  // match the summary cards and stay stable across table pagination.
+  const byEmployeeChart = useMemo(
+    () =>
+      (data?.by_user ?? []).slice(0, 8).map((g) => ({
+        name: userMap?.get(g.user_id)?.name ?? "Unknown",
+        minutes: g.total_minutes,
+      })),
+    [data, userMap]
+  )
 
-  // Chart: time by project (top 8) — computed from current page
-  const byProjectChart = useMemo(() => {
-    const map = new Map<string, number>()
-    const nameMap = new Map<string, string>()
-    for (const log of timeLogs) {
-      const key = log.project_id ?? "__none__"
-      map.set(key, (map.get(key) ?? 0) + (log.duration_minutes ?? 0))
-      if (log.project_id && log.project_name && !nameMap.has(key)) {
-        nameMap.set(key, log.project_name)
-      }
-    }
-    return Array.from(map.entries())
-      .map(([key, minutes]) => ({
-        name: key === "__none__" ? "No project" : (nameMap.get(key) ?? "Unknown"),
-        minutes,
-      }))
-      .sort((a, b) => b.minutes - a.minutes)
-      .slice(0, 8)
-  }, [timeLogs])
+  const byProjectChart = useMemo(
+    () =>
+      (data?.by_project ?? []).slice(0, 8).map((g) => ({
+        name: g.project_id === null ? "No project" : (g.project_name ?? "Unknown"),
+        minutes: g.total_minutes,
+      })),
+    [data]
+  )
 
   const userOptions = useMemo(
     () =>
@@ -359,7 +345,7 @@ export function ReportingPage({ workspaceId, orgScope = false }: { workspaceId?:
                         )}
                       </td>
                       <td className="px-6 py-3 text-xs text-muted-foreground tabular-nums whitespace-nowrap">
-                        {log.logged_date ? format(new Date(log.logged_date), "MMM d, yyyy") : "—"}
+                        {log.logged_date ? formatUtcDate(log.logged_date) : "—"}
                       </td>
                       <td className="px-6 py-3 text-xs text-muted-foreground truncate max-w-xs">
                         {log.description ?? <span className="italic">—</span>}

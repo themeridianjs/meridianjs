@@ -1,11 +1,9 @@
 import type { Response } from "express"
 import { getAccessibleWorkspaceIds } from "../../../utils/workspace-access.js"
 import { isGlobalAdmin } from "../../../utils/project-access.js"
-import { ROLES } from "@meridianjs/types"
 
 export const GET = async (req: any, res: Response) => {
   // ── Auth: require privileged caller ──
-  const roles: string[] = req.user?.roles ?? []
   const permissions: string[] = req.user?.permissions ?? []
   const isPrivileged = isGlobalAdmin(req) || permissions.includes("workspace:admin")
 
@@ -34,13 +32,14 @@ export const GET = async (req: any, res: Response) => {
   const offset = Number(req.query.offset) || 0
 
   // ── Workspace scoping ──
-  const isSuperAdmin = roles.includes(ROLES.SUPER_ADMIN)
+  const globalAdmin = isGlobalAdmin(req)
   const issueFilters: Record<string, unknown> = {
     assignee_ids: { $contains: targetUserId },
   }
 
-  // Super-admins see all workspaces; others are scoped to their accessible ones
-  if (!isSuperAdmin) {
+  // Global admins (super-admin/admin) see all workspaces, consistent with the
+  // redaction logic below; workspace:admin-permission callers stay scoped.
+  if (!globalAdmin) {
     let accessibleWsIds = await getAccessibleWorkspaceIds(req)
 
     if (req.query.workspace_id) {
@@ -56,7 +55,7 @@ export const GET = async (req: any, res: Response) => {
 
     issueFilters.workspace_id = accessibleWsIds.length === 1 ? accessibleWsIds[0] : { $in: accessibleWsIds }
   } else if (req.query.workspace_id) {
-    // Super-admin with workspace filter
+    // Global admin with workspace filter
     const wsIds = (req.query.workspace_id as string).split(",").filter(Boolean)
     if (wsIds.length > 0) {
       issueFilters.workspace_id = wsIds.length === 1 ? wsIds[0] : { $in: wsIds }
@@ -71,13 +70,23 @@ export const GET = async (req: any, res: Response) => {
     issueFilters.type = types.length === 1 ? types[0] : { $in: types }
   }
 
-  let [issues] = await issueService.listAndCountIssues(
-    issueFilters,
-    { limit: 500, offset: 0, orderBy: { updated_at: "DESC" } },
-  )
+  // Fetch the COMPLETE assigned set in batches — counts and the JS category
+  // filter below must operate on all rows, not a truncated window.
+  const BATCH = 500
+  const HARD_CAP = 5000
+  let issues: any[] = []
+  let dbCount = 0
+  do {
+    const [batch, total] = await issueService.listAndCountIssues(
+      issueFilters,
+      { limit: BATCH, offset: issues.length, orderBy: { updated_at: "DESC" } },
+    )
+    dbCount = total
+    issues = issues.concat(batch)
+    if (batch.length === 0) break
+  } while (issues.length < dbCount && issues.length < HARD_CAP)
 
   // ── Determine viewer's accessible projects ──
-  const globalAdmin = isGlobalAdmin(req)
   let viewerAccessibleProjectIds: Set<string>
 
   if (globalAdmin) {
@@ -155,14 +164,21 @@ export const GET = async (req: any, res: Response) => {
     }
   })
 
+  // Per-category totals over the FULL enriched set — lets the client render
+  // exact column counts regardless of how many rows it has paged in.
+  const category_counts: Record<string, number> = {}
+  for (const i of enriched) {
+    category_counts[i._status.category] = (category_counts[i._status.category] ?? 0) + 1
+  }
+
   // ── Category filter (post-enrichment) ──
   if (req.query.category) {
     const categories = (req.query.category as string).split(",").filter(Boolean)
     const filtered = enriched.filter((i: any) => categories.includes(i._status.category))
-    res.json({ issues: filtered.slice(offset, offset + limit), count: filtered.length, limit, offset })
+    res.json({ issues: filtered.slice(offset, offset + limit), count: filtered.length, limit, offset, category_counts })
     return
   }
 
   const count = enriched.length
-  res.json({ issues: enriched.slice(offset, offset + limit), count, limit, offset })
+  res.json({ issues: enriched.slice(offset, offset + limit), count, limit, offset, category_counts })
 }
