@@ -15,6 +15,11 @@ export interface MeridianContainer {
 
 export interface ModuleDefinition {
   key: string
+  /**
+   * Service constructor. Instantiated as `new service(moduleContainer, moduleOptions)` —
+   * domain services typically accept only the container; infrastructure modules
+   * (event bus, scheduler, email, storage) read their config from the second argument.
+   */
   service: new (...args: any[]) => IModuleService
   models?: unknown[]
   loaders?: LoaderFn[]
@@ -66,6 +71,13 @@ export interface ProjectConfig {
   /** Max levels of child issue nesting. Default: 1 (children allowed, grandchildren not). */
   maxChildIssueDepth?: number
   registration?: RegistrationConfig
+  /**
+   * Express "trust proxy" setting. Controls how many proxy hops are trusted
+   * when deriving req.ip (used for rate-limit keying). Default: 1.
+   * Set to the number of hops in your chain (e.g. 2 for Cloudflare → ALB),
+   * or false when not behind a proxy.
+   */
+  trustProxy?: boolean | number | string
 }
 
 export interface MeridianConfig {

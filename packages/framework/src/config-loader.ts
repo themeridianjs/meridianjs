@@ -1,3 +1,4 @@
+import fs from "node:fs"
 import path from "node:path"
 import { pathToFileURL } from "node:url"
 import type { MeridianConfig } from "@meridianjs/types"
@@ -23,28 +24,28 @@ export async function loadConfig(
         path.join(rootDir, "meridian.config.cjs"),
       ]
 
-  let config: MeridianConfig | null = null
+  // Decide "config not found" by checking the candidate files themselves —
+  // filtering import errors by ERR_MODULE_NOT_FOUND would also swallow a
+  // missing transitive import *inside* the config and misreport it as absent.
+  const existing = candidates.find((candidate) => fs.existsSync(candidate))
 
-  for (const candidate of candidates) {
-    try {
-      // Use dynamic import with file URL for cross-platform compatibility
-      const mod = await import(pathToFileURL(candidate).href)
-      const raw = mod.default ?? mod
-      config = raw as MeridianConfig
-      break
-    } catch (err: any) {
-      if (err.code !== "ERR_MODULE_NOT_FOUND" && err.code !== "MODULE_NOT_FOUND") {
-        throw new Error(
-          `Failed to load Meridian config from "${candidate}": ${err.message}`
-        )
-      }
-    }
-  }
-
-  if (!config) {
+  if (!existing) {
     throw new Error(
       `Could not find meridian.config.ts in "${rootDir}". ` +
       `Make sure you have a meridian.config.ts file in your project root.`
+    )
+  }
+
+  let config: MeridianConfig
+  try {
+    // Use dynamic import with file URL for cross-platform compatibility
+    const mod = await import(pathToFileURL(existing).href)
+    const raw = mod.default ?? mod
+    config = raw as MeridianConfig
+  } catch (err: any) {
+    throw new Error(
+      `Failed to load Meridian config from "${existing}": ${err.message}`,
+      { cause: err }
     )
   }
 

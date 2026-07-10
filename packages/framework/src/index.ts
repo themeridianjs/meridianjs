@@ -23,13 +23,14 @@ export { loadPlugins } from "./plugin-loader.js"
 export { ConsoleLogger } from "./logger.js"
 
 // Server
-export { createServer } from "./server.js"
+export { createServer, registerErrorHandling } from "./server.js"
 
 // Rate limiting
 export { authRateLimit, oauthRateLimit, apiRateLimit } from "./rate-limit.js"
 
 // Input validation
 export { validate } from "./validate.js"
+export type { ValidateTarget } from "./validate.js"
 
 // SSE real-time updates
 export { SseManager, sseManager } from "./sse-manager.js"

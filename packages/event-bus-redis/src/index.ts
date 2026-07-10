@@ -16,6 +16,22 @@ export interface RedisEventBusOptions {
 }
 
 /**
+ * Resolves options whether the class was constructed directly with an options
+ * object or by the Meridian module loader with (container, moduleOptions).
+ */
+function resolveOptions<T>(containerOrOptions: any, moduleOptions?: T): T | undefined {
+  if (moduleOptions && Object.keys(moduleOptions).length > 0) return moduleOptions
+  if (typeof containerOrOptions?.resolve === "function") {
+    try {
+      return containerOrOptions.resolve("moduleOptions") as T
+    } catch {
+      return undefined
+    }
+  }
+  return containerOrOptions as T
+}
+
+/**
  * Production event bus backed by BullMQ + Redis.
  *
  * All events go into a single persistent BullMQ queue.
@@ -31,7 +47,22 @@ export class RedisEventBus implements IEventBus {
   /** event name → set of registered handlers */
   private handlers = new Map<string, Set<SubscriberFn>>()
 
-  constructor(options: RedisEventBusOptions) {
+  /**
+   * Accepts either the options object directly (`new RedisEventBus({ url })`)
+   * or, when loaded as a Meridian module, the module container as first arg
+   * and the module's config options as second.
+   */
+  constructor(containerOrOptions: any, moduleOptions?: RedisEventBusOptions) {
+    const options = resolveOptions<RedisEventBusOptions>(containerOrOptions, moduleOptions)
+
+    if (!options?.url) {
+      throw new Error(
+        "@meridianjs/event-bus-redis: missing required option 'url'. " +
+        "Set it in meridian.config.ts: " +
+        `{ resolve: "@meridianjs/event-bus-redis", options: { url: process.env.REDIS_URL } }`
+      )
+    }
+
     const queueName = options.queueName ?? "meridian:events"
 
     // ioredis connection shared between queue and worker

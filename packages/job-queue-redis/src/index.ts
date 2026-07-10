@@ -9,6 +9,22 @@ export interface JobQueueOptions {
 }
 
 /**
+ * Resolves options whether the class was constructed directly with an options
+ * object or by the Meridian module loader with (container, moduleOptions).
+ */
+function resolveOptions<T>(containerOrOptions: any, moduleOptions?: T): T | undefined {
+  if (moduleOptions && Object.keys(moduleOptions).length > 0) return moduleOptions
+  if (typeof containerOrOptions?.resolve === "function") {
+    try {
+      return containerOrOptions.resolve("moduleOptions") as T
+    } catch {
+      return undefined
+    }
+  }
+  return containerOrOptions as T
+}
+
+/**
  * BullMQ-backed scheduler for cron and interval jobs.
  *
  * Each registered job gets its own named queue (`meridian:job:<name>`).
@@ -27,7 +43,22 @@ export class RedisScheduler implements IScheduler {
   private readonly queues = new Map<string, Queue>()
   private readonly workers = new Map<string, Worker>()
 
-  constructor(options: JobQueueOptions) {
+  /**
+   * Accepts either the options object directly (`new RedisScheduler({ url })`)
+   * or, when loaded as a Meridian module, the module container as first arg
+   * and the module's config options as second.
+   */
+  constructor(containerOrOptions: any, moduleOptions?: JobQueueOptions) {
+    const options = resolveOptions<JobQueueOptions>(containerOrOptions, moduleOptions)
+
+    if (!options?.url) {
+      throw new Error(
+        "@meridianjs/job-queue-redis: missing required option 'url'. " +
+        "Set it in meridian.config.ts: " +
+        `{ resolve: "@meridianjs/job-queue-redis", options: { url: process.env.REDIS_URL } }`
+      )
+    }
+
     this.prefix = options.prefix ?? "meridian:job"
     this.connection = new IORedis(options.url, {
       maxRetriesPerRequest: null,

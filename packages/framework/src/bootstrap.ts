@@ -9,7 +9,7 @@ import { loadRoutes } from "./route-loader.js"
 import { loadSubscribers } from "./subscriber-loader.js"
 import { loadJobs } from "./job-loader.js"
 import { loadLinks } from "./link-loader.js"
-import { createServer } from "./server.js"
+import { createServer, registerErrorHandling } from "./server.js"
 import { ConsoleLogger } from "./logger.js"
 import type { MeridianConfig, MeridianContainer, ILogger, IEventBus, IScheduler } from "@meridianjs/types"
 import { printStartupTable } from "./startup-table.js"
@@ -44,6 +44,8 @@ export interface MeridianApp {
  *  9. Load file-based API routes from src/api/
  * 10. Load subscribers from src/subscribers/
  * 11. Load scheduled jobs from src/jobs/
+ * 12. Register 404 + error handlers at start() — after all routes, including
+ *     any the consumer mounts between bootstrap() and start()
  */
 export async function bootstrap(opts: BootstrapOptions): Promise<MeridianApp> {
   const startTime = Date.now()
@@ -126,6 +128,13 @@ export async function bootstrap(opts: BootstrapOptions): Promise<MeridianApp> {
     httpServer,
 
     async start() {
+      // ── 12. Error handling ─────────────────────────────────────────────────
+      // Registered at start() time — after bootstrap's own route sources AND
+      // any routes the consumer added between bootstrap() and start() (e.g.
+      // static mounts). Express only routes errors to handlers registered
+      // after the layer that threw, and the 404 catch-all must be last.
+      registerErrorHandling(server, logger)
+
       const port = config.projectConfig.httpPort ?? 9000
       await new Promise<void>((resolve, reject) => {
         httpServer.listen(port, () => {

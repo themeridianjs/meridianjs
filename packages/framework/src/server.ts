@@ -15,10 +15,10 @@ export function createServer(
   config: MeridianConfig
 ): Express {
   const app = express()
-  // Trust the first proxy hop so req.ip reflects the real client IP.
-  // This is required for rate limiters to key by client IP rather than the
-  // proxy's IP when running behind nginx, AWS ALB, Cloudflare, etc.
-  app.set("trust proxy", 1)
+  // Trust proxy hops so req.ip reflects the real client IP — required for rate
+  // limiters to key by client IP when running behind nginx, ALB, Cloudflare, etc.
+  // Configurable because a wrong hop count lets clients spoof X-Forwarded-For.
+  app.set("trust proxy", config.projectConfig.trustProxy ?? 1)
   const logger = container.resolve<ILogger>("logger")
 
   // ── Middleware ─────────────────────────────────────────────────────────────
@@ -84,7 +84,25 @@ export function createServer(
     res.json({ ok: true })
   })
 
-  // ── Global error handler ───────────────────────────────────────────────────
+  return app
+}
+
+/**
+ * Registers the JSON 404 catch-all and the global error handler.
+ *
+ * Must be called AFTER every route source has been mounted (file-based routes,
+ * plugins, middlewares) — Express only routes errors to handlers registered
+ * after the layer that threw.
+ */
+export function registerErrorHandling(app: Express, logger: ILogger): void {
+  app.use((req: Request, res: Response) => {
+    res.status(404).json({
+      error: {
+        message: `Route not found: ${req.method} ${req.path}`,
+        type: "NotFoundError",
+      },
+    })
+  })
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status ?? err.statusCode ?? 500
@@ -97,6 +115,10 @@ export function createServer(
       })
     }
 
+    if (res.headersSent) {
+      return
+    }
+
     res.status(status).json({
       error: {
         message,
@@ -105,6 +127,4 @@ export function createServer(
       },
     })
   })
-
-  return app
 }

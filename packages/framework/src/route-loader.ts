@@ -92,6 +92,23 @@ async function scanApiDir(
 
     let registeredCount = 0
 
+    // Route-level middlewares must be registered BEFORE the method handlers —
+    // Express dispatches layers in registration order, and a handler that sends
+    // the response ends the chain, so later-registered middlewares never run.
+    const middlewares = routeModule["middlewares"]
+    if (Array.isArray(middlewares)) {
+      const wrapped = middlewares.map(
+        (mw: Function) => async (req: any, res: any, next: any) => {
+          try {
+            await mw(req, res, next)
+          } catch (err) {
+            next(err)
+          }
+        }
+      )
+      router.use(routePath, ...wrapped)
+    }
+
     for (const method of HTTP_METHODS) {
       const handler = routeModule[method]
       if (typeof handler !== "function") continue
@@ -110,12 +127,6 @@ async function scanApiDir(
       )
 
       registeredCount++
-    }
-
-    // Also check for a middlewares export
-    const middlewares = routeModule["middlewares"]
-    if (Array.isArray(middlewares)) {
-      router.use(routePath, ...middlewares)
     }
 
     if (registeredCount > 0) {

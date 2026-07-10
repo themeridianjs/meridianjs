@@ -47,10 +47,12 @@ export async function loadModules(
       }
     }
 
-    // Instantiate the module service, passing the module container as first arg.
-    // Services should follow the pattern: constructor(container: MeridianContainer).
+    // Instantiate the module service, passing the module container as first arg
+    // and the module's config options as second. Domain services follow
+    // constructor(container: MeridianContainer); infrastructure services
+    // (event bus, scheduler, email, storage) read their config from options.
     const ServiceClass = definition.service
-    const serviceInstance = new ServiceClass(moduleContainer)
+    const serviceInstance = new ServiceClass(moduleContainer, moduleOptions)
 
     // Register the instance in the module container (for internal cross-service use)
     moduleContainer.register({ [definition.key]: serviceInstance })
