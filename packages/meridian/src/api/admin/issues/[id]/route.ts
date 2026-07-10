@@ -2,25 +2,19 @@ import type { Response, NextFunction } from "express"
 import { requirePermission } from "@meridianjs/auth"
 import { updateIssueStatusWorkflow } from "../../../../workflows/update-issue-status.js"
 import { assignIssueWorkflow } from "../../../../workflows/assign-issue.js"
-import { hasProjectAccess } from "../../../utils/project-access.js"
+import { assertIssueAccess } from "../../../utils/issue-access.js"
 
 export const GET = async (req: any, res: Response) => {
-  const issueService = req.scope.resolve("issueModuleService") as any
-  const issue = await issueService.retrieveIssue(req.params.id)
-  if (issue?.project_id) {
-    const projectService = req.scope.resolve("projectModuleService") as any
-    const project = await projectService.retrieveProject(issue.project_id).catch(() => null)
-    if (project && !await hasProjectAccess(req, project)) {
-      res.status(403).json({ error: { message: "Forbidden" } })
-      return
-    }
-  }
+  const issue = await assertIssueAccess(req, res)
+  if (!issue) return
   res.json({ issue })
 }
 
 export const PUT = async (req: any, res: Response, next: NextFunction) => {
   requirePermission("issue:update")(req, res, async () => {
     try {
+      // Permission is org-wide; also require access to this issue's project.
+      if (!(await assertIssueAccess(req, res))) return
       const issueService = req.scope.resolve("issueModuleService") as any
       const activityService = req.scope.resolve("activityModuleService") as any
       const allowed = ["title", "description", "status", "priority", "type",
@@ -109,6 +103,8 @@ export const PUT = async (req: any, res: Response, next: NextFunction) => {
 export const DELETE = async (req: any, res: Response, next: NextFunction) => {
   requirePermission("issue:delete")(req, res, async () => {
     try {
+      // Permission is org-wide; also require access to this issue's project.
+      if (!(await assertIssueAccess(req, res))) return
       const issueService = req.scope.resolve("issueModuleService") as any
       await issueService.softDeleteIssue(req.params.id)
       res.status(204).send()

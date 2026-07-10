@@ -211,10 +211,24 @@ process.on("SIGINT", async () => {
 
 export function renderMiddlewares(): string {
   return `import { authenticateJWT } from "@meridianjs/auth"
+import { authRateLimit, oauthRateLimit, apiRateLimit } from "@meridianjs/framework"
 
+/**
+ * Route-level middleware configuration.
+ *
+ * /auth/login, /auth/register — strict rate limit (brute-force protection)
+ * /auth/google                — looser limit (a full OAuth flow = 3 requests)
+ * /admin/*                    — rate-limited + JWT required
+ */
 export default {
   routes: [
-    { matcher: "/admin", middlewares: [authenticateJWT] },
+    { matcher: "/auth/login",           middlewares: [authRateLimit] },
+    { matcher: "/auth/register",        middlewares: [authRateLimit] },
+    { matcher: "/auth/forgot-password", middlewares: [authRateLimit] },
+    { matcher: "/auth/reset-password",  middlewares: [authRateLimit] },
+    { matcher: "/auth/google",          middlewares: [oauthRateLimit] },
+    { matcher: "/auth/invite",          middlewares: [authRateLimit] },
+    { matcher: "/admin", middlewares: [apiRateLimit, authenticateJWT] },
   ],
 }
 `

@@ -5,9 +5,14 @@
  *   const allowed = await hasProjectAccess(req, project)
  *   if (!allowed) { res.status(403).json({ error: { message: "Forbidden" } }); return }
  */
-export async function hasProjectAccess(req: any, project: { id: string; workspace_id: string }): Promise<boolean> {
+/** True when the caller holds an org-wide admin role. */
+export function isGlobalAdmin(req: any): boolean {
   const roles: string[] = req.user?.roles ?? []
-  if (roles.includes("super-admin") || roles.includes("admin")) return true
+  return roles.includes("super-admin") || roles.includes("admin")
+}
+
+export async function hasProjectAccess(req: any, project: { id: string; workspace_id: string }): Promise<boolean> {
+  if (isGlobalAdmin(req)) return true
 
   const workspaceMemberService = req.scope.resolve("workspaceMemberModuleService") as any
   const teamMemberService = req.scope.resolve("teamMemberModuleService") as any
@@ -39,9 +44,7 @@ export async function resolveProjectAndAccess(
     return null
   }
 
-  const roles: string[] = req.user?.roles ?? []
-  const isGlobalAdmin = roles.includes("super-admin") || roles.includes("admin")
-  if (isGlobalAdmin) return { project, isAuthorized: true }
+  if (isGlobalAdmin(req)) return { project, isAuthorized: true }
 
   const workspaceMemberService = req.scope.resolve("workspaceMemberModuleService") as any
   const wsMembership = await workspaceMemberService.getMembership(project.workspace_id, req.user?.id)

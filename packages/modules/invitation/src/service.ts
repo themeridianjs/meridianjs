@@ -35,4 +35,28 @@ export class InvitationModuleService extends MeridianService({ Invitation: Invit
   async revokeInvitation(id: string) {
     return this.updateInvitation(id, { status: "revoked" as const })
   }
+
+  /**
+   * Atomically claims a pending invitation (pending → accepted).
+   * Returns true when this caller won the claim; false when another request
+   * already accepted (or revoked) it — prevents double-spending a token
+   * under concurrent accepts.
+   */
+  async claimInvitation(id: string): Promise<boolean> {
+    const repo = this.container.resolve("invitationRepository") as any
+    const affected = await repo.nativeUpdate(
+      { id, status: "pending" },
+      { status: "accepted", updated_at: new Date() }
+    )
+    return affected === 1
+  }
+
+  /** Reverts a claimed invitation back to pending (registration failed midway). */
+  async reopenInvitation(id: string): Promise<void> {
+    const repo = this.container.resolve("invitationRepository") as any
+    await repo.nativeUpdate(
+      { id, status: "accepted" },
+      { status: "pending", updated_at: new Date() }
+    )
+  }
 }

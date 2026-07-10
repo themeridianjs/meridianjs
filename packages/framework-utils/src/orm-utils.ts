@@ -153,6 +153,10 @@ export function createRepository(em: EntityManager, entityName: string): Meridia
     async removeAndFlush(entity: unknown) {
       await em.removeAndFlush(entity as any)
     },
+    async nativeUpdate(filters: object, data: object) {
+      // Bypasses the identity map — single atomic UPDATE, returns affected rows.
+      return em.nativeUpdate(entityName, filters as any, data as any)
+    },
   }
 }
 
@@ -165,6 +169,8 @@ export interface MeridianRepository {
   persistAndFlush(entity: unknown): Promise<void>
   flush(): Promise<void>
   removeAndFlush(entity: unknown): Promise<void>
+  /** Atomic conditional UPDATE (bypasses the identity map); returns affected row count. */
+  nativeUpdate(filters: object, data: object): Promise<number>
 }
 
 /**

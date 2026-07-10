@@ -1,12 +1,14 @@
 import type { Response } from "express"
 import { requirePermission } from "@meridianjs/auth"
+import { assertIssueAccess } from "../../../../../utils/issue-access.js"
 
 export const PUT = async (req: any, res: Response) => {
   requirePermission("issue:update")(req, res, async () => {
+    if (!(await assertIssueAccess(req, res))) return
     const issueService = req.scope.resolve("issueModuleService") as any
     const activityService = req.scope.resolve("activityModuleService") as any
     const entry = await issueService.retrieveTimeLog(req.params.logId)
-    if (!entry) {
+    if (!entry || entry.issue_id !== req.params.id) {
       res.status(404).json({ error: { message: "Time log not found" } })
       return
     }
@@ -51,10 +53,11 @@ export const PUT = async (req: any, res: Response) => {
 
 export const DELETE = async (req: any, res: Response) => {
   requirePermission("issue:update")(req, res, async () => {
+    if (!(await assertIssueAccess(req, res))) return
     const issueService = req.scope.resolve("issueModuleService") as any
     const activityService = req.scope.resolve("activityModuleService") as any
     const entry = await issueService.retrieveTimeLog(req.params.logId)
-    if (!entry) {
+    if (!entry || entry.issue_id !== req.params.id) {
       res.status(404).json({ error: { message: "Time log not found" } })
       return
     }

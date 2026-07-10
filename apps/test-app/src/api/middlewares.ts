@@ -1,4 +1,4 @@
-import { authenticateJWT, requireWorkspace } from "@meridianjs/auth"
+import { authenticateJWT } from "@meridianjs/auth"
 import { authRateLimit, oauthRateLimit, apiRateLimit } from "@meridianjs/framework"
 
 /**
@@ -6,7 +6,12 @@ import { authRateLimit, oauthRateLimit, apiRateLimit } from "@meridianjs/framewo
  *
  * /auth/login, /auth/register — strict 10 req/min (brute-force protection)
  * /auth/google                — loose 30 req/min (a full OAuth flow = 3 requests)
- * /admin/*                   — rate-limited + JWT required + workspace isolation
+ * /admin/*                   — rate-limited + JWT required
+ *
+ * Workspace/project isolation is enforced per-route via hasProjectAccess /
+ * assertIssueAccess / getAccessibleWorkspaceIds — the deprecated
+ * requireWorkspace guard was inert (JWTs carry workspaceId: null) and is
+ * intentionally not listed here.
  */
 export default {
   routes: [
@@ -16,6 +21,6 @@ export default {
     { matcher: "/auth/reset-password",  middlewares: [authRateLimit] },
     { matcher: "/auth/google",          middlewares: [oauthRateLimit] },
     { matcher: "/auth/invite",          middlewares: [authRateLimit] },
-    { matcher: "/admin",         middlewares: [apiRateLimit, authenticateJWT, requireWorkspace] },
+    { matcher: "/admin",         middlewares: [apiRateLimit, authenticateJWT] },
   ],
 }

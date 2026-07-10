@@ -93,6 +93,15 @@ export const POST = async (req: any, res: Response) => {
     return
   }
 
+  // Atomically claim the invitation BEFORE doing any work — two concurrent
+  // POSTs with the same token would otherwise both pass the pending check
+  // and double-spend it.
+  const claimed = await invitationService.claimInvitation(invitation.id)
+  if (!claimed) {
+    res.status(410).json({ error: { message: "Invitation has already been accepted" } })
+    return
+  }
+
   let authResult: { user: { id: string }; token: string }
   try {
     // Check for a previously soft-deleted account with this email.
@@ -118,6 +127,8 @@ export const POST = async (req: any, res: Response) => {
       })
     }
   } catch (err: any) {
+    // Registration failed — release the claim so the invitee can retry.
+    await invitationService.reopenInvitation(invitation.id).catch(() => {})
     res.status(err.status ?? 500).json({ error: { message: err.message ?? "Registration failed" } })
     return
   }
@@ -129,8 +140,6 @@ export const POST = async (req: any, res: Response) => {
   }
 
   await assignDefaultUserRole(req, authResult.user.id, invitation.app_role_id)
-
-  await invitationService.updateInvitation(invitation.id, { status: "accepted" })
 
   res.status(201).json(authResult)
 }

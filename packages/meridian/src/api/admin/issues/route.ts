@@ -131,6 +131,22 @@ export const POST = async (req: any, res: Response, next: NextFunction) => {
         res.status(400).json({ error: { message: "title, project_id and workspace_id are required" } })
         return
       }
+      // The issue:create permission is org-wide; also require access to the
+      // target project, and reject a workspace_id that doesn't match it.
+      const projectService = req.scope.resolve("projectModuleService") as any
+      const project = await projectService.retrieveProject(project_id).catch(() => null)
+      if (!project) {
+        res.status(404).json({ error: { message: "Project not found" } })
+        return
+      }
+      if (!(await hasProjectAccess(req, project))) {
+        res.status(403).json({ error: { message: "Forbidden" } })
+        return
+      }
+      if (workspace_id !== project.workspace_id) {
+        res.status(400).json({ error: { message: "workspace_id does not match the project's workspace" } })
+        return
+      }
       const { result: issue, errors, transaction_status } = await createIssueWorkflow(req.scope).run({
         input: {
           title, project_id, workspace_id, description, type, priority, status,

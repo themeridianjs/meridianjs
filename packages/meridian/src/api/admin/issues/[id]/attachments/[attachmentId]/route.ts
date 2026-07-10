@@ -2,9 +2,11 @@ import type { Response } from "express"
 import { requirePermission } from "@meridianjs/auth"
 import fs from "node:fs/promises"
 import path from "node:path"
+import { assertIssueAccess } from "../../../../../utils/issue-access.js"
 
 export const DELETE = async (req: any, res: Response) => {
   requirePermission("issue:update")(req, res, async () => {
+    if (!(await assertIssueAccess(req, res))) return
     const issueService = req.scope.resolve("issueModuleService") as any
     const repo = req.scope.resolve("attachmentRepository") as any
     const attachment = await repo.findOne({ id: req.params.attachmentId })

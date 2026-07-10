@@ -1,12 +1,10 @@
 import type { Response } from "express"
+import { assertIssueAccess } from "../../../../utils/issue-access.js"
 
 export const GET = async (req: any, res: Response) => {
+  const issue = await assertIssueAccess(req, res)
+  if (!issue) return
   const issueService = req.scope.resolve("issueModuleService") as any
-  const issue = await issueService.retrieveIssue(req.params.id).catch(() => null)
-  if (!issue) {
-    res.status(404).json({ error: { message: "Issue not found" } })
-    return
-  }
 
   // Calculate depth by walking the parent chain
   let depth = 0

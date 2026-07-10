@@ -11,7 +11,7 @@
  * Exits with code 1 if gaps are found (suitable for CI / pre-publish hooks).
  */
 
-import { readdirSync, statSync } from "node:fs"
+import { readdirSync, readFileSync, statSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 
@@ -22,6 +22,31 @@ const root = path.resolve(__dirname, "..")
 const TEST_APP_ONLY = new Set([
   "admin/hello/route.ts",
 ])
+
+// Files allowed to differ in content between the two trees (intentional divergence)
+const CONTENT_DIVERGENCE_ALLOWED = new Set<string>([])
+
+/**
+ * Normalizes a route file for content comparison:
+ * - import specifiers are reduced to their last two path segments, so
+ *   `../../../../utils/foo.js` (plugin) and a different relative depth or a
+ *   package specifier ending the same way compare equal
+ * - line endings and trailing whitespace are normalized
+ * The goal is to catch real drift (handlers, guards, logic) while tolerating
+ * the structural import-path differences between the two trees.
+ */
+function normalizeRouteSource(src: string): string {
+  return src
+    .replace(/\r\n/g, "\n")
+    .replace(/from\s+"([^"]+)"/g, (_m, spec: string) => {
+      const segments = spec.split("/").filter((s: string) => s !== "." && s !== "..")
+      return `from "${segments.slice(-2).join("/")}"`
+    })
+    .split("\n")
+    .map((l) => l.trimEnd())
+    .join("\n")
+    .trim()
+}
 
 function collectRoutes(dir: string): Set<string> {
   const routes = new Set<string>()
@@ -55,6 +80,17 @@ for (const route of testRoutes) {
   }
 }
 
+// Content drift: a route present in BOTH trees must have equivalent content —
+// stale test-app copies have previously shipped with security checks missing.
+const drifted: string[] = []
+for (const route of testRoutes) {
+  if (TEST_APP_ONLY.has(route) || CONTENT_DIVERGENCE_ALLOWED.has(route)) continue
+  if (!pluginRoutes.has(route)) continue
+  const a = normalizeRouteSource(readFileSync(path.join(testAppApi, route), "utf8"))
+  const b = normalizeRouteSource(readFileSync(path.join(pluginApi, route), "utf8"))
+  if (a !== b) drifted.push(route)
+}
+
 const pluginOnly: string[] = []
 for (const route of pluginRoutes) {
   if (!testRoutes.has(route)) {
@@ -72,6 +108,18 @@ if (missing.length > 0) {
   }
   console.error(
     "\n   These will cause 404s in scaffolded projects. Add them to packages/meridian/src/api/ before publishing.\n"
+  )
+}
+
+if (drifted.length > 0) {
+  hasProblems = true
+  console.error("\n❌  Routes whose CONTENT differs between test-app and @meridianjs/meridian:\n")
+  for (const r of drifted.sort()) {
+    console.error(`   ${r}`)
+  }
+  console.error(
+    "\n   The plugin version is canonical (it registers first at runtime). Sync the test-app copy," +
+    "\n   delete it, or add it to CONTENT_DIVERGENCE_ALLOWED with a justification.\n"
   )
 }
 

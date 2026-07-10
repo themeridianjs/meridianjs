@@ -1,4 +1,8 @@
 import type { Response, NextFunction } from "express"
+import { isGlobalAdmin } from "../../utils/project-access.js"
+
+/** Fields exposed to non-admin members — enough for assignee/mention pickers. */
+const MEMBER_VISIBLE_FIELDS = ["id", "email", "first_name", "last_name", "avatar_url", "designation"] as const
 
 export const GET = async (req: any, res: Response, next: NextFunction) => {
   try {
@@ -17,7 +21,14 @@ export const GET = async (req: any, res: Response, next: NextFunction) => {
     }
 
     const [users, count] = await userService.listAndCountUsers(filters, { limit, offset, orderBy: { created_at: "DESC" } })
-    const safeUsers = (users as any[]).map(({ password_hash: _, ...u }) => u)
+
+    // Admins get full records (sans hash); members get only picker fields —
+    // no phone numbers, OAuth ids, roles, metadata, or login timestamps.
+    const safeUsers = isGlobalAdmin(req)
+      ? (users as any[]).map(({ password_hash: _, ...u }) => u)
+      : (users as any[]).map((u) =>
+          Object.fromEntries(MEMBER_VISIBLE_FIELDS.map((f) => [f, u[f] ?? null]))
+        )
     res.json({ users: safeUsers, count, limit, offset })
   } catch (err) {
     next(err)

@@ -1,24 +1,6 @@
 import type { Response } from "express"
 import { requirePermission } from "@meridianjs/auth"
-import { hasProjectAccess } from "../../../../utils/project-access.js"
-
-async function assertIssueAccess(req: any, res: Response): Promise<boolean> {
-  const issueService = req.scope.resolve("issueModuleService") as any
-  const issue = await issueService.retrieveIssue(req.params.id).catch(() => null)
-  if (!issue) {
-    res.status(404).json({ error: { message: "Issue not found" } })
-    return false
-  }
-  if (issue.project_id) {
-    const projectService = req.scope.resolve("projectModuleService") as any
-    const project = await projectService.retrieveProject(issue.project_id).catch(() => null)
-    if (project && !await hasProjectAccess(req, project)) {
-      res.status(403).json({ error: { message: "Forbidden" } })
-      return false
-    }
-  }
-  return true
-}
+import { assertIssueAccess } from "../../../../utils/issue-access.js"
 
 export const GET = async (req: any, res: Response) => {
   if (!await assertIssueAccess(req, res)) return
