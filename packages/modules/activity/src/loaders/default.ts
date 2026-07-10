@@ -1,19 +1,7 @@
-import { dmlToEntitySchema, createRepository, createModuleOrm } from "@meridianjs/framework-utils"
-import type { LoaderOptions, MeridianConfig } from "@meridianjs/types"
+import { createDefaultLoader } from "@meridianjs/framework-utils"
 import ActivityModel from "../models/activity.js"
 
-const ActivitySchema = dmlToEntitySchema(ActivityModel)
-
-export const entitySchemas = [ActivitySchema]
-
-export default async function defaultLoader({ container }: LoaderOptions): Promise<void> {
-  const config = container.resolve<MeridianConfig>("config")
-  const { databaseUrl } = config.projectConfig
-
-  const orm = await createModuleOrm(entitySchemas, databaseUrl)
-
-  container.register({
-    activityRepository: createRepository(orm, "activity"),
-    activityOrm: orm,
-  })
-}
+export default createDefaultLoader({
+  models: [ActivityModel],
+  ormKey: "activityOrm",
+})

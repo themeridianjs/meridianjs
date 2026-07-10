@@ -1,17 +1,7 @@
-import { dmlToEntitySchema, createRepository, createModuleOrm } from "@meridianjs/framework-utils"
-import type { LoaderOptions, MeridianConfig } from "@meridianjs/types"
+import { createDefaultLoader } from "@meridianjs/framework-utils"
 import InvitationModel from "../models/invitation.js"
 
-const InvitationSchema = dmlToEntitySchema(InvitationModel)
-
-export default async function defaultLoader({ container }: LoaderOptions): Promise<void> {
-  const config = container.resolve<MeridianConfig>("config")
-  const { databaseUrl } = config.projectConfig
-
-  const orm = await createModuleOrm([InvitationSchema], databaseUrl)
-
-  container.register({
-    invitationRepository: createRepository(orm, "invitation"),
-    invitationOrm: orm,
-  })
-}
+export default createDefaultLoader({
+  models: [InvitationModel],
+  ormKey: "invitationOrm",
+})

@@ -1,3 +1,5 @@
+import { PRIVILEGED_ROLES } from "@meridianjs/types"
+
 /**
  * Shared project access check.
  *
@@ -8,7 +10,7 @@
 /** True when the caller holds an org-wide admin role. */
 export function isGlobalAdmin(req: any): boolean {
   const roles: string[] = req.user?.roles ?? []
-  return roles.includes("super-admin") || roles.includes("admin")
+  return roles.some((r) => PRIVILEGED_ROLES.includes(r))
 }
 
 export async function hasProjectAccess(req: any, project: { id: string; workspace_id: string }): Promise<boolean> {

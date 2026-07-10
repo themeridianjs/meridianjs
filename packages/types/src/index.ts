@@ -110,6 +110,41 @@ export interface AdminConfig {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Shared constants — canonical string values, replacing scattered magic strings
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** System JWT roles. `super-admin`/`admin` are org-wide privileged roles. */
+export const ROLES = {
+  SUPER_ADMIN: "super-admin",
+  ADMIN: "admin",
+  MEMBER: "member",
+} as const
+export type Role = (typeof ROLES)[keyof typeof ROLES]
+
+/** Roles with org-wide privileged access (see access-control pattern). */
+export const PRIVILEGED_ROLES: readonly string[] = [ROLES.SUPER_ADMIN, ROLES.ADMIN]
+
+/** Project-scoped membership roles. */
+export const PROJECT_ROLES = {
+  MANAGER: "manager",
+  MEMBER: "member",
+  VIEWER: "viewer",
+} as const
+
+/** Canonical domain event names emitted on the event bus. */
+export const EVENTS = {
+  PROJECT_CREATED: "project.created",
+  PROJECT_TRANSFERRED: "project.transferred",
+  ISSUE_CREATED: "issue.created",
+  ISSUE_STATUS_CHANGED: "issue.status_changed",
+  ISSUE_ASSIGNED: "issue.assigned",
+  ISSUE_MENTIONED: "issue.mentioned",
+  SPRINT_COMPLETED: "sprint.completed",
+  COMMENT_CREATED: "comment.created",
+} as const
+export type EventName = (typeof EVENTS)[keyof typeof EVENTS]
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Event Bus
 // ─────────────────────────────────────────────────────────────────────────────
 
