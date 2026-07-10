@@ -104,10 +104,10 @@ export const POST = async (req: any, res: Response) => {
 
   let authResult: { user: { id: string }; token: string }
   try {
-    // Check for a previously soft-deleted account with this email.
-    // retrieveUserByEmail finds deleted records too (no deleted_at filter).
+    // Check for a previously soft-deleted account with this email so we can
+    // restore it. The IncludingDeleted variant makes that intent explicit.
     const userService = req.scope.resolve("userModuleService") as any
-    const existingUser = await userService.retrieveUserByEmail(parsed.data.email)
+    const existingUser = await userService.retrieveUserByEmailIncludingDeleted(parsed.data.email)
 
     if (existingUser?.deleted_at) {
       // Restore the old account — preserves their user ID, issue history, comments, etc.

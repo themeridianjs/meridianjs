@@ -89,22 +89,24 @@ export const POST = async (req: any, res: Response, next: NextFunction) => {
         : "Someone"
 
       const managers = members.filter((m: any) => m.role === "manager")
-      for (const manager of managers) {
-        await notificationService.createNotification({
-          user_id: manager.user_id,
-          entity_type: "project_access_request",
-          entity_id: access_request.id,
-          action: "access_requested",
-          message: `${requesterName} requested access to "${project.name}"`,
-          workspace_id: project.workspace_id,
-          metadata: {
-            requesting_user_id: userId,
-            requesting_user_name: requesterName,
-            project_id: project.id,
-            project_name: project.name,
-          },
-        }).catch(() => {})
-      }
+      await Promise.all(
+        managers.map((manager: any) =>
+          notificationService.createNotification({
+            user_id: manager.user_id,
+            entity_type: "project_access_request",
+            entity_id: access_request.id,
+            action: "access_requested",
+            message: `${requesterName} requested access to "${project.name}"`,
+            workspace_id: project.workspace_id,
+            metadata: {
+              requesting_user_id: userId,
+              requesting_user_name: requesterName,
+              project_id: project.id,
+              project_name: project.name,
+            },
+          }).catch(() => {})
+        )
+      )
     } catch {
       // Non-fatal
     }

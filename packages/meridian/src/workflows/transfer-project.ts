@@ -64,28 +64,24 @@ const updateIssuesWorkspaceStep = createStep(
     { container }
   ) => {
     const issueSvc = container.resolve("issueModuleService") as any
-    const [issues] = await issueSvc.listAndCountIssues(
-      { project_id: input.project.id },
-      { limit: 10000, offset: 0 }
+    // Single bulk UPDATE instead of a capped per-issue loop — no 10k truncation.
+    await issueSvc.reassignProjectIssuesWorkspace(
+      input.project.id,
+      input.original_workspace_id,
+      input.project.workspace_id
     )
-    const issueIds: string[] = []
-    for (const issue of issues) {
-      await issueSvc.updateIssue(issue.id, { workspace_id: input.project.workspace_id })
-      issueIds.push(issue.id)
-    }
     return new StepResponse(
       { project: input.project, carry_over_user_ids: input.carry_over_user_ids, actor_id: input.actor_id, original_workspace_id: input.original_workspace_id },
-      { issueIds, original_workspace_id: input.original_workspace_id }
+      { project_id: input.project.id, from: input.original_workspace_id, to: input.project.workspace_id }
     )
   },
   async (
-    { issueIds, original_workspace_id }: { issueIds: string[]; original_workspace_id: string },
+    { project_id, from, to }: { project_id: string; from: string; to: string },
     { container }
   ) => {
+    // Reverse the bulk move (to → from) for this project.
     const issueSvc = container.resolve("issueModuleService") as any
-    for (const id of issueIds) {
-      await issueSvc.updateIssue(id, { workspace_id: original_workspace_id })
-    }
+    await issueSvc.reassignProjectIssuesWorkspace(project_id, to, from)
   }
 )
 
@@ -100,15 +96,21 @@ const adjustMembershipsStep = createStep(
     const projectId = input.project.id
     const targetWorkspaceId = input.project.workspace_id
 
-    // Remove all project teams (workspace-scoped, can't transfer)
+    // Snapshot BEFORE any destructive change so the compensation can restore it.
     const projectTeams = await projectMemberSvc.listProjectTeamIds(projectId)
-    for (const { team_id } of projectTeams) {
+    const members = await projectMemberSvc.listProjectMembers(projectId)
+    const removedTeamIds: string[] = projectTeams.map((t: any) => t.team_id)
+    const carryOverSet = new Set(input.carry_over_user_ids)
+    const removedMembers = members
+      .filter((m: any) => !carryOverSet.has(m.user_id))
+      .map((m: any) => ({ user_id: m.user_id, role: m.role }))
+
+    // Remove all project teams (workspace-scoped, can't transfer)
+    for (const team_id of removedTeamIds) {
       await projectMemberSvc.removeProjectTeam(projectId, team_id)
     }
 
     // Handle project members
-    const members = await projectMemberSvc.listProjectMembers(projectId)
-    const carryOverSet = new Set(input.carry_over_user_ids)
     for (const member of members) {
       if (carryOverSet.has(member.user_id)) {
         // Ensure carried-over members exist in target workspace
@@ -117,6 +119,22 @@ const adjustMembershipsStep = createStep(
         // Remove members not carried over from project
         await projectMemberSvc.removeProjectMember(projectId, member.user_id)
       }
+    }
+
+    return new StepResponse(undefined, { projectId, removedTeamIds, removedMembers })
+  },
+  async (
+    { projectId, removedTeamIds, removedMembers }:
+      { projectId: string; removedTeamIds: string[]; removedMembers: Array<{ user_id: string; role: string }> },
+    { container }
+  ) => {
+    // Restore removed teams and members if a later step fails.
+    const projectMemberSvc = container.resolve("projectMemberModuleService") as any
+    for (const team_id of removedTeamIds) {
+      await projectMemberSvc.ensureProjectTeam(projectId, team_id).catch(() => {})
+    }
+    for (const { user_id, role } of removedMembers) {
+      await projectMemberSvc.ensureProjectMember(projectId, user_id, role).catch(() => {})
     }
   }
 )

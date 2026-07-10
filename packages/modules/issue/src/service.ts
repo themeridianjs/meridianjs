@@ -136,6 +136,23 @@ export class IssueModuleService extends MeridianService({
     }
   }
 
+  /**
+   * Bulk-reassign every issue in a project from one workspace to another in a
+   * single UPDATE. Returns the affected row count. Used by project transfer —
+   * replaces a per-issue update loop that silently capped at 10k rows.
+   */
+  async reassignProjectIssuesWorkspace(
+    projectId: string,
+    fromWorkspaceId: string,
+    toWorkspaceId: string
+  ): Promise<number> {
+    const repo = this.container.resolve<any>("issueRepository")
+    return repo.nativeUpdate(
+      { project_id: projectId, workspace_id: fromWorkspaceId },
+      { workspace_id: toWorkspaceId, updated_at: new Date() }
+    )
+  }
+
   /** Return all template issues whose next_occurrence_date is due (≤ end of today). */
   async listDueRecurringIssues(): Promise<any[]> {
     const repo = this.container.resolve<any>("issueRepository")

@@ -25,6 +25,18 @@ export class TeamMemberModuleService extends MeridianService({ TeamMember: TeamM
     return [...new Set(userIds)]
   }
 
+  /** Batch: member count per team, in a single query. */
+  async getTeamMemberCounts(teamIds: string[]): Promise<Map<string, number>> {
+    const counts = new Map<string, number>()
+    if (teamIds.length === 0) return counts
+    const repo = this.container.resolve<any>("teamMemberRepository")
+    const members = await repo.find({ team_id: { $in: teamIds } })
+    for (const m of members as any[]) {
+      counts.set(m.team_id, (counts.get(m.team_id) ?? 0) + 1)
+    }
+    return counts
+  }
+
   async getUserTeamIds(userId: string): Promise<string[]> {
     const repo = this.container.resolve<any>("teamMemberRepository")
     const members = await repo.find({ user_id: userId })

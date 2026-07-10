@@ -59,17 +59,18 @@ export const GET = async (req: any, res: Response) => {
       : { id: m.id, user_id: m.user_id, role: m.role, app_role_name: null, user: null }
   })
 
-  const enrichedTeams = await Promise.all(
-    teamEntries.map(async (t: any) => {
-      try {
-        const team = await userService.retrieveTeam(t.team_id)
-        const memberIds = await teamMemberService.getTeamMemberUserIds(t.team_id)
-        return { id: t.id, team_id: t.team_id, team: { ...team, member_count: memberIds.length } }
-      } catch {
-        return { id: t.id, team_id: t.team_id, team: null }
-      }
-    })
-  )
+  // Batch team + member-count fetches (2 queries total) instead of 2 per team.
+  const teamIds = teamEntries.map((t: any) => t.team_id)
+  const teamMap = await userService.listTeamsByIds(teamIds)
+  const teamCounts = await teamMemberService.getTeamMemberCounts(teamIds)
+  const enrichedTeams = teamEntries.map((t: any) => {
+    const team = teamMap.get(t.team_id) ?? null
+    return {
+      id: t.id,
+      team_id: t.team_id,
+      team: team ? { ...team, member_count: teamCounts.get(t.team_id) ?? 0 } : null,
+    }
+  })
 
   res.json({ members: enrichedMembers, teams: enrichedTeams })
 }

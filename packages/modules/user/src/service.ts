@@ -25,6 +25,14 @@ export class UserModuleService extends MeridianService({ User: UserModel, Team: 
   }
 
   /** Find a user by email. Returns null if not found. */
+  /**
+   * Find a user by email, INCLUDING soft-deleted accounts. Returns null if none.
+   *
+   * NOTE: this intentionally does not filter deleted_at — callers such as
+   * register (treat a deleted email as taken) and the invite restore flow rely
+   * on seeing deleted rows. If you want only live accounts, use
+   * {@link retrieveActiveUserByEmail}.
+   */
   async retrieveUserByEmail(email: string): Promise<any | null> {
     const userRepository = this.container.resolve<any>("userRepository")
     try {
@@ -32,6 +40,17 @@ export class UserModuleService extends MeridianService({ User: UserModel, Team: 
     } catch {
       return null
     }
+  }
+
+  /** Explicit alias of {@link retrieveUserByEmail} — self-documents intent at call sites that need deleted rows. */
+  async retrieveUserByEmailIncludingDeleted(email: string): Promise<any | null> {
+    return this.retrieveUserByEmail(email)
+  }
+
+  /** Find a live (non-deleted) user by email. Returns null if none or soft-deleted. */
+  async retrieveActiveUserByEmail(email: string): Promise<any | null> {
+    const userRepository = this.container.resolve<any>("userRepository")
+    return userRepository.findOne({ email, deleted_at: null })
   }
 
   /** Find a user by Google ID. Returns null if not found. */
@@ -85,6 +104,14 @@ export class UserModuleService extends MeridianService({ User: UserModel, Team: 
     }
     const users = await userRepository.find(filters)
     return new Map(users.map((u: any) => [u.id, u]))
+  }
+
+  /** Batch: fetch teams by id in a single query, keyed by id. */
+  async listTeamsByIds(ids: string[]): Promise<Map<string, any>> {
+    if (!ids.length) return new Map()
+    const teamRepository = this.container.resolve<any>("teamRepository")
+    const teams = await teamRepository.find({ id: { $in: ids } })
+    return new Map(teams.map((t: any) => [t.id, t]))
   }
 
   /** Return the total number of registered users. */

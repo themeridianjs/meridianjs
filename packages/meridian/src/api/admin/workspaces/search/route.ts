@@ -4,33 +4,36 @@ export const GET = async (req: any, res: Response) => {
   const workspaceService = req.scope.resolve("workspaceModuleService") as any
   const workspaceMemberService = req.scope.resolve("workspaceMemberModuleService") as any
 
-  const q = (req.query.q as string ?? "").trim().toLowerCase()
+  const q = (req.query.q as string ?? "").trim()
 
-  const [workspaces] = await workspaceService.listAndCountWorkspaces(
-    { is_private: false },
-    { limit: 100 }
+  // Push the text search into SQL rather than loading 100 rows and filtering in JS.
+  const filters: Record<string, unknown> = { is_private: false }
+  if (q) {
+    const term = `%${q}%`
+    filters.$or = [{ name: { $ilike: term } }, { slug: { $ilike: term } }]
+  }
+
+  const [workspaces] = await workspaceService.listAndCountWorkspaces(filters, { limit: 20 })
+
+  // Batch the membership + pending-request lookups into two queries total
+  // instead of two per result row.
+  const userId = req.user?.id
+  const memberWsIds = new Set<string>(await workspaceMemberService.getWorkspaceIdsForUser(userId))
+  const pendingWsIds = new Set<string>(
+    (await workspaceMemberService.getUserPendingRequests(userId)).map((r: any) => r.workspace_id)
   )
 
-  const filtered = q
-    ? workspaces.filter(
-        (w: any) =>
-          w.name.toLowerCase().includes(q) ||
-          w.slug.toLowerCase().includes(q)
-      )
-    : workspaces
-
-  const limited = filtered.slice(0, 20)
-
-  // Check membership and pending request for each workspace
-  const results = await Promise.all(
-    limited.map(async (w: any) => {
-      const isMember = await workspaceMemberService.isMember(w.id, req.user?.id)
-      const hasPendingRequest = !isMember
-        ? !!(await workspaceMemberService.getPendingRequest(w.id, req.user?.id))
-        : false
-      return { id: w.id, name: w.name, slug: w.slug, is_private: w.is_private, is_member: isMember, has_pending_request: hasPendingRequest }
-    })
-  )
+  const results = workspaces.map((w: any) => {
+    const isMember = memberWsIds.has(w.id)
+    return {
+      id: w.id,
+      name: w.name,
+      slug: w.slug,
+      is_private: w.is_private,
+      is_member: isMember,
+      has_pending_request: !isMember && pendingWsIds.has(w.id),
+    }
+  })
 
   res.json({ workspaces: results })
 }
