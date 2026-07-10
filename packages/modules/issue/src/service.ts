@@ -99,25 +99,41 @@ export class IssueModuleService extends MeridianService({
       }
     }
 
-    // Get the next sequential number for this project (fetch only the highest-numbered issue)
-    const [highest] = await issueRepo.find(
-      { project_id: input.project_id },
-      { orderBy: { number: "DESC" }, limit: 1 }
-    )
-    const maxNumber = (highest as any)?.number ?? 0
-    const nextNumber = maxNumber + 1
-    const identifier = `${project.identifier}-${nextNumber}`
+    // Assign the next sequential number for this project. Because two concurrent
+    // creates can read the same max, the unique (project_id, number) index is the
+    // source of truth: on a 23505 violation we re-read the max and retry.
+    const MAX_ATTEMPTS = 10
+    for (let attempt = 1; ; attempt++) {
+      const [highest] = await issueRepo.find(
+        { project_id: input.project_id },
+        { orderBy: { number: "DESC" }, limit: 1 }
+      )
+      const maxNumber = (highest as any)?.number ?? 0
+      const nextNumber = maxNumber + 1
+      const identifier = `${project.identifier}-${nextNumber}`
 
-    const issue = issueRepo.create({
-      ...input,
-      number: nextNumber,
-      identifier,
-      type: input.type ?? "task",
-      priority: input.priority ?? "none",
-      status: input.status ?? "backlog",
-    })
-    await issueRepo.persistAndFlush(issue)
-    return issue
+      const issue = issueRepo.create({
+        ...input,
+        number: nextNumber,
+        identifier,
+        type: input.type ?? "task",
+        priority: input.priority ?? "none",
+        status: input.status ?? "backlog",
+      })
+
+      try {
+        await issueRepo.persistAndFlush(issue)
+        return issue
+      } catch (err: any) {
+        // 23505 = Postgres unique_violation. Anything else is a real error.
+        const code = err?.code ?? err?.cause?.code
+        if (code !== "23505" || attempt >= MAX_ATTEMPTS) throw err
+        // Drop the poisoned entity from the identity map before retrying, then
+        // back off a jittered few ms to de-synchronize concurrent creators.
+        issueRepo.clear?.()
+        await new Promise((r) => setTimeout(r, Math.floor(Math.random() * 15) + attempt * 5))
+      }
+    }
   }
 
   /** Return all template issues whose next_occurrence_date is due (≤ end of today). */

@@ -37,8 +37,7 @@ export default async function defaultLoader({ container }: LoaderOptions): Promi
     [dmlToEntitySchema(AppRoleModel)],
     config.projectConfig.databaseUrl
   )
-  const em = orm.em.fork()
-  const repo = createRepository(em, "app_role")
+  const repo = createRepository(orm, "app_role")
 
   container.register({
     appRoleRepository: repo,

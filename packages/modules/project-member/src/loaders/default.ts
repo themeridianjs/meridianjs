@@ -10,11 +10,10 @@ export default async function defaultLoader({ container }: LoaderOptions): Promi
     [dmlToEntitySchema(ProjectMemberModel), dmlToEntitySchema(ProjectTeamModel), dmlToEntitySchema(ProjectAccessRequestModel)],
     config.projectConfig.databaseUrl
   )
-  const em = orm.em.fork()
   container.register({
-    projectMemberRepository: createRepository(em, "project_member"),
-    projectTeamRepository: createRepository(em, "project_team"),
-    projectAccessRequestRepository: createRepository(em, "project_access_request"),
+    projectMemberRepository: createRepository(orm, "project_member"),
+    projectTeamRepository: createRepository(orm, "project_team"),
+    projectAccessRequestRepository: createRepository(orm, "project_access_request"),
     projectMemberOrm: orm,
   })
 }

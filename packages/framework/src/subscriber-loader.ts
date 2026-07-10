@@ -1,6 +1,7 @@
 import fs from "node:fs/promises"
 import path from "node:path"
 import { pathToFileURL } from "node:url"
+import { runInOrmContext } from "@meridianjs/framework-utils"
 import type {
   MeridianContainer,
   IEventBus,
@@ -69,7 +70,9 @@ export async function loadSubscribers(
         continue
       }
       eventBus.subscribe(eventName, (args) =>
-        handler({ ...args, container })
+        // Each event handler runs in its own EM context so background work
+        // gets an isolated fork rather than sharing one global EM.
+        runInOrmContext(() => handler({ ...args, container }))
       )
       logger.debug(`Subscriber registered: ${file} → ${eventName}`)
     }

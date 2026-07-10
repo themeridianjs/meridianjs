@@ -9,6 +9,18 @@ const UPDATE_RESERVED = new Set([
 ])
 
 /**
+ * Safety ceiling for generated list queries with no explicit limit — prevents
+ * an accidental full-table scan from loading everything into the identity map.
+ * This is a runaway guard, NOT pagination: routes that expose lists to clients
+ * should still pass their own limit/offset.
+ */
+const DEFAULT_LIST_LIMIT = 1000
+
+function withDefaultLimit(options: Record<string, unknown>): Record<string, unknown> {
+  return options.limit === undefined ? { ...options, limit: DEFAULT_LIST_LIMIT } : options
+}
+
+/**
  * Base class factory that auto-generates CRUD methods for each model.
  *
  * For a model named "Project", the following methods are generated:
@@ -52,7 +64,7 @@ export function MeridianService(
             options: Record<string, unknown> = {}
           ) => {
             const repo = this.#container.resolve<Repository>(repoToken)
-            return repo.find({ deleted_at: null, ...filters }, options)
+            return repo.find({ deleted_at: null, ...filters }, withDefaultLimit(options))
           }
         }
 
@@ -64,7 +76,7 @@ export function MeridianService(
             options: Record<string, unknown> = {}
           ) => {
             const repo = this.#container.resolve<Repository>(repoToken)
-            return repo.findAndCount({ deleted_at: null, ...filters }, options)
+            return repo.findAndCount({ deleted_at: null, ...filters }, withDefaultLimit(options))
           }
         }
 

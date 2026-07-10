@@ -10,6 +10,7 @@ import { loadSubscribers } from "./subscriber-loader.js"
 import { loadJobs } from "./job-loader.js"
 import { loadLinks } from "./link-loader.js"
 import { createServer, registerErrorHandling } from "./server.js"
+import { closeAllOrms } from "@meridianjs/framework-utils"
 import { ConsoleLogger } from "./logger.js"
 import type { MeridianConfig, MeridianContainer, ILogger, IEventBus, IScheduler } from "@meridianjs/types"
 import { printStartupTable } from "./startup-table.js"
@@ -164,6 +165,8 @@ export async function bootstrap(opts: BootstrapOptions): Promise<MeridianApp> {
       } catch {
         // scheduler may not be configured
       }
+      // Close the shared ORM connection pool(s).
+      await closeAllOrms()
       logger.info("Meridian server stopped.")
     },
   }

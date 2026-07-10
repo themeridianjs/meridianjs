@@ -10,9 +10,8 @@ export default async function defaultLoader({ container }: LoaderOptions): Promi
     [NotificationSchema],
     config.projectConfig.databaseUrl
   )
-  const em = orm.em.fork()
   container.register({
-    notificationRepository: createRepository(em, "notification"),
+    notificationRepository: createRepository(orm, "notification"),
     notificationOrm: orm,
   })
 }

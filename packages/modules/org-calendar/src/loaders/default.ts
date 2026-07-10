@@ -9,11 +9,10 @@ export default async function defaultLoader({ container }: LoaderOptions): Promi
     [dmlToEntitySchema(OrgCalendarModel), dmlToEntitySchema(OrgHolidayModel)],
     config.projectConfig.databaseUrl
   )
-  const em = orm.em.fork()
 
   container.register({
-    orgCalendarRepository: createRepository(em, "org_calendar"),
-    orgHolidayRepository: createRepository(em, "org_holiday"),
+    orgCalendarRepository: createRepository(orm, "org_calendar"),
+    orgHolidayRepository: createRepository(orm, "org_holiday"),
     orgCalendarOrm: orm,
   })
 }

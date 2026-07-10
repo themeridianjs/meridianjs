@@ -19,14 +19,13 @@ export default async function defaultLoader({ container }: LoaderOptions): Promi
   const { databaseUrl } = config.projectConfig
 
   const orm = await createModuleOrm(entitySchemas, databaseUrl)
-  const em = orm.em.fork()
 
   container.register({
-    projectRepository: createRepository(em, "project"),
-    labelRepository: createRepository(em, "label"),
-    milestoneRepository: createRepository(em, "milestone"),
-    projectStatusRepository: createRepository(em, "project_status"),
-    projectHealthUpdateRepository: createRepository(em, "project_health_update"),
+    projectRepository: createRepository(orm, "project"),
+    labelRepository: createRepository(orm, "label"),
+    milestoneRepository: createRepository(orm, "milestone"),
+    projectStatusRepository: createRepository(orm, "project_status"),
+    projectHealthUpdateRepository: createRepository(orm, "project_health_update"),
     projectOrm: orm,
   })
 }

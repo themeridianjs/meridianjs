@@ -1,6 +1,7 @@
 import fs from "node:fs/promises"
 import path from "node:path"
 import { pathToFileURL } from "node:url"
+import { runInOrmContext } from "@meridianjs/framework-utils"
 import type {
   MeridianContainer,
   IScheduler,
@@ -67,7 +68,7 @@ export async function loadJobs(
       continue
     }
 
-    await scheduler.register(config, () => fn(container))
+    await scheduler.register(config, () => runInOrmContext(() => fn(container)))
     logger.info(`Scheduled job registered: ${config.name} (${JSON.stringify(config.schedule)})`)
   }
 }

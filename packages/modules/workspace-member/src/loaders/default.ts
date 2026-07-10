@@ -9,10 +9,9 @@ export default async function defaultLoader({ container }: LoaderOptions): Promi
     [dmlToEntitySchema(WorkspaceMemberModel), dmlToEntitySchema(WorkspaceAccessRequestModel)],
     config.projectConfig.databaseUrl
   )
-  const em = orm.em.fork()
   container.register({
-    workspaceMemberRepository: createRepository(em, "workspace_member"),
-    workspaceAccessRequestRepository: createRepository(em, "workspace_access_request"),
+    workspaceMemberRepository: createRepository(orm, "workspace_member"),
+    workspaceAccessRequestRepository: createRepository(orm, "workspace_access_request"),
     workspaceMemberOrm: orm,
   })
 }

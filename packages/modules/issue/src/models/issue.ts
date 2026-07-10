@@ -45,6 +45,9 @@ const Issue = model.define("issue", {
   { columns: ["project_id"] },
   { columns: ["workspace_id"] },
   { columns: ["project_id", "status"] },
+  // Backstops the sequential-number generation against concurrent creates —
+  // two racing inserts can't both claim the same PROJ-N.
+  { columns: ["project_id", "number"], unique: true, name: "issue_project_id_number_unique" },
 ])
 
 export default Issue

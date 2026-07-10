@@ -8,6 +8,7 @@ import cookieParser from "cookie-parser"
 import cors from "cors"
 import helmet from "helmet"
 import type { MeridianConfig, MeridianContainer, ILogger } from "@meridianjs/types"
+import { runInOrmContext } from "@meridianjs/framework-utils"
 import { httpLoggerMiddleware } from "./http-logger.js"
 
 export function createServer(
@@ -66,12 +67,26 @@ export function createServer(
     })
   )
 
-  // Attach a request-scoped DI container to every request and dispose it when done
+  // Attach a request-scoped DI container to every request and dispose it once.
   app.use((req: any, res: Response, next: NextFunction) => {
     req.scope = container.createScope()
-    res.on("finish", () => req.scope.dispose?.())
-    res.on("close",  () => req.scope.dispose?.())
+    let disposed = false
+    const dispose = () => {
+      if (disposed) return
+      disposed = true
+      req.scope.dispose?.()
+    }
+    res.on("finish", dispose)
+    res.on("close", dispose)
     next()
+  })
+
+  // Establish a per-request EntityManager context so every module's
+  // repositories resolve an isolated EM fork for this request (see
+  // @meridianjs/framework-utils orm-context). Without this, concurrent
+  // requests would share one identity map and unit-of-work state.
+  app.use((_req: Request, _res: Response, next: NextFunction) => {
+    runInOrmContext(() => next())
   })
 
   // ── Health check ───────────────────────────────────────────────────────────

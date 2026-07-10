@@ -8,9 +8,8 @@ export default async function defaultLoader({ container }: LoaderOptions): Promi
     [dmlToEntitySchema(TeamMemberModel)],
     config.projectConfig.databaseUrl
   )
-  const em = orm.em.fork()
   container.register({
-    teamMemberRepository: createRepository(em, "team_member"),
+    teamMemberRepository: createRepository(orm, "team_member"),
     teamMemberOrm: orm,
   })
 }

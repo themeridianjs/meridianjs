@@ -11,10 +11,9 @@ export default async function defaultLoader({ container }: LoaderOptions): Promi
   const { databaseUrl } = config.projectConfig
 
   const orm = await createModuleOrm(entitySchemas, databaseUrl)
-  const em = orm.em.fork()
 
   container.register({
-    sprintRepository: createRepository(em, "sprint"),
+    sprintRepository: createRepository(orm, "sprint"),
     sprintOrm: orm,
   })
 }

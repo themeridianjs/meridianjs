@@ -9,10 +9,9 @@ export default async function defaultLoader({ container }: LoaderOptions): Promi
   const { databaseUrl } = config.projectConfig
 
   const orm = await createModuleOrm([InvitationSchema], databaseUrl)
-  const em = orm.em.fork()
 
   container.register({
-    invitationRepository: createRepository(em, "invitation"),
+    invitationRepository: createRepository(orm, "invitation"),
     invitationOrm: orm,
   })
 }
