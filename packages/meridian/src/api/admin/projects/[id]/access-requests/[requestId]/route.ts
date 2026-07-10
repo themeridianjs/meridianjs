@@ -1,5 +1,6 @@
 import type { Response, NextFunction } from "express"
 import { resolveProjectAndAccess } from "../../../../../utils/project-access.js"
+import { EVENTS, PROJECT_ROLES } from "@meridianjs/types"
 
 // Owner cancels their own pending request
 export const DELETE = async (req: any, res: Response, next: NextFunction) => {
@@ -55,7 +56,7 @@ export const PATCH = async (req: any, res: Response, next: NextFunction) => {
     }
 
     if (action === "approve") {
-      await projectMemberService.ensureProjectMember(project.id, request.user_id, "member")
+      await projectMemberService.ensureProjectMember(project.id, request.user_id, PROJECT_ROLES.MEMBER)
     }
     const updated = await projectMemberService.updateAccessRequestStatus(request.id, action === "approve" ? "approved" : "denied")
 
@@ -94,7 +95,7 @@ export const PATCH = async (req: any, res: Response, next: NextFunction) => {
 
     const eventBus = req.scope.resolve("eventBus") as any
     eventBus.emit({
-      name: "project.access_request_resolved",
+      name: EVENTS.PROJECT_ACCESS_REQUEST_RESOLVED,
       data: {
         project_id: project.id,
         project_name: project.name,

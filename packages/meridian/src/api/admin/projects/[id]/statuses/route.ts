@@ -15,7 +15,7 @@ export const GET = async (req: any, res: Response) => {
     return
   }
   const statuses = await svc.listStatusesByProject(req.params.id)
-  res.json({ statuses })
+  res.json({ statuses, count: statuses.length })
 }
 
 export const POST = async (req: any, res: Response) => {

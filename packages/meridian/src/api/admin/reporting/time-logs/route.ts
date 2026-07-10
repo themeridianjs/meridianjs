@@ -4,6 +4,8 @@ import type { WorkspaceMemberModuleService } from "@meridianjs/workspace-member"
 import type { TeamMemberModuleService } from "@meridianjs/team-member"
 import type { ProjectMemberModuleService } from "@meridianjs/project-member"
 import { getAccessibleWorkspaceIds } from "../../../utils/workspace-access.js"
+import { ROLES } from "@meridianjs/types"
+import { isGlobalAdmin } from "../../../utils/project-access.js"
 
 async function enrichWithProjects(result: { time_logs: any[];[k: string]: any }, projectService: any) {
   const projectIds = [...new Set(result.time_logs.map((l: any) => l.project_id).filter(Boolean))]
@@ -27,7 +29,7 @@ export const GET = async (req: any, res: Response) => {
 
   const roles: string[] = req.user?.roles ?? []
   const permissions: string[] = req.user?.permissions ?? []
-  const isPrivileged = roles.includes("super-admin") || roles.includes("admin") || permissions.includes("workspace:admin")
+  const isPrivileged = isGlobalAdmin(req) || permissions.includes("workspace:admin")
 
   const filters: Record<string, unknown> = {}
 
@@ -50,7 +52,7 @@ export const GET = async (req: any, res: Response) => {
   const filterUserIds = user_ids ? user_ids.split(",").filter(Boolean) : user_id ? [user_id] : []
   const filterProjectIds = project_ids ? project_ids.split(",").filter(Boolean) : project_id ? [project_id] : []
 
-  const isSuperAdmin = roles.includes("super-admin")
+  const isSuperAdmin = roles.includes(ROLES.SUPER_ADMIN)
 
   // Super-admin org-scope bypass: skip all workspace privacy filtering
   if (isSuperAdmin && req.query.org_scope === "true") {

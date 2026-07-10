@@ -1,5 +1,6 @@
 import type { Response } from "express"
 import { requirePermission } from "@meridianjs/auth"
+import { HEALTH_STATUSES } from "@meridianjs/types"
 import { hasProjectAccess } from "../../../../../utils/project-access.js"
 
 export const GET = async (req: any, res: Response) => {
@@ -20,9 +21,8 @@ export const PUT = async (req: any, res: Response) => {
   requirePermission("project:update")(req, res, async () => {
     const { health, title, summary, collaborators, report_date } = req.body
 
-  const validHealth = ["on_track", "delayed", "on_hold", "completed"]
-  if (health !== undefined && !validHealth.includes(health)) {
-    res.status(400).json({ error: { message: `health must be one of: ${validHealth.join(", ")}` } })
+  if (health !== undefined && !HEALTH_STATUSES.includes(health)) {
+    res.status(400).json({ error: { message: `health must be one of: ${HEALTH_STATUSES.join(", ")}` } })
     return
   }
 

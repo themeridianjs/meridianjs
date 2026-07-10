@@ -1,5 +1,6 @@
 import type { Response } from "express"
 import { assertWorkspaceAccess } from "../../../../../utils/workspace-access.js"
+import { isGlobalAdmin } from "../../../../../utils/project-access.js"
 
 export const DELETE = async (req: any, res: Response) => {
   if (!await assertWorkspaceAccess(req, res)) return
@@ -19,9 +20,8 @@ export const DELETE = async (req: any, res: Response) => {
   }
 
   // Caller must have member:invite permission or be admin/super-admin
-  const roles: string[] = req.user?.roles ?? []
   const permissions: string[] = req.user?.permissions ?? []
-  const isPrivileged = roles.includes("super-admin") || roles.includes("admin")
+  const isPrivileged = isGlobalAdmin(req)
   if (!isPrivileged && !permissions.includes("member:invite")) {
     res.status(403).json({ error: { message: "Forbidden — requires member:invite permission" } })
     return

@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query"
 import { api } from "../client"
+import { buildQuery } from "@/lib/buildQuery"
 
 export interface Issue {
   id: string
@@ -149,17 +150,16 @@ export function useIssues(projectId?: string, filters?: BoardFilters) {
   return useQuery({
     queryKey: projectId ? issueKeys.byProject(projectId, filters) : issueKeys.all,
     queryFn: async () => {
-      const params = new URLSearchParams()
-      if (projectId) {
-        params.set("project_id", projectId)
-        params.set("limit", "1000")
+      const baseParams = {
+        project_id: projectId,
+        limit: projectId ? 1000 : undefined,
+        priority: filters?.priority?.join(","),
+        assignee_id: filters?.assignee_id,
+        type: filters?.type?.join(","),
+        status: filters?.status?.join(","),
       }
-      if (filters?.priority?.length) params.set("priority", filters.priority.join(","))
-      if (filters?.assignee_id) params.set("assignee_id", filters.assignee_id)
-      if (filters?.type?.length) params.set("type", filters.type.join(","))
-      if (filters?.status?.length) params.set("status", filters.status.join(","))
 
-      const first = await api.get<IssuesResponse>(`/admin/issues?${params}`)
+      const first = await api.get<IssuesResponse>(`/admin/issues${buildQuery(baseParams)}`)
       if (first.count <= first.issues.length) return first
 
       // Fetch remaining pages in parallel.
@@ -172,11 +172,11 @@ export function useIssues(projectId?: string, filters?: BoardFilters) {
       // requests / blow up client memory. Beyond this, callers should paginate.
       const MAX_EXTRA_PAGES = 20
       const pages = Math.min(Math.ceil(remaining / pageSize), MAX_EXTRA_PAGES)
-      const fetches = Array.from({ length: pages }, (_, i) => {
-        const p = new URLSearchParams(params)
-        p.set("offset", String(pageSize * (i + 1)))
-        return api.get<IssuesResponse>(`/admin/issues?${p}`)
-      })
+      const fetches = Array.from({ length: pages }, (_, i) =>
+        api.get<IssuesResponse>(
+          `/admin/issues${buildQuery({ ...baseParams, offset: pageSize * (i + 1) })}`
+        )
+      )
       const results = await Promise.all(fetches)
       const allIssues = first.issues.concat(...results.map((r) => r.issues))
       return { issues: allIssues, count: first.count } as IssuesResponse
@@ -199,22 +199,23 @@ export function usePaginatedIssues(params: PaginatedIssuesParams) {
   const { project_id, page = 1, pageSize = 50, search, status, priority, sprint_id, task_list_id, assignee_id, sort_by, sort_order, parent_id } = params
   return useQuery({
     queryKey: issueKeys.paginated(params),
-    queryFn: async () => {
-      const qs = new URLSearchParams()
-      qs.set("project_id", project_id)
-      qs.set("limit", String(pageSize))
-      qs.set("offset", String((page - 1) * pageSize))
-      if (search) qs.set("search", search)
-      if (status) qs.set("status", status)
-      if (priority) qs.set("priority", priority)
-      if (sprint_id) qs.set("sprint_id", sprint_id)
-      if (task_list_id) qs.set("task_list_id", task_list_id)
-      if (assignee_id) qs.set("assignee_id", assignee_id)
-      if (sort_by) qs.set("sort_by", sort_by)
-      if (sort_order) qs.set("sort_order", sort_order)
-      if (parent_id) qs.set("parent_id", parent_id)
-      return api.get<PaginatedIssuesResponse>(`/admin/issues?${qs}`)
-    },
+    queryFn: async () =>
+      api.get<PaginatedIssuesResponse>(
+        `/admin/issues${buildQuery({
+          project_id,
+          limit: pageSize,
+          offset: (page - 1) * pageSize,
+          search,
+          status,
+          priority,
+          sprint_id,
+          task_list_id,
+          assignee_id,
+          sort_by,
+          sort_order,
+          parent_id,
+        })}`
+      ),
     placeholderData: keepPreviousData,
     enabled: !!project_id,
   })

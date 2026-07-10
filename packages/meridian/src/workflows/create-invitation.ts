@@ -5,6 +5,7 @@ import {
   WorkflowResponse,
 } from "@meridianjs/workflow-engine"
 import { emitEventStep } from "./emit-event.js"
+import { EVENTS } from "@meridianjs/types"
 
 export interface CreateInvitationInput {
   workspace_id: string
@@ -39,7 +40,7 @@ export const createInvitationWorkflow = createWorkflow(
     const invitation = await createInvitationStep(input)
 
     await emitEventStep({
-      name: "workspace.member_invited",
+      name: EVENTS.WORKSPACE_MEMBER_INVITED,
       data: {
         invitation_id: invitation.id,
         workspace_id: invitation.workspace_id,

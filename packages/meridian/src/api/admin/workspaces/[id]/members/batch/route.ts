@@ -2,6 +2,7 @@ import type { Response, NextFunction } from "express"
 import { requirePermission } from "@meridianjs/auth"
 import { assertWorkspaceAccess } from "../../../../../utils/workspace-access.js"
 import { assignDefaultUserRole } from "../../../../../utils/assign-default-role.js"
+import { EVENTS, ROLES } from "@meridianjs/types"
 
 export const POST = async (req: any, res: Response, next: NextFunction) => {
   requirePermission("member:invite")(req, res, async () => {
@@ -16,7 +17,7 @@ export const POST = async (req: any, res: Response, next: NextFunction) => {
         return
       }
 
-      const wsRole: "admin" | "member" = role === "member" ? "member" : "admin"
+      const wsRole: "admin" | "member" = role === ROLES.MEMBER ? ROLES.MEMBER : ROLES.ADMIN
 
       // Validate all user IDs exist before creating memberships
       const userService = req.scope.resolve("userModuleService") as any
@@ -46,7 +47,7 @@ export const POST = async (req: any, res: Response, next: NextFunction) => {
 
         const eventBus = req.scope.resolve("eventBus") as any
         eventBus.emit({
-          name: "workspace.member_added",
+          name: EVENTS.WORKSPACE_MEMBER_ADDED,
           data: {
             workspace_id: req.params.id,
             user_id: userId,

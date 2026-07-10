@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { api } from "../client"
+import { buildQuery } from "@/lib/buildQuery"
 
 export interface WorkingDays {
   mon: boolean
@@ -59,7 +60,7 @@ export function useHolidays(year?: number) {
   const y = year ?? new Date().getFullYear()
   return useQuery({
     queryKey: ["org", "holidays", y],
-    queryFn: () => api.get<{ holidays: OrgHoliday[]; count: number }>(`/admin/org/holidays?year=${y}`),
+    queryFn: () => api.get<{ holidays: OrgHoliday[]; count: number }>(`/admin/org/holidays${buildQuery({ year: y })}`),
     select: (data) => data.holidays,
   })
 }

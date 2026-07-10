@@ -1,8 +1,9 @@
 import type { Response } from "express"
 import { requireRoles } from "@meridianjs/auth"
+import { EVENTS, ROLES } from "@meridianjs/types"
 
 export const POST = async (req: any, res: Response) => {
-  requireRoles("super-admin", "admin")(req, res, async () => {
+  requireRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN)(req, res, async () => {
     const svc = req.scope.resolve("invitationModuleService") as any
     const invitation = await svc.retrieveInvitation(req.params.inviteId).catch(() => null)
 
@@ -23,7 +24,7 @@ export const POST = async (req: any, res: Response) => {
 
     const eventBus = req.scope.resolve("eventBus") as any
     await eventBus.emit({
-      name: "workspace.member_invited",
+      name: EVENTS.WORKSPACE_MEMBER_INVITED,
       data: {
         invitation_id: invitation.id,
         workspace_id: invitation.workspace_id ?? null,

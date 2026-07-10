@@ -2,6 +2,8 @@ import type { Response, NextFunction } from "express"
 import { requirePermission } from "@meridianjs/auth"
 import { createProjectWorkflow } from "../../../workflows/create-project.js"
 import { getAccessibleWorkspaceIds } from "../../utils/workspace-access.js"
+import { isGlobalAdmin } from "../../utils/project-access.js"
+import { ROLES, PROJECT_ROLES } from "@meridianjs/types"
 
 export const GET = async (req: any, res: Response) => {
   const projectService = req.scope.resolve("projectModuleService") as any
@@ -19,11 +21,11 @@ export const GET = async (req: any, res: Response) => {
   if (req.query.status) filters.status = req.query.status
 
   const roles: string[] = req.user?.roles ?? []
-  const isPrivileged = roles.includes("super-admin") || roles.includes("admin")
+  const isPrivileged = isGlobalAdmin(req)
 
   if (isPrivileged) {
     // Super-admin org-scope bypass: return all projects unfiltered
-    if (roles.includes("super-admin") && req.query.org_scope === "true") {
+    if (roles.includes(ROLES.SUPER_ADMIN) && req.query.org_scope === "true") {
       const [projects, count] = await projectService.listAndCountProjects(filters, { limit, offset })
       res.json({ projects, count, limit, offset })
       return
@@ -79,7 +81,7 @@ export const GET = async (req: any, res: Response) => {
   const projectIds = projects.map((p: any) => p.id)
 
   // Workspace admins have access to all projects
-  if (membership.role === "admin") {
+  if (membership.role === ROLES.ADMIN) {
     const pendingCounts = await projectMemberService.getPendingCountsForProjects(projectIds)
     const enriched = projects.map((p: any) => ({
       ...p,
@@ -106,7 +108,7 @@ export const GET = async (req: any, res: Response) => {
 
   // Only fetch pending counts for projects where user is a manager
   const managedProjectIds = memberRecords
-    .filter((m: any) => m.user_id === userId && m.role === "manager")
+    .filter((m: any) => m.user_id === userId && m.role === PROJECT_ROLES.MANAGER)
     .map((m: any) => m.project_id)
   const pendingCounts = await projectMemberService.getPendingCountsForProjects(managedProjectIds)
 
@@ -148,7 +150,7 @@ export const POST = async (req: any, res: Response, next: NextFunction) => {
       }
       // Auto-create project membership for the creator (manager role)
       if (req.user?.id && project) {
-        await projectMemberService.ensureProjectMember(project.id, req.user.id, "manager")
+        await projectMemberService.ensureProjectMember(project.id, req.user.id, PROJECT_ROLES.MANAGER)
       }
       res.status(201).json({ project })
     } catch (err) {

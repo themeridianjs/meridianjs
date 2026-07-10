@@ -1,6 +1,7 @@
 import { z } from "zod"
 import type { Response } from "express"
 import { assignDefaultUserRole } from "../../../utils/assign-default-role.js"
+import { ROLES } from "@meridianjs/types"
 
 /** Public endpoint — no auth middleware. Returns invitation + workspace name for the accept page. */
 export const GET = async (req: any, res: Response) => {
@@ -135,7 +136,7 @@ export const POST = async (req: any, res: Response) => {
 
   if (invitation.workspace_id) {
     // workspace_member.role only supports "admin" | "member" — map super-admin → admin
-    const wsRole = invitation.role === "member" ? "member" : "admin"
+    const wsRole = invitation.role === ROLES.MEMBER ? ROLES.MEMBER : ROLES.ADMIN
     await workspaceMemberService.ensureMember(invitation.workspace_id, authResult.user.id, wsRole)
   }
 

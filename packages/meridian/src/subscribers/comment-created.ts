@@ -1,4 +1,5 @@
 import type { SubscriberArgs, SubscriberConfig } from "@meridianjs/types"
+import { EVENTS } from "@meridianjs/types"
 import { sseManager } from "@meridianjs/framework"
 import { buildEmail, buildIssueUrl, htmlToEmailSafe, capitalize, userDisplayName, resolveTemplate } from "./_email-helper.js"
 
@@ -156,4 +157,4 @@ export default async function handler({ event, container }: SubscriberArgs<Comme
   }
 }
 
-export const config: SubscriberConfig = { event: "comment.created" }
+export const config: SubscriberConfig = { event: EVENTS.COMMENT_CREATED }

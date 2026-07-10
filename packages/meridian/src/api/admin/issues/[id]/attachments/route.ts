@@ -7,7 +7,7 @@ export const GET = async (req: any, res: Response) => {
   if (!await assertIssueAccess(req, res)) return
   const issueService = req.scope.resolve("issueModuleService") as any
   const attachments = await issueService.listAttachmentsByIssue(req.params.id)
-  res.json({ attachments })
+  res.json({ attachments, count: attachments.length })
 }
 
 export const POST = async (req: any, res: Response) => {

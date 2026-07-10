@@ -3,6 +3,7 @@ import { requirePermission } from "@meridianjs/auth"
 import { updateIssueStatusWorkflow } from "../../../../workflows/update-issue-status.js"
 import { assignIssueWorkflow } from "../../../../workflows/assign-issue.js"
 import { assertIssueAccess } from "../../../utils/issue-access.js"
+import { EVENTS } from "@meridianjs/types"
 
 export const GET = async (req: any, res: Response) => {
   const issue = await assertIssueAccess(req, res)
@@ -39,7 +40,7 @@ export const PUT = async (req: any, res: Response, next: NextFunction) => {
         if (mentionedUserIds.length > 0 && req.body.description !== undefined) {
           const eventBus = req.scope.resolve("eventBus") as any
           eventBus.emit({
-            name: "issue.mentioned",
+            name: EVENTS.ISSUE_MENTIONED,
             data: {
               issue_id: issue.id,
               actor_id: req.user?.id ?? "system",

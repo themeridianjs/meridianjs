@@ -1,4 +1,5 @@
 import type { Response, NextFunction } from "express"
+import { EVENTS, PROJECT_ROLES } from "@meridianjs/types"
 
 // Workspace member submits or cancels a project access request using the project identifier.
 // This lets the client avoid needing the project ID from a prior (forbidden) fetch.
@@ -55,7 +56,7 @@ export const POST = async (req: any, res: Response, next: NextFunction) => {
         ? `${requester.first_name ?? ""} ${requester.last_name ?? ""}`.trim() || requester.email
         : "Someone"
 
-      const managers = members.filter((m: any) => m.role === "manager")
+      const managers = members.filter((m: any) => m.role === PROJECT_ROLES.MANAGER)
       for (const manager of managers) {
         await notificationService.createNotification({
           user_id: manager.user_id,
@@ -78,7 +79,7 @@ export const POST = async (req: any, res: Response, next: NextFunction) => {
 
     const eventBus = req.scope.resolve("eventBus") as any
     eventBus.emit({
-      name: "project.access_requested",
+      name: EVENTS.PROJECT_ACCESS_REQUESTED,
       data: { project_id: project.id, workspace_id: project.workspace_id, user_id: userId, request_id: access_request.id },
     }).catch(() => {})
 
@@ -111,7 +112,7 @@ export const DELETE = async (req: any, res: Response, next: NextFunction) => {
 
     const eventBus = req.scope.resolve("eventBus") as any
     eventBus.emit({
-      name: "project.access_request_cancelled",
+      name: EVENTS.PROJECT_ACCESS_REQUEST_CANCELLED,
       data: { project_id: project.id, workspace_id: project.workspace_id, user_id: userId, request_id: existing.id },
     }).catch(() => {})
 

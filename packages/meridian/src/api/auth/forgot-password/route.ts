@@ -1,5 +1,6 @@
 import { z } from "zod"
 import type { Response } from "express"
+import { EVENTS } from "@meridianjs/types"
 
 const forgotPasswordSchema = z.object({
   email: z.string().email(),
@@ -24,7 +25,7 @@ export const POST = async (req: any, res: Response) => {
     try {
       const eventBus = req.scope.resolve("eventBus") as any
       await eventBus.emit({
-        name: "password.reset_requested",
+        name: EVENTS.PASSWORD_RESET_REQUESTED,
         data: {
           user_id: resetInfo.userId,
           email: resetInfo.email,

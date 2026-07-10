@@ -13,5 +13,5 @@ export const DELETE = async (req: any, res: Response) => {
 
   const userService = req.scope.resolve("userModuleService") as any
   await userService.updateUser(userId, { google_id: null })
-  res.json({ ok: true })
+  res.status(204).end()
 }

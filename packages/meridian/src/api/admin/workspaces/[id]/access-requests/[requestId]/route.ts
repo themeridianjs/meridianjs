@@ -1,6 +1,7 @@
 import type { Response, NextFunction } from "express"
 import { assertWorkspaceAdmin } from "../../../../../utils/workspace-access.js"
 import { assignDefaultUserRole } from "../../../../../utils/assign-default-role.js"
+import { EVENTS, ROLES } from "@meridianjs/types"
 
 // Owner cancels their own pending request
 export const DELETE = async (req: any, res: Response, next: NextFunction) => {
@@ -25,7 +26,7 @@ export const DELETE = async (req: any, res: Response, next: NextFunction) => {
 
     const eventBus = req.scope.resolve("eventBus") as any
     eventBus.emit({
-      name: "workspace.access_request_cancelled",
+      name: EVENTS.WORKSPACE_ACCESS_REQUEST_CANCELLED,
       data: { workspace_id: req.params.id, user_id: accessRequest.user_id, request_id: req.params.requestId },
     }).catch(() => {})
 
@@ -62,7 +63,7 @@ export const PATCH = async (req: any, res: Response) => {
   }
 
   if (action === "approve") {
-    await workspaceMemberService.ensureMember(req.params.id, accessRequest.user_id, "member")
+    await workspaceMemberService.ensureMember(req.params.id, accessRequest.user_id, ROLES.MEMBER)
     await assignDefaultUserRole(req, accessRequest.user_id)
   }
 
@@ -87,7 +88,7 @@ export const PATCH = async (req: any, res: Response) => {
 
   const eventBus = req.scope.resolve("eventBus") as any
   eventBus.emit({
-    name: "workspace.access_request_resolved",
+    name: EVENTS.WORKSPACE_ACCESS_REQUEST_RESOLVED,
     data: {
       workspace_id: workspace.id,
       workspace_name: workspace.name,

@@ -1,8 +1,9 @@
 import type { Response, NextFunction } from "express"
 import { requirePermission } from "@meridianjs/auth"
 import { createIssueWorkflow } from "../../../workflows/create-issue.js"
-import { hasProjectAccess } from "../../utils/project-access.js"
+import { hasProjectAccess, isGlobalAdmin } from "../../utils/project-access.js"
 import { getAccessibleWorkspaceIds } from "../../utils/workspace-access.js"
+import { EVENTS } from "@meridianjs/types"
 
 export const GET = async (req: any, res: Response) => {
   const issueService = req.scope.resolve("issueModuleService") as any
@@ -57,8 +58,7 @@ export const GET = async (req: any, res: Response) => {
     // No project scope — restrict to projects the caller can access
     const projectService = req.scope.resolve("projectModuleService") as any
     const userId: string = req.user?.id
-    const roles: string[] = req.user?.roles ?? []
-    const isPrivileged = roles.includes("super-admin") || roles.includes("admin")
+    const isPrivileged = isGlobalAdmin(req)
 
     let accessibleProjectIds: string[]
 
@@ -176,7 +176,7 @@ export const POST = async (req: any, res: Response, next: NextFunction) => {
       if (validMentionIds.length > 0 && description) {
         const eventBus = req.scope.resolve("eventBus") as any
         eventBus.emit({
-          name: "issue.mentioned",
+          name: EVENTS.ISSUE_MENTIONED,
           data: {
             issue_id: issue.id,
             actor_id: req.user?.id ?? "system",

@@ -1,5 +1,6 @@
 import { MeridianService } from "@meridianjs/framework-utils"
 import type { MeridianContainer, MeridianConfig } from "@meridianjs/types"
+import { ROLES } from "@meridianjs/types"
 import bcrypt from "bcrypt"
 import jwt from "jsonwebtoken"
 import { randomBytes, randomUUID } from "crypto"
@@ -86,12 +87,12 @@ export class AuthModuleService extends MeridianService({}) {
 
     // Role is determined internally: first user → super-admin, else member.
     // The _inviteRole field is only used by the controlled invite acceptance flow.
-    let role: UserRole = "member"
+    let role: UserRole = ROLES.MEMBER
     if (input._inviteRole) {
       role = input._inviteRole
     } else {
       const [, userCount] = await userService.listAndCountUsers({}, { limit: 1 })
-      if (userCount === 0) role = "super-admin"
+      if (userCount === 0) role = ROLES.SUPER_ADMIN
     }
 
     const user = await userService.createUser({
@@ -146,7 +147,7 @@ export class AuthModuleService extends MeridianService({}) {
     await userService.recordLogin(user.id).catch(() => {})
 
     const permissions = await this.resolvePermissions(user.app_role_id)
-    const { token, jti, expiresAt } = this.signToken(user.id, null, [user.role ?? "member"], permissions, config.projectConfig.jwtSecret)
+    const { token, jti, expiresAt } = this.signToken(user.id, null, [user.role ?? ROLES.MEMBER], permissions, config.projectConfig.jwtSecret)
 
     await userService.createSession(jti, user.id, expiresAt).catch(() => {})
 
@@ -206,7 +207,7 @@ export class AuthModuleService extends MeridianService({}) {
       }
       await userService.recordLogin(user.id).catch(() => {})
       const permissions = await this.resolvePermissions(user.app_role_id)
-      const { token, jti, expiresAt } = this.signToken(user.id, null, [user.role ?? "member"], permissions, config.projectConfig.jwtSecret)
+      const { token, jti, expiresAt } = this.signToken(user.id, null, [user.role ?? ROLES.MEMBER], permissions, config.projectConfig.jwtSecret)
       await userService.createSession(jti, user.id, expiresAt).catch(() => {})
       return {
         user: { id: user.id, email: user.email, first_name: user.first_name ?? null, last_name: user.last_name ?? null },
@@ -217,13 +218,13 @@ export class AuthModuleService extends MeridianService({}) {
     // Step 3: create new user — only allowed if first user or via invite
     const invite = input.inviteRecord
 
-    let role: UserRole = "member"
+    let role: UserRole = ROLES.MEMBER
     if (invite) {
-      role = (invite.role as UserRole) ?? "member"
+      role = (invite.role as UserRole) ?? ROLES.MEMBER
     } else {
       const [, userCount] = await userService.listAndCountUsers({}, { limit: 1 })
       if (userCount === 0) {
-        role = "super-admin"
+        role = ROLES.SUPER_ADMIN
       } else if (!input.autoRegister) {
         // Not first user, no invite, and open registration not enabled — blocked
         throw Object.assign(
@@ -254,7 +255,7 @@ export class AuthModuleService extends MeridianService({}) {
       try {
         const workspaceMemberService = this.container.resolve<any>("workspaceMemberModuleService")
         // workspace_member.role only supports "admin" | "member" — map super-admin → admin
-        const wsRole = invite.role === "member" ? "member" : "admin"
+        const wsRole = invite.role === ROLES.MEMBER ? ROLES.MEMBER : ROLES.ADMIN
         await workspaceMemberService.ensureMember(invite.workspace_id, newUser.id, wsRole)
       } catch {
         // Non-fatal — user created, workspace membership assignment failed
@@ -285,7 +286,7 @@ export class AuthModuleService extends MeridianService({}) {
 
     // Validate that the role is one of the known roles — prevent injection
     const allowedRoles: UserRole[] = ["super-admin", "admin", "moderator", "member"]
-    const role: UserRole = (input.role && allowedRoles.includes(input.role)) ? input.role : "member"
+    const role: UserRole = (input.role && allowedRoles.includes(input.role)) ? input.role : ROLES.MEMBER
 
     const password_hash = await bcrypt.hash(input.password, BCRYPT_ROUNDS)
     const user = await userService.restoreUser(userId, {
@@ -389,7 +390,7 @@ export class AuthModuleService extends MeridianService({}) {
     }
 
     const permissions = await this.resolvePermissions(user.app_role_id)
-    const { token, jti, expiresAt } = this.signToken(user.id, null, [user.role ?? "member"], permissions, config.projectConfig.jwtSecret)
+    const { token, jti, expiresAt } = this.signToken(user.id, null, [user.role ?? ROLES.MEMBER], permissions, config.projectConfig.jwtSecret)
 
     await userService.createSession(jti, user.id, expiresAt).catch(() => {})
 

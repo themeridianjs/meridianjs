@@ -1,8 +1,9 @@
 import type { Response, NextFunction } from "express"
 import { requireRoles } from "@meridianjs/auth"
+import { ROLES } from "@meridianjs/types"
 
 export const POST = async (req: any, res: Response, next: NextFunction) => {
-  requireRoles("super-admin", "admin")(req, res, async () => {
+  requireRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN)(req, res, async () => {
     try {
       const userService = req.scope.resolve("userModuleService") as any
       const user = await userService.reactivateUser(req.params.id)

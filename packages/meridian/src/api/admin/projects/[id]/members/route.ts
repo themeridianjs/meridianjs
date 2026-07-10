@@ -1,5 +1,6 @@
 import type { Response, NextFunction } from "express"
 import { requirePermission } from "@meridianjs/auth"
+import { EVENTS, PROJECT_ROLES } from "@meridianjs/types"
 
 export const POST = async (req: any, res: Response, next: NextFunction) => {
   requirePermission("project:manage_access")(req, res, async () => {
@@ -23,10 +24,10 @@ export const POST = async (req: any, res: Response, next: NextFunction) => {
         return
       }
 
-      await projectMemberService.ensureProjectMember(project.id, user_id, role ?? "member")
+      await projectMemberService.ensureProjectMember(project.id, user_id, role ?? PROJECT_ROLES.MEMBER)
 
       await eventBus.emit({
-        name: "project.member_added",
+        name: EVENTS.PROJECT_MEMBER_ADDED,
         data: {
           project_id: project.id,
           project_name: project.name,
@@ -41,7 +42,7 @@ export const POST = async (req: any, res: Response, next: NextFunction) => {
         entity_type: "project", entity_id: project.id,
         actor_id: req.user?.id ?? "system", action: "member_added",
         workspace_id: project.workspace_id,
-        changes: { user_id: { from: null, to: user_id }, role: { from: null, to: role ?? "member" } },
+        changes: { user_id: { from: null, to: user_id }, role: { from: null, to: role ?? PROJECT_ROLES.MEMBER } },
       }).catch(() => {})
 
       res.status(201).json({ ok: true })

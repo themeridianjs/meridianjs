@@ -1,11 +1,12 @@
 import type { Response, NextFunction } from "express"
 import { requirePermission } from "@meridianjs/auth"
+import { ROLES } from "@meridianjs/types"
 
 const ROLE_RANK: Record<string, number> = {
-  "super-admin": 3,
-  "admin": 2,
+  [ROLES.SUPER_ADMIN]: 3,
+  [ROLES.ADMIN]: 2,
   "moderator": 1,
-  "member": 0,
+  [ROLES.MEMBER]: 0,
 }
 
 function actorRank(req: any): number {
@@ -23,7 +24,7 @@ export const PATCH = async (req: any, res: Response, next: NextFunction) => {
       const workspaceMemberService = req.scope.resolve("workspaceMemberModuleService") as any
       const { role } = req.body
 
-      if (!role || !["admin", "member"].includes(role)) {
+      if (!role || ![ROLES.ADMIN, ROLES.MEMBER].includes(role)) {
         res.status(400).json({ error: { message: "role must be 'admin' or 'member'" } })
         return
       }

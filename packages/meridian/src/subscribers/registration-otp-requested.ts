@@ -1,4 +1,5 @@
 import type { SubscriberArgs, SubscriberConfig } from "@meridianjs/types"
+import { EVENTS } from "@meridianjs/types"
 import { emailHtml, resolveTemplate } from "./_email-helper.js"
 
 interface RegistrationOtpRequestedData {
@@ -33,4 +34,4 @@ export default async function handler({ event, container }: SubscriberArgs<Regis
   }
 }
 
-export const config: SubscriberConfig = { event: "registration.otp_requested" }
+export const config: SubscriberConfig = { event: EVENTS.REGISTRATION_OTP_REQUESTED }

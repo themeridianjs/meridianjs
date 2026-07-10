@@ -1,5 +1,6 @@
 import type { Response } from "express"
 import { assertWorkspaceAdmin } from "../../../../utils/workspace-access.js"
+import { EVENTS, ROLES } from "@meridianjs/types"
 
 export const GET = async (req: any, res: Response) => {
   if (!await assertWorkspaceAdmin(req, res)) return
@@ -74,7 +75,7 @@ export const POST = async (req: any, res: Response) => {
 
   // Notify workspace admins
   const [wsMembers] = await workspaceMemberService.listAndCountWorkspaceMembers(
-    { workspace_id: req.params.id, role: "admin" },
+    { workspace_id: req.params.id, role: ROLES.ADMIN },
     { limit: 100 }
   )
 
@@ -107,7 +108,7 @@ export const POST = async (req: any, res: Response) => {
   // Emit event for subscriber (email + SSE broadcast)
   const eventBus = req.scope.resolve("eventBus") as any
   eventBus.emit({
-    name: "workspace.access_requested",
+    name: EVENTS.WORKSPACE_ACCESS_REQUESTED,
     data: {
       access_request_id: accessRequest.id,
       workspace_id: req.params.id,

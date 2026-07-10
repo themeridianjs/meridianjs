@@ -1,11 +1,12 @@
 import type { Response, NextFunction } from "express"
 import { requireRoles } from "@meridianjs/auth"
+import { ROLES } from "@meridianjs/types"
 
 const ROLE_RANK: Record<string, number> = {
-  "super-admin": 3,
-  "admin": 2,
+  [ROLES.SUPER_ADMIN]: 3,
+  [ROLES.ADMIN]: 2,
   "moderator": 1,
-  "member": 0,
+  [ROLES.MEMBER]: 0,
 }
 
 function actorRank(req: any): number {
@@ -15,7 +16,7 @@ function actorRank(req: any): number {
 
 /** DELETE /admin/users/:id/sessions — revoke all active sessions for a user (admin action). */
 export const DELETE = async (req: any, res: Response, next: NextFunction) => {
-  requireRoles("super-admin", "admin")(req, res, async () => {
+  requireRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN)(req, res, async () => {
     try {
       const userService = req.scope.resolve("userModuleService") as any
       const target = await userService.retrieveUser(req.params.id)
@@ -32,7 +33,7 @@ export const DELETE = async (req: any, res: Response, next: NextFunction) => {
       }
 
       await userService.revokeAllUserSessions(req.params.id)
-      res.json({ ok: true })
+      res.status(204).end()
     } catch (err) {
       next(err)
     }

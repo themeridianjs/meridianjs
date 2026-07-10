@@ -67,7 +67,7 @@ export function useRemoveAvatar() {
   const qc = useQueryClient()
   const { updateLocalUser } = useAuth()
   return useMutation({
-    mutationFn: () => api.delete<{ ok: boolean }>("/admin/users/me/avatar"),
+    mutationFn: () => api.delete<void>("/admin/users/me/avatar"),
     onSuccess: () => {
       updateLocalUser({ avatar_url: null })
       qc.invalidateQueries({ queryKey: ["me"] })
@@ -95,7 +95,7 @@ export function useSetPassword() {
 export function useUnlinkGoogle() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: () => api.delete<{ ok: boolean }>("/admin/users/me/google"),
+    mutationFn: () => api.delete<void>("/admin/users/me/google"),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["me"] })
     },

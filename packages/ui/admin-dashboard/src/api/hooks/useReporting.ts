@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query"
 import { api } from "../client"
+import { buildQuery } from "@/lib/buildQuery"
 import type { TimeLog } from "./useTimeLogs"
 
 interface ReportingTimeLogsResponse {
@@ -34,22 +35,22 @@ export const reportingKeys = {
 export function useReportingTimeLogs(filters: ReportingFilters, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: reportingKeys.timeLogs(filters),
-    queryFn: () => {
-      const params = new URLSearchParams()
-      Object.entries(filters).forEach(([k, v]) => {
-        if (!v) return
-        if ((k === "workspace_ids" || k === "user_ids" || k === "project_ids") && Array.isArray(v)) {
-          if (v.length > 0) params.set(k, v.join(","))
-        } else if (typeof v === "boolean") {
-          if (v) params.set(k, "true")
-        } else if (typeof v === "string") {
-          params.set(k, v)
-        } else if (typeof v === "number") {
-          params.set(k, String(v))
-        }
-      })
-      return api.get<ReportingTimeLogsResponse>(`/admin/reporting/time-logs?${params}`)
-    },
+    queryFn: () =>
+      api.get<ReportingTimeLogsResponse>(
+        `/admin/reporting/time-logs${buildQuery({
+          user_id: filters.user_id,
+          user_ids: filters.user_ids?.join(","),
+          project_id: filters.project_id,
+          project_ids: filters.project_ids?.join(","),
+          workspace_id: filters.workspace_id,
+          workspace_ids: filters.workspace_ids?.join(","),
+          from: filters.from,
+          to: filters.to,
+          limit: filters.limit || undefined,
+          offset: filters.offset || undefined,
+          org_scope: filters.org_scope || undefined,
+        })}`
+      ),
     enabled: options?.enabled !== false,
   })
 }

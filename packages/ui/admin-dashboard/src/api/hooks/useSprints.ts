@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { api } from "../client"
+import { buildQuery } from "@/lib/buildQuery"
 
 export interface Sprint {
   id: string
@@ -23,12 +24,10 @@ export const sprintKeys = {
 export function useSprints(projectId?: string) {
   return useQuery({
     queryKey: projectId ? sprintKeys.byProject(projectId) : sprintKeys.all,
-    queryFn: () => {
-      const url = projectId
-        ? `/admin/sprints?project_id=${projectId}`
-        : "/admin/sprints"
-      return api.get<{ sprints: Sprint[]; count: number }>(url)
-    },
+    queryFn: () =>
+      api.get<{ sprints: Sprint[]; count: number }>(
+        `/admin/sprints${buildQuery({ project_id: projectId })}`
+      ),
     select: (data) => data.sprints,
     enabled: !!projectId,
   })

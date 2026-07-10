@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { api } from "../client"
+import { buildQuery } from "@/lib/buildQuery"
 
 export interface User {
   id: string
@@ -27,14 +28,11 @@ export const userKeys = {
 
 export function useUsers(params?: { limit?: number; offset?: number; q?: string }) {
   const { limit = 20, offset = 0, q = "" } = params ?? {}
-  const searchParams = new URLSearchParams()
-  searchParams.set("limit", String(limit))
-  searchParams.set("offset", String(offset))
-  if (q) searchParams.set("q", q)
+  const qs = buildQuery({ limit, offset, q })
 
   return useQuery({
     queryKey: userKeys.list({ limit, offset, q }),
-    queryFn: () => api.get<PaginatedUsersResponse>(`/admin/users?${searchParams}`),
+    queryFn: () => api.get<PaginatedUsersResponse>(`/admin/users${qs}`),
     staleTime: 1000 * 60 * 5,
     placeholderData: (prev) => prev,
   })
@@ -67,14 +65,11 @@ const invitationKeys = {
 
 export function useOrgInvitations(params?: { limit?: number; offset?: number; q?: string }) {
   const { limit = 20, offset = 0, q = "" } = params ?? {}
-  const searchParams = new URLSearchParams()
-  searchParams.set("limit", String(limit))
-  searchParams.set("offset", String(offset))
-  if (q) searchParams.set("q", q)
+  const qs = buildQuery({ limit, offset, q })
 
   return useQuery({
     queryKey: invitationKeys.list({ limit, offset, q }),
-    queryFn: () => api.get<PaginatedInvitationsResponse>(`/admin/users/invitations?${searchParams}`),
+    queryFn: () => api.get<PaginatedInvitationsResponse>(`/admin/users/invitations${qs}`),
     staleTime: 1000 * 30,
     placeholderData: (prev) => prev,
   })

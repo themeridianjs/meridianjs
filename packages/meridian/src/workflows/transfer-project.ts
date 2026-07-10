@@ -5,6 +5,7 @@ import {
   WorkflowResponse,
 } from "@meridianjs/workflow-engine"
 import { emitEventStep } from "./emit-event.js"
+import { EVENTS, ROLES } from "@meridianjs/types"
 
 export interface TransferProjectInput {
   project_id: string
@@ -114,7 +115,7 @@ const adjustMembershipsStep = createStep(
     for (const member of members) {
       if (carryOverSet.has(member.user_id)) {
         // Ensure carried-over members exist in target workspace
-        await workspaceMemberSvc.ensureMember(targetWorkspaceId, member.user_id, "member")
+        await workspaceMemberSvc.ensureMember(targetWorkspaceId, member.user_id, ROLES.MEMBER)
       } else {
         // Remove members not carried over from project
         await projectMemberSvc.removeProjectMember(projectId, member.user_id)
@@ -187,7 +188,7 @@ export const transferProjectWorkflow = createWorkflow(
     await adjustMembershipsStep(withIssues)
     await logTransferActivityStep({ project: transferred.project, actor_id: input.actor_id, original_workspace_id: transferred.original_workspace_id })
     await emitEventStep({
-      name: "project.transferred",
+      name: EVENTS.PROJECT_TRANSFERRED,
       data: { project_id: transferred.project.id, workspace_id: transferred.project.workspace_id, actor_id: input.actor_id ?? "system" },
     })
     return new WorkflowResponse(transferred.project)

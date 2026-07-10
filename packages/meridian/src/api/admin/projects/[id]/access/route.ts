@@ -1,5 +1,6 @@
 import type { Response } from "express"
 import { hasProjectAccess } from "../../../../utils/project-access.js"
+import { PROJECT_ROLES } from "@meridianjs/types"
 
 export const GET = async (req: any, res: Response) => {
   const projectMemberService = req.scope.resolve("projectMemberModuleService") as any
@@ -28,7 +29,7 @@ export const GET = async (req: any, res: Response) => {
   // before ensureProjectMember was introduced, and acts as a defensive guarantee)
   try {
     if (project?.owner_id) {
-      await projectMemberService.ensureProjectMember(projectId, project.owner_id, "manager")
+      await projectMemberService.ensureProjectMember(projectId, project.owner_id, PROJECT_ROLES.MANAGER)
     }
   } catch { /* project may not exist or owner already a member */ }
 

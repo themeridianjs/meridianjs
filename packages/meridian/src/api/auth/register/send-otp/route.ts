@@ -2,6 +2,7 @@ import { z } from "zod"
 import type { Response } from "express"
 import { generateAndStoreOtp } from "../_otp-store.js"
 import { validateEmailDomain } from "../_domain-check.js"
+import { EVENTS } from "@meridianjs/types"
 
 const schema = z.object({
   email: z.string().email(),
@@ -54,7 +55,7 @@ export const POST = async (req: any, res: Response) => {
 
   try {
     const eventBus = req.scope.resolve("eventBus") as any
-    await eventBus.emit({ name: "registration.otp_requested", data: { email, otp } })
+    await eventBus.emit({ name: EVENTS.REGISTRATION_OTP_REQUESTED, data: { email, otp } })
   } catch {
     // Non-fatal — OTP is stored, email may not send
   }

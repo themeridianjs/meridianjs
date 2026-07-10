@@ -1,4 +1,5 @@
 import type { SubscriberArgs, SubscriberConfig } from "@meridianjs/types"
+import { EVENTS } from "@meridianjs/types"
 import { emailHtml, resolveTemplate } from "./_email-helper.js"
 
 interface WorkspaceMemberAddedData {
@@ -45,4 +46,4 @@ export default async function handler({ event, container }: SubscriberArgs<Works
   }
 }
 
-export const config: SubscriberConfig = { event: "workspace.member_added" }
+export const config: SubscriberConfig = { event: EVENTS.WORKSPACE_MEMBER_ADDED }

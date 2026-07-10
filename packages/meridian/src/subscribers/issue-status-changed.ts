@@ -1,4 +1,5 @@
 import type { SubscriberArgs, SubscriberConfig } from "@meridianjs/types"
+import { EVENTS } from "@meridianjs/types"
 import { sseManager } from "@meridianjs/framework"
 
 interface IssueStatusChangedData {
@@ -18,4 +19,4 @@ export default async function handler({ event }: SubscriberArgs<IssueStatusChang
   })
 }
 
-export const config: SubscriberConfig = { event: "issue.status_changed" }
+export const config: SubscriberConfig = { event: EVENTS.ISSUE_STATUS_CHANGED }

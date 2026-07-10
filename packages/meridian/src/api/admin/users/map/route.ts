@@ -1,6 +1,7 @@
 import type { Response, NextFunction } from "express"
 import type { UserModuleService } from "@meridianjs/user"
 import type { WorkspaceMemberModuleService } from "@meridianjs/workspace-member"
+import { isGlobalAdmin } from "../../../utils/project-access.js"
 
 /**
  * Lightweight endpoint that returns users with only the fields needed
@@ -10,9 +11,8 @@ import type { WorkspaceMemberModuleService } from "@meridianjs/workspace-member"
 export const GET = async (req: any, res: Response, next: NextFunction) => {
   try {
     const userService = req.scope.resolve("userModuleService") as UserModuleService
-    const roles: string[] = req.user?.roles ?? []
     const permissions: string[] = req.user?.permissions ?? []
-    const isPrivileged = roles.includes("super-admin") || roles.includes("admin") || permissions.includes("workspace:admin")
+    const isPrivileged = isGlobalAdmin(req) || permissions.includes("workspace:admin")
 
     let users: any[]
 
@@ -22,7 +22,7 @@ export const GET = async (req: any, res: Response, next: NextFunction) => {
       const workspaceMemberService = req.scope.resolve("workspaceMemberModuleService") as WorkspaceMemberModuleService
       const accessibleWsIds = await workspaceMemberService.getWorkspaceIdsForUser(req.user?.id)
       if (accessibleWsIds.length === 0) {
-        res.json({ users: [] })
+        res.json({ users: [], count: 0 })
         return
       }
       const wsMembers = await (workspaceMemberService as any).listWorkspaceMembers(
@@ -30,7 +30,7 @@ export const GET = async (req: any, res: Response, next: NextFunction) => {
       )
       const userIds = [...new Set((wsMembers as any[]).map((m: any) => m.user_id))]
       if (userIds.length === 0) {
-        res.json({ users: [] })
+        res.json({ users: [], count: 0 })
         return
       }
       const userMap = await (userService as any).listUsersByIds(userIds)
@@ -44,7 +44,7 @@ export const GET = async (req: any, res: Response, next: NextFunction) => {
       last_name: u.last_name,
       avatar_url: u.avatar_url ?? null,
     }))
-    res.json({ users: mapped })
+    res.json({ users: mapped, count: mapped.length })
   } catch (err) {
     next(err)
   }

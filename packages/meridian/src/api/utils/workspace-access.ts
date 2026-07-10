@@ -1,4 +1,6 @@
 import type { Response } from "express"
+import { ROLES } from "@meridianjs/types"
+import { isGlobalAdmin } from "./project-access.js"
 
 /**
  * Shared workspace access check. Verifies the workspace exists and the caller
@@ -14,8 +16,7 @@ export async function assertWorkspaceAccess(req: any, res: Response): Promise<bo
     return false
   }
 
-  const roles: string[] = req.user?.roles ?? []
-  const isPrivileged = roles.includes("super-admin") || roles.includes("admin")
+  const isPrivileged = isGlobalAdmin(req)
 
   if (workspace.is_private || !isPrivileged) {
     const membership = await workspaceMemberService.getMembership(req.params.id, req.user?.id)
@@ -40,12 +41,10 @@ export async function assertWorkspaceAdmin(req: any, res: Response): Promise<boo
     return false
   }
 
-  const roles: string[] = req.user?.roles ?? []
-  const isGlobalAdmin = roles.includes("super-admin") || roles.includes("admin")
-  if (isGlobalAdmin) return true
+  if (isGlobalAdmin(req)) return true
 
   const membership = await workspaceMemberService.getMembership(req.params.id, req.user?.id)
-  if (!membership || membership.role !== "admin") {
+  if (!membership || membership.role !== ROLES.ADMIN) {
     res.status(403).json({ error: { message: "Workspace admin access required" } })
     return false
   }
@@ -54,7 +53,7 @@ export async function assertWorkspaceAdmin(req: any, res: Response): Promise<boo
 
 export function isSuperAdminOrgScope(req: any): boolean {
   const roles: string[] = req.user?.roles ?? []
-  return roles.includes("super-admin") && req.query.org_scope === "true"
+  return roles.includes(ROLES.SUPER_ADMIN) && req.query.org_scope === "true"
 }
 
 /**

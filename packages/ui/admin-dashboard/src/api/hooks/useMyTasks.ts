@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query"
 import { api } from "../client"
+import { buildQuery } from "@/lib/buildQuery"
 import type { Issue } from "./useIssues"
 
 export interface MyTaskIssue extends Issue {
@@ -29,15 +30,16 @@ export const myTasksKeys = {
 export function useMyTasks(filters?: MyTasksFilters) {
   return useQuery({
     queryKey: myTasksKeys.filtered(filters),
-    queryFn: () => {
-      const params = new URLSearchParams()
-      params.set("limit", "200")
-      if (filters?.workspace_id?.length) params.set("workspace_id", filters.workspace_id.join(","))
-      if (filters?.priority?.length) params.set("priority", filters.priority.join(","))
-      if (filters?.type?.length) params.set("type", filters.type.join(","))
-      if (filters?.category?.length) params.set("category", filters.category.join(","))
-      return api.get<MyTasksResponse>(`/admin/my/tasks?${params}`)
-    },
+    queryFn: () =>
+      api.get<MyTasksResponse>(
+        `/admin/my/tasks${buildQuery({
+          limit: 200,
+          workspace_id: filters?.workspace_id?.join(","),
+          priority: filters?.priority?.join(","),
+          type: filters?.type?.join(","),
+          category: filters?.category?.join(","),
+        })}`
+      ),
     select: (data) => data.issues,
   })
 }

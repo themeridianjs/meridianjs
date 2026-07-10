@@ -11,6 +11,7 @@ export {
   EnumProperty,
 } from "./dml.js"
 export { MeridianService } from "./service-factory.js"
+export type { MeridianServiceInstance, GeneratedCrudMethods } from "./service-factory.js"
 export { dmlToEntitySchema, createRepository, createModuleOrm, closeAllOrms, resetOrmCache } from "./orm-utils.js"
 export type { MeridianRepository } from "./orm-utils.js"
 export { runInOrmContext, getContextEm, hasOrmContext } from "./orm-context.js"

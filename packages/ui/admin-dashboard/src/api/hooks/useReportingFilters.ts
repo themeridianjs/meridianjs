@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query"
 import { api } from "../client"
+import { buildQuery } from "@/lib/buildQuery"
 
 export interface ReportingMember {
   id: string
@@ -13,13 +14,14 @@ export function useReportingMembers(workspaceIds: string[], projectIds: string[]
   const orgScope = options?.orgScope ?? false
   return useQuery({
     queryKey: ["reporting", "members", workspaceIds.join(","), projectIds.join(","), orgScope],
-    queryFn: () => {
-      const params = new URLSearchParams()
-      if (workspaceIds.length) params.set("workspace_ids", workspaceIds.join(","))
-      if (projectIds.length) params.set("project_ids", projectIds.join(","))
-      if (orgScope) params.set("org_scope", "true")
-      return api.get<{ members: ReportingMember[] }>(`/admin/reporting/members?${params}`)
-    },
+    queryFn: () =>
+      api.get<{ members: ReportingMember[] }>(
+        `/admin/reporting/members${buildQuery({
+          workspace_ids: workspaceIds.join(","),
+          project_ids: projectIds.join(","),
+          org_scope: orgScope || undefined,
+        })}`
+      ),
     select: (data) => data.members,
   })
 }

@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label"
 import { toast } from "sonner"
 import { Camera, Trash2, User, CheckCircle2, XCircle, Eye, EyeOff, KeyRound } from "lucide-react"
 import { BASE_URL } from "@/api/client"
+import { buildQuery } from "@/lib/buildQuery"
 
 // ── Google icon ───────────────────────────────────────────────────────────────
 
@@ -118,7 +119,7 @@ export function ProfilePage() {
     }
     // Full-page navigation so the server's Set-Cookie (nonce) is stored correctly.
     // Cross-origin XHR silently drops Set-Cookie, causing CSRF failures.
-    window.location.href = `${BASE_URL}/auth/google/link?token=${encodeURIComponent(token)}`
+    window.location.href = `${BASE_URL}/auth/google/link${buildQuery({ token })}`
   }
 
   const handleUnlinkGoogle = () => {

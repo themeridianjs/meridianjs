@@ -1,4 +1,5 @@
 import type { SubscriberArgs, SubscriberConfig } from "@meridianjs/types"
+import { EVENTS } from "@meridianjs/types"
 import { sseManager } from "@meridianjs/framework"
 
 interface WorkspaceAccessRequestCancelledData {
@@ -17,4 +18,4 @@ export default async function handler({ event }: SubscriberArgs<WorkspaceAccessR
   })
 }
 
-export const config: SubscriberConfig = { event: "workspace.access_request_cancelled" }
+export const config: SubscriberConfig = { event: EVENTS.WORKSPACE_ACCESS_REQUEST_CANCELLED }

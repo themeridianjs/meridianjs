@@ -1,14 +1,13 @@
 import type { Response } from "express"
 import { getAccessibleWorkspaceIds } from "../../../utils/workspace-access.js"
+import { isGlobalAdmin } from "../../../utils/project-access.js"
+import { ROLES } from "@meridianjs/types"
 
 export const GET = async (req: any, res: Response) => {
   // ── Auth: require privileged caller ──
   const roles: string[] = req.user?.roles ?? []
   const permissions: string[] = req.user?.permissions ?? []
-  const isPrivileged =
-    roles.includes("super-admin") ||
-    roles.includes("admin") ||
-    permissions.includes("workspace:admin")
+  const isPrivileged = isGlobalAdmin(req) || permissions.includes("workspace:admin")
 
   if (!isPrivileged) {
     res.status(403).json({ error: { message: "Forbidden — admin access required" } })
@@ -35,7 +34,7 @@ export const GET = async (req: any, res: Response) => {
   const offset = Number(req.query.offset) || 0
 
   // ── Workspace scoping ──
-  const isSuperAdmin = roles.includes("super-admin")
+  const isSuperAdmin = roles.includes(ROLES.SUPER_ADMIN)
   const issueFilters: Record<string, unknown> = {
     assignee_ids: { $contains: targetUserId },
   }
@@ -78,10 +77,10 @@ export const GET = async (req: any, res: Response) => {
   )
 
   // ── Determine viewer's accessible projects ──
-  const isGlobalAdmin = roles.includes("super-admin") || roles.includes("admin")
+  const globalAdmin = isGlobalAdmin(req)
   let viewerAccessibleProjectIds: Set<string>
 
-  if (isGlobalAdmin) {
+  if (globalAdmin) {
     // Global admins can see all projects
     viewerAccessibleProjectIds = new Set(issues.map((i: any) => i.project_id))
   } else {

@@ -1,4 +1,5 @@
 import type { SubscriberArgs, SubscriberConfig } from "@meridianjs/types"
+import { EVENTS } from "@meridianjs/types"
 import { sseManager } from "@meridianjs/framework"
 
 interface ProjectAccessRequestedData {
@@ -19,4 +20,4 @@ export default async function handler({ event }: SubscriberArgs<ProjectAccessReq
   sseManager.broadcast(data.workspace_id, "notification.created", {})
 }
 
-export const config: SubscriberConfig = { event: "project.access_requested" }
+export const config: SubscriberConfig = { event: EVENTS.PROJECT_ACCESS_REQUESTED }

@@ -3,6 +3,8 @@ import { requirePermission } from "@meridianjs/auth"
 import fs from "node:fs/promises"
 import path from "node:path"
 import { assertIssueAccess } from "../../../../../utils/issue-access.js"
+import { PROJECT_ROLES } from "@meridianjs/types"
+import { isGlobalAdmin } from "../../../../../utils/project-access.js"
 
 export const DELETE = async (req: any, res: Response) => {
   requirePermission("issue:update")(req, res, async () => {
@@ -23,7 +25,7 @@ export const DELETE = async (req: any, res: Response) => {
 
     // Verify caller uploaded the attachment or has manager/admin role
     const roles: string[] = req.user?.roles ?? []
-    const isPrivileged = roles.includes("super-admin") || roles.includes("admin") || roles.includes("manager")
+    const isPrivileged = isGlobalAdmin(req) || roles.includes(PROJECT_ROLES.MANAGER)
     if (!isPrivileged && attachment.uploader_id !== req.user?.id) {
       res.status(403).json({ error: { message: "Forbidden" } })
       return

@@ -1,5 +1,7 @@
 import type { Response, NextFunction } from "express"
 import { requirePermission } from "@meridianjs/auth"
+import { ROLES } from "@meridianjs/types"
+import { isGlobalAdmin } from "../../utils/project-access.js"
 
 export const GET = async (req: any, res: Response) => {
   const workspaceService = req.scope.resolve("workspaceModuleService") as any
@@ -8,7 +10,7 @@ export const GET = async (req: any, res: Response) => {
   const offset = Number(req.query.offset) || 0
 
   const roles: string[] = req.user?.roles ?? []
-  const isPrivileged = roles.includes("super-admin") || roles.includes("admin")
+  const isPrivileged = isGlobalAdmin(req)
 
   // Always fetch the user's workspace memberships (needed for private workspace filtering)
   const userWorkspaceIds = await workspaceMemberService.getWorkspaceIdsForUser(req.user.id)
@@ -16,7 +18,7 @@ export const GET = async (req: any, res: Response) => {
   if (isPrivileged) {
     const [workspaces, count] = await workspaceService.listAndCountWorkspaces({}, { limit, offset })
     // Super-admin org-scope bypass: return all workspaces unfiltered
-    if (roles.includes("super-admin") && req.query.org_scope === "true") {
+    if (roles.includes(ROLES.SUPER_ADMIN) && req.query.org_scope === "true") {
       res.json({ workspaces, count, limit, offset })
       return
     }
@@ -78,7 +80,7 @@ export const POST = async (req: any, res: Response, next: NextFunction) => {
 
       // Auto-create workspace membership for the creator (admin role)
       if (req.user?.id) {
-        await workspaceMemberService.ensureMember(workspace.id, req.user.id, "admin")
+        await workspaceMemberService.ensureMember(workspace.id, req.user.id, ROLES.ADMIN)
 
         // Assign "Workspace Admin" app role to the creator
         try {

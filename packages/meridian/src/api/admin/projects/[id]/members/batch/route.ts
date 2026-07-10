@@ -1,5 +1,6 @@
 import type { Response, NextFunction } from "express"
 import { requirePermission } from "@meridianjs/auth"
+import { EVENTS, PROJECT_ROLES } from "@meridianjs/types"
 
 export const POST = async (req: any, res: Response, next: NextFunction) => {
   requirePermission("project:manage_access")(req, res, async () => {
@@ -25,7 +26,7 @@ export const POST = async (req: any, res: Response, next: NextFunction) => {
         return
       }
 
-      const memberRole = role ?? "member"
+      const memberRole = role ?? PROJECT_ROLES.MEMBER
       let added = 0
       let skipped = 0
 
@@ -39,7 +40,7 @@ export const POST = async (req: any, res: Response, next: NextFunction) => {
         }
 
         eventBus.emit({
-          name: "project.member_added",
+          name: EVENTS.PROJECT_MEMBER_ADDED,
           data: {
             project_id: project.id,
             project_name: project.name,

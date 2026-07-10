@@ -2,6 +2,7 @@ import type { Response } from "express"
 import { requirePermission } from "@meridianjs/auth"
 import { createInvitationWorkflow } from "../../../../../workflows/create-invitation.js"
 import { assertWorkspaceAccess } from "../../../../utils/workspace-access.js"
+import { ROLES } from "@meridianjs/types"
 
 export const GET = async (req: any, res: Response) => {
   if (!await assertWorkspaceAccess(req, res)) return
@@ -18,20 +19,20 @@ export const POST = async (req: any, res: Response) => {
     if (!await assertWorkspaceAccess(req, res)) return
     const { email, role, app_role_id } = req.body
 
-  if (!role || !["super-admin", "admin", "member"].includes(role)) {
+  if (!role || ![ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MEMBER].includes(role)) {
     res.status(400).json({ error: { message: "role must be 'super-admin', 'admin', or 'member'" } })
     return
   }
 
   // Privilege check: only admins/super-admins can invite admins; only super-admins can invite super-admins
   const callerRoles: string[] = req.user?.roles ?? []
-  if (role === "super-admin") {
-    if (!callerRoles.includes("super-admin")) {
+  if (role === ROLES.SUPER_ADMIN) {
+    if (!callerRoles.includes(ROLES.SUPER_ADMIN)) {
       res.status(403).json({ error: { message: "Only super-admins can invite users with the super-admin role" } })
       return
     }
-  } else if (role !== "member") {
-    if (!callerRoles.includes("super-admin") && !callerRoles.includes("admin")) {
+  } else if (role !== ROLES.MEMBER) {
+    if (!callerRoles.includes(ROLES.SUPER_ADMIN) && !callerRoles.includes(ROLES.ADMIN)) {
       res.status(403).json({ error: { message: "Only admins can invite users with elevated roles" } })
       return
     }

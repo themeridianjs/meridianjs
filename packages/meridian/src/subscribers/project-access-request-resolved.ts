@@ -1,4 +1,5 @@
 import type { SubscriberArgs, SubscriberConfig } from "@meridianjs/types"
+import { EVENTS } from "@meridianjs/types"
 import { sseManager } from "@meridianjs/framework"
 import { buildEmail, buildProjectUrl, resolveTemplate } from "./_email-helper.js"
 
@@ -66,4 +67,4 @@ export default async function handler({ event, container }: SubscriberArgs<Proje
   }
 }
 
-export const config: SubscriberConfig = { event: "project.access_request_resolved" }
+export const config: SubscriberConfig = { event: EVENTS.PROJECT_ACCESS_REQUEST_RESOLVED }

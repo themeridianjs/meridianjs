@@ -53,5 +53,5 @@ export const DELETE = async (req: any, res: Response) => {
 
   if (existing.avatar_url) await deleteUpload(req, existing.avatar_url)
   await userService.updateUser(userId, { avatar_url: null })
-  res.json({ ok: true })
+  res.status(204).end()
 }

@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query"
 import { api } from "../client"
+import { buildQuery } from "@/lib/buildQuery"
 import type { ProjectStatus } from "./useProjectStatuses"
 import type { Issue } from "./useIssues"
 
@@ -30,11 +31,11 @@ export function usePublicProject(token: string) {
 }
 
 export function usePublicIssues(token: string, filters: PublicIssueFilters = {}) {
-  const params = new URLSearchParams()
-  if (filters.status) params.set("status", filters.status)
-  if (filters.priority) params.set("priority", filters.priority)
-  if (filters.search) params.set("search", filters.search)
-  const qs = params.toString() ? `?${params.toString()}` : ""
+  const qs = buildQuery({
+    status: filters.status,
+    priority: filters.priority,
+    search: filters.search,
+  })
 
   return useQuery({
     queryKey: ["public", "share", token, "issues", filters],

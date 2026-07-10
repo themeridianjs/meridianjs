@@ -1,589 +1,19 @@
-import { useState, useMemo } from "react"
-import { useParams, useNavigate } from "react-router-dom"
+import { useState } from "react"
+import { useParams } from "react-router-dom"
 import { useProjectByKey } from "@/api/hooks/useProjects"
-import { useIssues, useUpdateIssue, type Issue } from "@/api/hooks/useIssues"
+import { useIssues, type Issue } from "@/api/hooks/useIssues"
 import { useProjectStatuses, type ProjectStatus } from "@/api/hooks/useProjectStatuses"
-import { useSprints, type Sprint } from "@/api/hooks/useSprints"
-import { useTaskLists, useCreateTaskList, useUpdateTaskList, useDeleteTaskList, type TaskList } from "@/api/hooks/useTaskLists"
-import { useProjectAccess } from "@/api/hooks/useProjectAccess"
+import { useSprints } from "@/api/hooks/useSprints"
+import { useTaskLists, useUpdateTaskList, useDeleteTaskList } from "@/api/hooks/useTaskLists"
 import { IssueDetail } from "@/components/issues/IssueDetail"
 import { CreateIssueDialog } from "@/components/issues/CreateIssueDialog"
-import { AssigneeSelector } from "@/components/issues/AssigneeSelector"
-import { Button } from "@/components/ui/button"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Input } from "@/components/ui/input"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Command, CommandGroup, CommandItem, CommandList } from "@/components/ui/command"
-import { Calendar } from "@/components/ui/calendar"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import {
-  ISSUE_STATUS_LABELS,
-  ISSUE_PRIORITY_LABELS,
-  ISSUE_PRIORITY_COLORS,
-} from "@/lib/constants"
-import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
-import {
-  Plus,
-  Search,
-  ArrowUp,
-  ArrowDown,
-  Minus,
-  Zap,
-  Circle,
-  ExternalLink,
-  Check,
-  Calendar as CalendarIcon,
-  X,
-  Layers,
-  ChevronRight,
-  ChevronDown,
-  MoreHorizontal,
-  Pencil,
-  Trash2,
-  ListTree,
-} from "lucide-react"
-import { cn } from "@/lib/utils"
-import { format } from "date-fns"
+import { IssuesToolbar } from "@/components/project-issues/IssuesToolbar"
+import { IssuesFilterBar } from "@/components/project-issues/IssuesFilterBar"
+import { IssuesTable } from "@/components/project-issues/IssuesTable"
+import { MobileIssuesList } from "@/components/project-issues/MobileIssuesList"
+import { ISSUE_STATUS_LABELS } from "@/lib/constants"
 import { toast } from "sonner"
 import { WidgetZone } from "@/components/WidgetZone"
-
-// ─── PriorityIcon ─────────────────────────────────────────────────────────────
-
-const PriorityIcon = ({ priority, className }: { priority: string; className?: string }) => {
-  const cls = cn("h-3.5 w-3.5 shrink-0", ISSUE_PRIORITY_COLORS[priority], className)
-  switch (priority) {
-    case "urgent": return <Zap className={cls} />
-    case "high": return <ArrowUp className={cls} />
-    case "medium": return <Minus className={cls} />
-    case "low": return <ArrowDown className={cls} />
-    default: return <Circle className={cn("h-3.5 w-3.5 shrink-0 text-zinc-300", className)} />
-  }
-}
-
-const GRID = "grid-cols-[110px_250px_150px_120px_130px_140px_130px_32px]"
-
-// ─── IssueRow ─────────────────────────────────────────────────────────────────
-
-interface IssueRowProps {
-  issue: Issue
-  projectId: string
-  statuses: ProjectStatus[]
-  statusLabels: Record<string, string>
-  statusColorMap: Record<string, string> | null
-  sprints: Sprint[]
-  workspace: string
-  projectKey: string
-  onOpen: (issue: Issue) => void
-  isChild?: boolean
-  depth?: number
-  children?: Issue[]
-  childrenMap?: Record<string, Issue[]>
-  onAddChild?: (parentId: string) => void
-}
-
-function IssueRow({
-  issue,
-  projectId,
-  statuses,
-  statusLabels,
-  statusColorMap,
-  sprints,
-  workspace,
-  projectKey,
-  onOpen,
-  isChild = false,
-  depth = 0,
-  children = [],
-  childrenMap,
-  onAddChild,
-}: IssueRowProps) {
-  const navigate = useNavigate()
-  const [openPopover, setOpenPopover] = useState<"status" | "priority" | "due" | "sprint" | null>(null)
-  const [expanded, setExpanded] = useState(false)
-  const update = useUpdateIssue(issue.id, projectId)
-  const { data: access } = useProjectAccess(projectId)
-  const projectUsers = useMemo(
-    () => access ? access.members.filter(m => m.user).map(m => m.user!) : undefined,
-    [access]
-  )
-
-  function save(data: { status?: string; priority?: string; due_date?: string | null; sprint_id?: string | null; assignee_ids?: string[] }) {
-    update.mutate(data as any)
-    setOpenPopover(null)
-  }
-
-  const statusColor = statusColorMap?.[issue.status] ?? "#94a3b8"
-  const activeSprint = sprints.find((s) => s.id === issue.sprint_id)
-  const hasChildren = children.length > 0
-
-  return (
-    <>
-      <div
-        onClick={() => onOpen(issue)}
-        className={cn(
-          `group grid ${GRID} items-center py-3`,
-          "hover:bg-[#f9fafb] dark:hover:bg-muted/30 cursor-pointer transition-colors",
-          isChild && "bg-zinc-50/80 dark:bg-zinc-800/30",
-          update.isPending && "opacity-70"
-        )}
-      >
-        {/* ID */}
-        <span
-          className={cn(
-            "text-xs font-mono text-muted-foreground truncate",
-            "sticky left-0 z-10 transition-colors",
-            isChild
-              ? "bg-zinc-50/80 dark:bg-zinc-800/30 group-hover:bg-[#f9fafb] dark:group-hover:bg-muted/30"
-              : "bg-white dark:bg-card group-hover:bg-[#f9fafb] dark:group-hover:bg-muted/30",
-          )}
-          style={{ paddingLeft: `${1.5 + depth * 1.25}rem` }}
-        >
-          {issue.identifier}
-        </span>
-
-        {/* Title — with expand/collapse for children */}
-        <div className={cn(
-          "flex items-center gap-1 min-w-0 pr-3",
-          "sticky left-[110px] z-10 transition-colors",
-          isChild
-            ? "bg-zinc-50/80 dark:bg-zinc-800/30 group-hover:bg-[#f9fafb] dark:group-hover:bg-muted/30"
-            : "bg-white dark:bg-card group-hover:bg-[#f9fafb] dark:group-hover:bg-muted/30",
-        )}>
-          {hasChildren ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={(e) => { e.stopPropagation(); setExpanded(!expanded) }}
-                  className="shrink-0 text-muted-foreground hover:text-foreground transition-colors p-0.5 rounded"
-                >
-                  {expanded
-                    ? <ChevronDown className="h-3.5 w-3.5" />
-                    : <ChevronRight className="h-3.5 w-3.5" />}
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="top">{expanded ? "Collapse" : "Expand"}</TooltipContent>
-            </Tooltip>
-          ) : isChild ? (
-            <ListTree className="h-3 w-3 text-muted-foreground shrink-0" />
-          ) : (
-            <span className="w-4 shrink-0" />
-          )}
-          <span className={cn("text-sm text-foreground truncate", isChild && "text-primary")}>
-            {issue.title}
-          </span>
-          {hasChildren && (
-            <span className="shrink-0 flex items-center gap-0.5 ml-1 text-[10px] font-medium text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/50 px-1 py-0.5 rounded">
-              <ListTree className="h-2.5 w-2.5" />
-              {children.length}
-            </span>
-          )}
-        </div>
-
-        {/* ── Status ── */}
-        <div onClick={(e) => e.stopPropagation()}>
-          <Popover open={openPopover === "status"} onOpenChange={(o) => setOpenPopover(o ? "status" : null)}>
-            <PopoverTrigger asChild>
-              <button
-                type="button"
-                className="flex items-center gap-1.5 max-w-full px-1.5 py-1 rounded hover:bg-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              >
-                <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: statusColor }} />
-                <span className="text-xs text-primary truncate">
-                  {statusLabels[issue.status] ?? issue.status}
-                </span>
-              </button>
-            </PopoverTrigger>
-            <PopoverContent className="w-52 p-1" align="start" onClick={(e) => e.stopPropagation()}>
-              <Command>
-                <CommandList>
-                  <CommandGroup>
-                    {statuses.map((s) => (
-                      <CommandItem
-                        key={s.key}
-                        value={s.name}
-                        onSelect={() => save({ status: s.key })}
-                        className="flex items-center gap-2 py-1.5 px-2 cursor-pointer"
-                      >
-                        <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: s.color }} />
-                        <span className="text-xs flex-1">{s.name}</span>
-                        {issue.status === s.key && <Check className="h-3.5 w-3.5 text-indigo-500" />}
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
-        </div>
-
-        {/* ── Priority ── */}
-        <div onClick={(e) => e.stopPropagation()}>
-          <Popover open={openPopover === "priority"} onOpenChange={(o) => setOpenPopover(o ? "priority" : null)}>
-            <PopoverTrigger asChild>
-              <button
-                type="button"
-                className="flex items-center gap-1.5 px-1.5 py-1 rounded hover:bg-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              >
-                <PriorityIcon priority={issue.priority} />
-                <span className="text-xs text-primary">
-                  {ISSUE_PRIORITY_LABELS[issue.priority] ?? issue.priority}
-                </span>
-              </button>
-            </PopoverTrigger>
-            <PopoverContent className="w-44 p-1" align="start" onClick={(e) => e.stopPropagation()}>
-              <Command>
-                <CommandList>
-                  <CommandGroup>
-                    {Object.entries(ISSUE_PRIORITY_LABELS).map(([key, label]) => (
-                      <CommandItem
-                        key={key}
-                        value={label}
-                        onSelect={() => save({ priority: key })}
-                        className="flex items-center gap-2 py-1.5 px-2 cursor-pointer"
-                      >
-                        <PriorityIcon priority={key} />
-                        <span className="text-xs flex-1">{label}</span>
-                        {issue.priority === key && <Check className="h-3.5 w-3.5 text-indigo-500" />}
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
-        </div>
-
-        {/* ── Sprint ── */}
-        <div onClick={(e) => e.stopPropagation()}>
-          <Popover open={openPopover === "sprint"} onOpenChange={(o) => setOpenPopover(o ? "sprint" : null)}>
-            <PopoverTrigger asChild>
-              <button
-                type="button"
-                className="flex items-center gap-1.5 px-1.5 py-1 rounded hover:bg-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-ring max-w-full"
-              >
-                <Layers className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                <span className={cn("text-xs truncate", activeSprint ? "text-foreground" : "text-muted-foreground")}>
-                  {activeSprint?.name ?? "No sprint"}
-                </span>
-              </button>
-            </PopoverTrigger>
-            <PopoverContent className="w-56 p-1" align="start" onClick={(e) => e.stopPropagation()}>
-              <Command>
-                <CommandList>
-                  <CommandGroup>
-                    <CommandItem
-                      value="no-sprint"
-                      onSelect={() => save({ sprint_id: null })}
-                      className="flex items-center gap-2 py-1.5 px-2 cursor-pointer"
-                    >
-                      <X className="h-3.5 w-3.5 text-muted-foreground" />
-                      <span className="text-xs flex-1 text-muted-foreground">No sprint</span>
-                      {!issue.sprint_id && <Check className="h-3.5 w-3.5 text-indigo-500" />}
-                    </CommandItem>
-                    {sprints.filter((s) => s.status !== "completed").map((s) => (
-                      <CommandItem
-                        key={s.id}
-                        value={s.name}
-                        onSelect={() => save({ sprint_id: s.id })}
-                        className="flex items-center gap-2 py-1.5 px-2 cursor-pointer"
-                      >
-                        <Layers className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs truncate">{s.name}</p>
-                          {(s.start_date || s.end_date) && (
-                            <p className="text-[10px] text-muted-foreground">
-                              {s.start_date ? format(new Date(s.start_date), "MMM d") : "—"}
-                              {" → "}
-                              {s.end_date ? format(new Date(s.end_date), "MMM d") : "—"}
-                            </p>
-                          )}
-                        </div>
-                        {issue.sprint_id === s.id && <Check className="h-3.5 w-3.5 text-indigo-500 shrink-0" />}
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
-        </div>
-
-        {/* ── Due Date ── */}
-        <div onClick={(e) => e.stopPropagation()}>
-          <Popover open={openPopover === "due"} onOpenChange={(o) => setOpenPopover(o ? "due" : null)}>
-            <PopoverTrigger asChild>
-              <button
-                type="button"
-                className="flex items-center gap-1.5 px-1.5 py-1 rounded hover:bg-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              >
-                <CalendarIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                <span className={cn("text-xs", issue.due_date ? "text-foreground" : "text-muted-foreground")}>
-                  {issue.due_date ? format(new Date(issue.due_date), "MMM d, yyyy") : "No due date"}
-                </span>
-              </button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start" onClick={(e) => e.stopPropagation()}>
-              <Calendar
-                mode="single"
-                selected={issue.due_date ? new Date(issue.due_date) : undefined}
-                onSelect={(date) => save({ due_date: date ? format(date, "yyyy-MM-dd") : null })}
-                initialFocus
-              />
-              {issue.due_date && (
-                <div className="border-t px-3 py-2">
-                  <button
-                    onClick={() => save({ due_date: null })}
-                    className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors"
-                  >
-                    <X className="h-3 w-3" />
-                    Clear date
-                  </button>
-                </div>
-              )}
-            </PopoverContent>
-          </Popover>
-        </div>
-
-        {/* ── Assignees ── */}
-        <div onClick={(e) => e.stopPropagation()}>
-          <AssigneeSelector
-            value={issue.assignee_ids ?? []}
-            onChange={(ids) => update.mutate({ assignee_ids: ids } as any)}
-            users={projectUsers}
-          />
-        </div>
-
-        {/* External link + add child */}
-        <div className="flex items-center gap-1 pr-6" onClick={(e) => e.stopPropagation()}>
-          {!isChild && onAddChild && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={() => onAddChild(issue.id)}
-                  className="p-1 rounded hover:bg-border text-muted-foreground hover:text-foreground"
-                >
-                  <ListTree className="h-3.5 w-3.5" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="top">Add child issue</TooltipContent>
-            </Tooltip>
-          )}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                onClick={() => navigate(`/${workspace}/projects/${projectKey}/issues/${issue.id}`)}
-                className="p-1 rounded hover:bg-border text-muted-foreground hover:text-foreground"
-              >
-                <ExternalLink className="h-3.5 w-3.5" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="top">Open full page</TooltipContent>
-          </Tooltip>
-        </div>
-      </div>
-
-      {/* Children (expanded) */}
-      {expanded && children.map((child) => (
-        <IssueRow
-          key={child.id}
-          issue={child}
-          projectId={projectId}
-          statuses={statuses}
-          statusLabels={statusLabels}
-          statusColorMap={statusColorMap}
-          sprints={sprints}
-          workspace={workspace}
-          projectKey={projectKey}
-          onOpen={onOpen}
-          isChild
-          depth={depth + 1}
-          children={childrenMap?.[child.id] ?? []}
-          childrenMap={childrenMap}
-          onAddChild={onAddChild}
-        />
-      ))}
-    </>
-  )
-}
-
-// ─── TaskListGroup ─────────────────────────────────────────────────────────────
-
-interface TaskListGroupProps {
-  taskList: TaskList | null  // null = "No List" group
-  issues: Issue[]
-  childrenMap: Record<string, Issue[]>
-  projectId: string
-  statuses: ProjectStatus[]
-  statusLabels: Record<string, string>
-  statusColorMap: Record<string, string>
-  sprints: Sprint[]
-  workspace: string
-  projectKey: string
-  onOpen: (issue: Issue) => void
-  onAddIssue: (taskListId: string | null) => void
-  onAddChild: (parentId: string) => void
-  onRenameList?: (id: string, name: string) => void
-  onDeleteList?: (id: string) => void
-}
-
-function TaskListGroup({
-  taskList,
-  issues,
-  childrenMap,
-  projectId,
-  statuses,
-  statusLabels,
-  statusColorMap,
-  sprints,
-  workspace,
-  projectKey,
-  onOpen,
-  onAddIssue,
-  onAddChild,
-  onRenameList,
-  onDeleteList,
-}: TaskListGroupProps) {
-  const [collapsed, setCollapsed] = useState(false)
-  const [isRenaming, setIsRenaming] = useState(false)
-  const [renameValue, setRenameValue] = useState(taskList?.name ?? "")
-
-  const totalChildCount = issues.reduce((sum, i) => sum + (childrenMap[i.id]?.length ?? 0), 0)
-  const totalCount = issues.length + totalChildCount
-
-  const handleRenameSubmit = () => {
-    if (taskList && renameValue.trim() && onRenameList) {
-      onRenameList(taskList.id, renameValue.trim())
-    }
-    setIsRenaming(false)
-  }
-
-  return (
-    <div>
-      {/* Group header */}
-      <div className="flex items-center gap-2 px-6 py-2 bg-muted/20 border-b border-border group/header">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              onClick={() => setCollapsed(!collapsed)}
-              className="text-muted-foreground hover:text-foreground transition-colors"
-            >
-              {collapsed
-                ? <ChevronRight className="h-3.5 w-3.5" />
-                : <ChevronDown className="h-3.5 w-3.5" />}
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="right">{collapsed ? "Expand" : "Collapse"}</TooltipContent>
-        </Tooltip>
-
-        {taskList ? (
-          isRenaming ? (
-            <input
-              autoFocus
-              value={renameValue}
-              onChange={(e) => setRenameValue(e.target.value)}
-              onBlur={handleRenameSubmit}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleRenameSubmit()
-                if (e.key === "Escape") { setIsRenaming(false); setRenameValue(taskList.name) }
-              }}
-              className="text-xs font-semibold text-foreground bg-transparent border-b border-indigo-400 outline-none px-0.5"
-            />
-          ) : (
-            <span className="text-xs font-semibold text-foreground">{taskList.name}</span>
-          )
-        ) : (
-          <span className="text-xs font-semibold text-muted-foreground">No List</span>
-        )}
-
-        <span className="text-[11px] text-muted-foreground/60 font-mono">{totalCount}</span>
-
-        <div className="flex items-center gap-1 ml-auto">
-          <button
-            onClick={() => onAddIssue(taskList?.id ?? null)}
-            className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors px-1.5 py-0.5 rounded hover:bg-muted"
-          >
-            <Plus className="h-3 w-3" />
-            Add issue
-          </button>
-
-          {taskList && (
-            <DropdownMenu>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <DropdownMenuTrigger asChild>
-                    <button className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors">
-                      <MoreHorizontal className="h-3.5 w-3.5" />
-                    </button>
-                  </DropdownMenuTrigger>
-                </TooltipTrigger>
-                <TooltipContent side="top">More options</TooltipContent>
-              </Tooltip>
-              <DropdownMenuContent align="end" className="w-36">
-                <DropdownMenuItem
-                  className="text-xs gap-2 cursor-pointer"
-                  onClick={() => { setIsRenaming(true); setRenameValue(taskList.name) }}
-                >
-                  <Pencil className="h-3.5 w-3.5" />
-                  Rename
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  className="text-xs gap-2 cursor-pointer text-destructive focus:text-destructive"
-                  onClick={() => onDeleteList?.(taskList.id)}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                  Delete list
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-        </div>
-      </div>
-
-      {/* Issues */}
-      {!collapsed && (
-        <div className="divide-y divide-border/60">
-          {issues.length === 0 ? (
-            <div className="px-14 py-3 text-xs text-muted-foreground/50 italic">
-              No issues in this list
-            </div>
-          ) : (
-            issues.map((issue) => (
-              <IssueRow
-                key={issue.id}
-                issue={issue}
-                projectId={projectId}
-                statuses={statuses}
-                statusLabels={statusLabels}
-                statusColorMap={statusColorMap}
-                sprints={sprints}
-                workspace={workspace}
-                projectKey={projectKey}
-                onOpen={onOpen}
-                children={childrenMap[issue.id] ?? []}
-                childrenMap={childrenMap}
-                onAddChild={onAddChild}
-              />
-            ))
-          )}
-        </div>
-      )}
-    </div>
-  )
-}
-
-// ─── ProjectIssuesPage ────────────────────────────────────────────────────────
 
 interface CreateDialogState {
   open: boolean
@@ -592,12 +22,9 @@ interface CreateDialogState {
 }
 
 export function ProjectIssuesPage() {
-  const navigate = useNavigate()
   const { workspace, projectKey } = useParams<{ workspace: string; projectKey: string }>()
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null)
   const [createDialog, setCreateDialog] = useState<CreateDialogState>({ open: false })
-  const [newListName, setNewListName] = useState("")
-  const [showNewListInput, setShowNewListInput] = useState(false)
   const [search, setSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [priorityFilter, setPriorityFilter] = useState("all")
@@ -609,7 +36,6 @@ export function ProjectIssuesPage() {
   const { data: projectStatuses } = useProjectStatuses(projectId || undefined)
   const { data: sprints } = useSprints(projectId || undefined)
   const { data: taskLists } = useTaskLists(projectId || undefined)
-  const createTaskList = useCreateTaskList(projectId)
   const updateTaskList = useUpdateTaskList(projectId)
   const deleteTaskList = useDeleteTaskList(projectId)
 
@@ -706,17 +132,6 @@ export function ProjectIssuesPage() {
   }
 
   // ── Task list CRUD handlers ───────────────────────────────────────────────
-  function handleCreateList() {
-    if (!newListName.trim()) return
-    createTaskList.mutate(
-      { name: newListName.trim() },
-      {
-        onSuccess: () => { setNewListName(""); setShowNewListInput(false); toast.success("List created") },
-        onError: () => toast.error("Failed to create list"),
-      }
-    )
-  }
-
   function handleRenameList(id: string, name: string) {
     updateTaskList.mutate({ id, name }, {
       onError: () => toast.error("Failed to rename list"),
@@ -738,237 +153,59 @@ export function ProjectIssuesPage() {
       <div className="bg-white dark:bg-card border border-border rounded-xl overflow-hidden">
 
         {/* Card header */}
-        <div className="flex items-center justify-end px-6 py-3 border-b border-border">
-          <div className="flex items-center gap-2">
-            {/* New list */}
-            {showNewListInput ? (
-              <div className="flex items-center gap-1.5">
-                <Input
-                  autoFocus
-                  placeholder="List name..."
-                  value={newListName}
-                  onChange={(e) => setNewListName(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") handleCreateList()
-                    if (e.key === "Escape") { setShowNewListInput(false); setNewListName("") }
-                  }}
-                  className="h-8 text-xs w-36"
-                />
-                <Button size="sm" variant="outline" className="h-8 text-xs" onClick={handleCreateList} disabled={!newListName.trim() || createTaskList.isPending}>
-                  Add
-                </Button>
-                <Button size="sm" variant="ghost" className="h-8 text-xs" onClick={() => { setShowNewListInput(false); setNewListName("") }}>
-                  Cancel
-                </Button>
-              </div>
-            ) : (
-              <Button size="sm" variant="outline" onClick={() => setShowNewListInput(true)}>
-                <Plus className="h-4 w-4" />
-                New List
-              </Button>
-            )}
-            <Button size="sm" onClick={() => setCreateDialog({ open: true })}>
-              <Plus className="h-4 w-4" />
-              Create
-            </Button>
-          </div>
-        </div>
+        <IssuesToolbar
+          projectId={projectId}
+          onCreateIssue={() => setCreateDialog({ open: true })}
+        />
 
         {/* Toolbar */}
-        <div className="flex flex-col gap-2 px-4 md:px-6 py-3 border-b border-border md:flex-row md:items-center md:justify-between md:gap-3">
-          <div className="flex items-center gap-2 md:overflow-x-auto md:scrollbar-none">
-            <Select value={sprintFilter} onValueChange={setSprintFilter}>
-              <SelectTrigger className="h-8 text-xs flex-1 md:flex-none md:w-[140px] md:shrink-0 bg-transparent">
-                <SelectValue placeholder="Sprint" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all" className="text-xs">All sprints</SelectItem>
-                <SelectItem value="none" className="text-xs text-muted-foreground">No sprint</SelectItem>
-                {allSprints.map((s) => (
-                  <SelectItem key={s.id} value={s.id} className="text-xs">{s.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="h-8 text-xs flex-1 md:flex-none md:w-[130px] md:shrink-0 bg-transparent">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all" className="text-xs">All statuses</SelectItem>
-                {statuses.map(({ key, name }) => (
-                  <SelectItem key={key} value={key} className="text-xs">{name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-              <SelectTrigger className="h-8 text-xs flex-1 md:flex-none md:w-[130px] md:shrink-0 bg-transparent">
-                <SelectValue placeholder="Priority" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all" className="text-xs">All priorities</SelectItem>
-                {Object.entries(ISSUE_PRIORITY_LABELS).map(([v, l]) => (
-                  <SelectItem key={v} value={v} className="text-xs">{l}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-            <Input
-              placeholder="Search..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-8 h-8 w-full md:w-[200px] text-xs bg-transparent"
-            />
-          </div>
-        </div>
+        <IssuesFilterBar
+          search={search}
+          onSearchChange={setSearch}
+          statusFilter={statusFilter}
+          onStatusFilterChange={setStatusFilter}
+          priorityFilter={priorityFilter}
+          onPriorityFilterChange={setPriorityFilter}
+          sprintFilter={sprintFilter}
+          onSprintFilterChange={setSprintFilter}
+          statuses={statuses}
+          sprints={allSprints}
+        />
 
         {/* Desktop: scrollable table (hidden on mobile) */}
-        <div className="hidden md:block overflow-x-auto">
-          <div className="min-w-[1025px]">
-            {/* Table header */}
-            <div className={cn("grid items-center py-2.5 border-b border-border", GRID)}>
-              <span className="text-xs font-medium text-[#6b7280] sticky left-0 z-10 bg-white dark:bg-card pl-6">ID</span>
-              <span className="text-xs font-medium text-[#6b7280] sticky left-[110px] z-10 bg-white dark:bg-card">Title</span>
-              <span className="text-xs font-medium text-[#6b7280]">Status</span>
-              <span className="text-xs font-medium text-[#6b7280]">Priority</span>
-              <span className="text-xs font-medium text-[#6b7280]">Sprint</span>
-              <span className="text-xs font-medium text-[#6b7280]">Due Date</span>
-              <span className="text-xs font-medium text-[#6b7280]">Assignees</span>
-              <span className="pr-6" />
-            </div>
-
-            {/* Content */}
-            {isLoading ? (
-              <div className="divide-y divide-border">
-                {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className={cn("grid items-center px-6 py-3 gap-4", GRID)}>
-                    <Skeleton className="h-4 w-14" />
-                    <Skeleton className="h-4 w-56" />
-                    <Skeleton className="h-5 w-20" />
-                    <Skeleton className="h-4 w-16" />
-                    <Skeleton className="h-4 w-20" />
-                    <Skeleton className="h-4 w-24" />
-                    <Skeleton className="h-6 w-16" />
-                    <span />
-                  </div>
-                ))}
-              </div>
-            ) : totalCount === 0 && (issues ?? []).length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 text-center">
-                <p className="text-sm font-medium mb-1">No issues yet</p>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Create your first issue to start tracking work.
-                </p>
-                <Button size="sm" onClick={() => setCreateDialog({ open: true })}>
-                  <Plus className="h-4 w-4" />
-                  Create issue
-                </Button>
-              </div>
-            ) : topLevel.length === 0 && (issues ?? []).length > 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <p className="text-sm text-muted-foreground">No issues match your filters.</p>
-              </div>
-            ) : (
-              <TooltipProvider delayDuration={200}>
-                <div className="divide-y divide-border">
-                  {/* Task list groups */}
-                  {(taskLists ?? []).map((tl) => (
-                    <TaskListGroup
-                      key={tl.id}
-                      taskList={tl}
-                      issues={groupedByList[tl.id] ?? []}
-                      childrenMap={childrenMap}
-                      projectId={projectId}
-                      statuses={statuses}
-                      statusLabels={statusLabels}
-                      statusColorMap={statusColorMap}
-                      sprints={allSprints}
-                      workspace={workspace}
-                      projectKey={projectKey}
-                      onOpen={setSelectedIssue}
-                      onAddIssue={(id) => setCreateDialog({ open: true, defaultTaskListId: id })}
-                      onAddChild={(parentId) => setCreateDialog({ open: true, defaultParentId: parentId })}
-                      onRenameList={handleRenameList}
-                      onDeleteList={handleDeleteList}
-                    />
-                  ))}
-
-                  {/* "No List" group — always show if there are ungrouped issues or no task lists */}
-                  {(groupedByList["__none__"]?.length > 0 || (taskLists ?? []).length === 0) && (
-                    <TaskListGroup
-                      taskList={null}
-                      issues={groupedByList["__none__"] ?? []}
-                      childrenMap={childrenMap}
-                      projectId={projectId}
-                      statuses={statuses}
-                      statusLabels={statusLabels}
-                      statusColorMap={statusColorMap}
-                      sprints={allSprints}
-                      workspace={workspace}
-                      projectKey={projectKey}
-                      onOpen={setSelectedIssue}
-                      onAddIssue={(id) => setCreateDialog({ open: true, defaultTaskListId: id })}
-                      onAddChild={(parentId) => setCreateDialog({ open: true, defaultParentId: parentId })}
-                    />
-                  )}
-                </div>
-              </TooltipProvider>
-            )}
-          </div>{/* /min-w */}
-        </div>{/* /overflow-x-auto */}
+        <IssuesTable
+          isLoading={isLoading}
+          totalCount={totalCount}
+          allIssuesCount={(issues ?? []).length}
+          topLevel={topLevel}
+          taskLists={taskLists ?? []}
+          groupedByList={groupedByList}
+          childrenMap={childrenMap}
+          projectId={projectId}
+          statuses={statuses}
+          statusLabels={statusLabels}
+          statusColorMap={statusColorMap}
+          sprints={allSprints}
+          workspace={workspace}
+          projectKey={projectKey}
+          onOpen={setSelectedIssue}
+          onCreateIssue={() => setCreateDialog({ open: true })}
+          onAddIssue={(id) => setCreateDialog({ open: true, defaultTaskListId: id })}
+          onAddChild={(parentId) => setCreateDialog({ open: true, defaultParentId: parentId })}
+          onRenameList={handleRenameList}
+          onDeleteList={handleDeleteList}
+        />
 
         {/* Mobile: flat card list (no horizontal scroll) */}
-        <div className="md:hidden divide-y divide-border/60">
-          {isLoading ? (
-            [1, 2, 3, 4].map((i) => (
-              <div key={i} className="flex items-start gap-3 px-4 py-3">
-                <div className="flex-1 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <div className="h-3 w-10 bg-muted rounded animate-pulse" />
-                    <div className="h-4 w-48 bg-muted rounded animate-pulse" />
-                  </div>
-                  <div className="h-3 w-32 bg-muted rounded animate-pulse" />
-                </div>
-              </div>
-            ))
-          ) : topLevel.length === 0 ? null : (
-            topLevel.map((issue) => {
-              const statusColor = statusColorMap?.[issue.status] ?? "#94a3b8"
-              const activeSprint = allSprints.find((s) => s.id === issue.sprint_id)
-              return (
-                <div
-                  key={issue.id}
-                  onClick={() => navigate(`/${workspace}/projects/${projectKey}/issues/${issue.id}`)}
-                  className="flex items-start gap-3 px-4 py-3 hover:bg-[#f9fafb] dark:hover:bg-muted/30 cursor-pointer transition-colors"
-                >
-                  <div className="flex-1 min-w-0 space-y-1">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="text-[10px] font-mono text-muted-foreground shrink-0">{issue.identifier}</span>
-                      <span className="text-sm text-foreground truncate font-medium">{issue.title}</span>
-                    </div>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <PriorityIcon priority={issue.priority} />
-                      <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                        <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: statusColor }} />
-                        {statusLabels[issue.status] ?? issue.status}
-                      </span>
-                      {activeSprint && (
-                        <span className="text-[11px] text-muted-foreground truncate max-w-[120px]">{activeSprint.name}</span>
-                      )}
-                      {issue.due_date && (
-                        <span className="text-[11px] text-muted-foreground">{format(new Date(issue.due_date), "MMM d")}</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )
-            })
-          )}
-        </div>
+        <MobileIssuesList
+          isLoading={isLoading}
+          topLevel={topLevel}
+          statusLabels={statusLabels}
+          statusColorMap={statusColorMap}
+          sprints={allSprints}
+          workspace={workspace}
+          projectKey={projectKey}
+        />
 
         {/* Footer */}
         {!isLoading && totalCount > 0 && (

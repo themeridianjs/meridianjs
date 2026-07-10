@@ -1,4 +1,5 @@
 import type { Response, NextFunction } from "express"
+import { PRIVILEGED_ROLES } from "@meridianjs/types"
 
 /**
  * RBAC guard — allows the request only if `req.user.roles` contains at least
@@ -32,7 +33,7 @@ export function requireRoles(...roles: string[]) {
 export function requirePermission(...permissions: string[]) {
   return (req: any, res: Response, next: NextFunction) => {
     const userRoles: string[] = req.user?.roles ?? []
-    if (userRoles.includes("super-admin") || userRoles.includes("admin")) return next()
+    if (PRIVILEGED_ROLES.some((r) => userRoles.includes(r))) return next()
     const userPermissions: string[] = req.user?.permissions ?? []
     if (permissions.some((p) => userPermissions.includes(p))) return next()
     res.status(403).json({ error: { message: "Forbidden — insufficient permissions" } })

@@ -20,16 +20,19 @@ export interface ModuleDefinition {
    * domain services typically accept only the container; infrastructure modules
    * (event bus, scheduler, email, storage) read their config from the second argument.
    */
-  service: new (...args: any[]) => IModuleService
+  service: new (container: MeridianContainer, options?: Record<string, unknown>) => IModuleService
   models?: unknown[]
   loaders?: LoaderFn[]
   linkable?: LinkableConfig
 }
 
-export interface IModuleService {
-  // Intentionally permissive — services may have any shape
-  [method: string]: any
-}
+/**
+ * Marker interface for module services. The framework never calls methods on
+ * services generically, so no shape is required here; callers narrow via
+ * `resolveService<T>` or a concrete service type — never through `any`.
+ */
+// eslint-disable-next-line @typescript-eslint/no-empty-interface
+export interface IModuleService {}
 
 export type LoaderFn = (options: LoaderOptions) => Promise<void>
 
@@ -141,8 +144,24 @@ export const EVENTS = {
   ISSUE_MENTIONED: "issue.mentioned",
   SPRINT_COMPLETED: "sprint.completed",
   COMMENT_CREATED: "comment.created",
+  PROJECT_ACCESS_REQUESTED: "project.access_requested",
+  PROJECT_ACCESS_REQUEST_RESOLVED: "project.access_request_resolved",
+  PROJECT_ACCESS_REQUEST_CANCELLED: "project.access_request_cancelled",
+  PROJECT_MEMBER_ADDED: "project.member_added",
+  WORKSPACE_ACCESS_REQUESTED: "workspace.access_requested",
+  WORKSPACE_ACCESS_REQUEST_RESOLVED: "workspace.access_request_resolved",
+  WORKSPACE_ACCESS_REQUEST_CANCELLED: "workspace.access_request_cancelled",
+  WORKSPACE_MEMBER_ADDED: "workspace.member_added",
+  WORKSPACE_MEMBER_INVITED: "workspace.member_invited",
+  REGISTRATION_OTP_REQUESTED: "registration.otp_requested",
+  PASSWORD_OTP_REQUESTED: "password.otp_requested",
+  PASSWORD_RESET_REQUESTED: "password.reset_requested",
 } as const
 export type EventName = (typeof EVENTS)[keyof typeof EVENTS]
+
+/** Valid values for a project health update's `health` field. */
+export const HEALTH_STATUSES = ["on_track", "delayed", "on_hold", "completed"] as const
+export type HealthStatus = (typeof HEALTH_STATUSES)[number]
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Event Bus

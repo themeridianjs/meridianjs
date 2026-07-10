@@ -1,11 +1,12 @@
 import type { Response, NextFunction } from "express"
 import { requireRoles } from "@meridianjs/auth"
+import { ROLES } from "@meridianjs/types"
 
 const ROLE_RANK: Record<string, number> = {
-  "super-admin": 3,
-  "admin": 2,
+  [ROLES.SUPER_ADMIN]: 3,
+  [ROLES.ADMIN]: 2,
   "moderator": 1,
-  "member": 0,
+  [ROLES.MEMBER]: 0,
 }
 
 function actorRank(req: any): number {
@@ -20,7 +21,7 @@ async function targetRank(req: any): Promise<number> {
 }
 
 export const PATCH = async (req: any, res: Response, next: NextFunction) => {
-  requireRoles("super-admin", "admin")(req, res, async () => {
+  requireRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN)(req, res, async () => {
     try {
       const actor = actorRank(req)
       const target = await targetRank(req)
@@ -55,7 +56,7 @@ export const PATCH = async (req: any, res: Response, next: NextFunction) => {
 }
 
 export const DELETE = async (req: any, res: Response, next: NextFunction) => {
-  requireRoles("super-admin", "admin")(req, res, async () => {
+  requireRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN)(req, res, async () => {
     try {
       if (req.params.id === req.user?.id) {
         res.status(400).json({ error: { message: "You cannot deactivate yourself" } })

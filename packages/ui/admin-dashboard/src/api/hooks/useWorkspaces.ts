@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { api } from "../client"
+import { buildQuery } from "@/lib/buildQuery"
 import type { User } from "./useUsers"
 
 export interface Workspace {
@@ -22,7 +23,7 @@ export function useWorkspaces(enabledOrOptions: boolean | { orgScope?: boolean; 
   const enabled = typeof enabledOrOptions === "boolean" ? enabledOrOptions : true
   const orgScope = typeof enabledOrOptions === "object" ? (enabledOrOptions.orgScope ?? false) : false
   const refetchInterval = typeof enabledOrOptions === "object" ? (enabledOrOptions.refetchInterval ?? false) : false
-  const qs = orgScope ? "?org_scope=true" : ""
+  const qs = buildQuery({ org_scope: orgScope || undefined })
   return useQuery({
     queryKey: ["workspaces", orgScope ? "org" : "default"],
     queryFn: () => api.get<WorkspacesResponse>(`/admin/workspaces${qs}`),

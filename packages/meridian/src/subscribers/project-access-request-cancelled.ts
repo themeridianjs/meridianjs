@@ -1,4 +1,5 @@
 import type { SubscriberArgs, SubscriberConfig } from "@meridianjs/types"
+import { EVENTS } from "@meridianjs/types"
 import { sseManager } from "@meridianjs/framework"
 
 interface ProjectAccessRequestCancelledData {
@@ -18,4 +19,4 @@ export default async function handler({ event }: SubscriberArgs<ProjectAccessReq
   })
 }
 
-export const config: SubscriberConfig = { event: "project.access_request_cancelled" }
+export const config: SubscriberConfig = { event: EVENTS.PROJECT_ACCESS_REQUEST_CANCELLED }

@@ -1,4 +1,5 @@
 import type { SubscriberArgs, SubscriberConfig } from "@meridianjs/types"
+import { EVENTS } from "@meridianjs/types"
 import { sseManager } from "@meridianjs/framework"
 import { buildEmail, buildProjectUrl, userDisplayName, resolveTemplate } from "./_email-helper.js"
 
@@ -80,4 +81,4 @@ export default async function handler({ event, container }: SubscriberArgs<Proje
   }
 }
 
-export const config: SubscriberConfig = { event: "project.member_added" }
+export const config: SubscriberConfig = { event: EVENTS.PROJECT_MEMBER_ADDED }

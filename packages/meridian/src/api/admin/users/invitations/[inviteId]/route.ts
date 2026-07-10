@@ -1,8 +1,9 @@
 import type { Response } from "express"
 import { requireRoles } from "@meridianjs/auth"
+import { ROLES } from "@meridianjs/types"
 
 export const DELETE = async (req: any, res: Response) => {
-  requireRoles("super-admin", "admin")(req, res, async () => {
+  requireRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN)(req, res, async () => {
     const svc = req.scope.resolve("invitationModuleService") as any
 
     const invitation = await svc.retrieveInvitation(req.params.inviteId).catch(() => null)

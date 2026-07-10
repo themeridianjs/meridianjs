@@ -1,4 +1,5 @@
 import type { SubscriberArgs, SubscriberConfig } from "@meridianjs/types"
+import { EVENTS } from "@meridianjs/types"
 import { emailHtml, resolveTemplate } from "./_email-helper.js"
 
 interface PasswordResetRequestedData {
@@ -37,4 +38,4 @@ export default async function handler({ event, container }: SubscriberArgs<Passw
   }
 }
 
-export const config: SubscriberConfig = { event: "password.reset_requested" }
+export const config: SubscriberConfig = { event: EVENTS.PASSWORD_RESET_REQUESTED }

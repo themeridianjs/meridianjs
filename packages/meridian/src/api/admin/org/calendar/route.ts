@@ -1,5 +1,6 @@
 import type { Response, NextFunction } from "express"
 import { requireRoles } from "@meridianjs/auth"
+import { ROLES } from "@meridianjs/types"
 
 export const GET = async (req: any, res: Response, next: NextFunction) => {
   try {
@@ -12,7 +13,7 @@ export const GET = async (req: any, res: Response, next: NextFunction) => {
 }
 
 export const PUT = async (req: any, res: Response, next: NextFunction) => {
-  requireRoles("super-admin", "admin")(req, res, async () => {
+  requireRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN)(req, res, async () => {
     try {
       const service = req.scope.resolve("orgCalendarModuleService") as any
       const { working_days, timezone } = req.body

@@ -6,6 +6,7 @@ import {
   transform,
 } from "@meridianjs/workflow-engine"
 import { emitEventStep } from "./emit-event.js"
+import { EVENTS } from "@meridianjs/types"
 
 export interface AssignIssueInput {
   issueId: string
@@ -62,7 +63,7 @@ export const assignIssueWorkflow = createWorkflow(
     }))
     await logAssigneesStep(activityInput)
     await emitEventStep({
-      name: "issue.assigned",
+      name: EVENTS.ISSUE_ASSIGNED,
       data: { issue_id: updated.id, project_id: updated.project_id, workspace_id: updated.workspace_id, actor_id: actor_id ?? "system", assignee_ids: newAssignees },
     })
     return new WorkflowResponse(updated)

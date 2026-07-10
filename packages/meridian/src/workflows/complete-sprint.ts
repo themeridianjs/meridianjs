@@ -7,6 +7,7 @@ import {
   when,
 } from "@meridianjs/workflow-engine"
 import { emitEventStep } from "./emit-event.js"
+import { EVENTS } from "@meridianjs/types"
 
 export interface CompleteSprintInput {
   sprintId: string
@@ -92,7 +93,7 @@ export const completeSprintWorkflow = createWorkflow(
     }))
     await logSprintCompletedStep(activityInput)
     await emitEventStep({
-      name: "sprint.completed",
+      name: EVENTS.SPRINT_COMPLETED,
       data: { sprint_id: completed.id, project_id: completed.project_id, actor_id: input.actor_id ?? "system" },
     })
     return new WorkflowResponse(completed)

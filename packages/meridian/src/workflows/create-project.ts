@@ -6,6 +6,7 @@ import {
   transform,
 } from "@meridianjs/workflow-engine"
 import { emitEventStep } from "./emit-event.js"
+import { EVENTS } from "@meridianjs/types"
 
 export interface InitialStatus {
   name: string
@@ -124,7 +125,7 @@ export const createProjectWorkflow = createWorkflow(
     }))
     await logProjectCreatedStep(activityInput)
     await emitEventStep({
-      name: "project.created",
+      name: EVENTS.PROJECT_CREATED,
       data: { project_id: project.id, workspace_id: project.workspace_id, actor_id: input.actor_id ?? "system" },
     })
     return new WorkflowResponse(project)

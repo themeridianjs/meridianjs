@@ -1,18 +1,19 @@
 import type { Response, NextFunction } from "express"
 import { requireRoles } from "@meridianjs/auth"
+import { EVENTS, ROLES } from "@meridianjs/types"
 
 export const POST = async (req: any, res: Response, next: NextFunction) => {
-  requireRoles("super-admin", "admin")(req, res, async () => {
+  requireRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN)(req, res, async () => {
     try {
       const invitationService = req.scope.resolve("invitationModuleService") as any
-      const { email, role = "member" } = req.body
+      const { email, role = ROLES.MEMBER } = req.body
 
       if (!email || typeof email !== "string") {
         res.status(400).json({ error: { message: "email is required" } })
         return
       }
 
-      if (!["super-admin", "admin", "member"].includes(role)) {
+      if (![ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MEMBER].includes(role)) {
         res.status(400).json({ error: { message: "role must be 'super-admin', 'admin', or 'member'" } })
         return
       }
@@ -46,7 +47,7 @@ export const POST = async (req: any, res: Response, next: NextFunction) => {
 
       const eventBus = req.scope.resolve("eventBus") as any
       eventBus.emit({
-        name: "workspace.member_invited",
+        name: EVENTS.WORKSPACE_MEMBER_INVITED,
         data: {
           invitation_id: invitation.id,
           workspace_id: null,

@@ -1,8 +1,9 @@
+import { ROLES } from "@meridianjs/types"
 const ROLE_RANK: Record<string, number> = {
-  "super-admin": 3,
-  "admin": 2,
+  [ROLES.SUPER_ADMIN]: 3,
+  [ROLES.ADMIN]: 2,
   "moderator": 1,
-  "member": 0,
+  [ROLES.MEMBER]: 0,
 }
 
 /**
@@ -33,12 +34,12 @@ export async function applyPendingInvites(
 
     if (!invitations || invitations.length === 0) return false
 
-    let highestRole = "member"
+    let highestRole: string = ROLES.MEMBER
 
     for (const inv of invitations) {
       // Create workspace membership
       if (inv.workspace_id) {
-        const wsRole: "admin" | "member" = inv.role === "member" ? "member" : "admin"
+        const wsRole: "admin" | "member" = inv.role === ROLES.MEMBER ? ROLES.MEMBER : ROLES.ADMIN
         await workspaceMemberService.ensureMember(inv.workspace_id, userId, wsRole).catch(() => {})
       }
 

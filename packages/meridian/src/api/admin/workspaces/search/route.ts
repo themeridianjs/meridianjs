@@ -35,5 +35,5 @@ export const GET = async (req: any, res: Response) => {
     }
   })
 
-  res.json({ workspaces: results })
+  res.json({ workspaces: results, count: results.length })
 }

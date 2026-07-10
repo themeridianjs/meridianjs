@@ -4,6 +4,7 @@ import type { ProjectMemberModuleService } from "@meridianjs/project-member"
 import type { TeamMemberModuleService } from "@meridianjs/team-member"
 import type { UserModuleService } from "@meridianjs/user"
 import { getAccessibleWorkspaceIds } from "../../../utils/workspace-access.js"
+import { ROLES } from "@meridianjs/types"
 
 export const GET = async (req: any, res: Response) => {
   const workspaceMemberService = req.scope.resolve("workspaceMemberModuleService") as WorkspaceMemberModuleService
@@ -20,7 +21,7 @@ export const GET = async (req: any, res: Response) => {
 
   // Super-admin org-scope bypass: return members from all workspaces without privacy filtering
   const roles: string[] = req.user?.roles ?? []
-  if (roles.includes("super-admin") && req.query.org_scope === "true") {
+  if (roles.includes(ROLES.SUPER_ADMIN) && req.query.org_scope === "true") {
     let userIdSet = new Set<string>()
     if (rawWsIds.length > 0) {
       const wsMembers = await workspaceMemberService.listWorkspaceMembers(
@@ -31,14 +32,14 @@ export const GET = async (req: any, res: Response) => {
       const [allMembers] = await (workspaceMemberService as any).listAndCountWorkspaceMembers({}, { limit: 5000 })
       for (const m of allMembers as any[]) userIdSet.add(m.user_id)
     }
-    if (userIdSet.size === 0) { res.json({ members: [] }); return }
+    if (userIdSet.size === 0) { res.json({ members: [], count: 0 }); return }
     const userMapResult = await (userService as any).listUsersByIds([...userIdSet])
     const members = [...userIdSet].map((id) => {
       const u = userMapResult.get(id)
       if (!u) return null
       return { id: u.id, email: u.email, first_name: u.first_name, last_name: u.last_name, avatar_url: u.avatar_url ?? null }
     }).filter(Boolean)
-    res.json({ members })
+    res.json({ members, count: members.length })
     return
   }
 
@@ -88,7 +89,7 @@ export const GET = async (req: any, res: Response) => {
   }
 
   if (userIdSet.size === 0) {
-    res.json({ members: [] })
+    res.json({ members: [], count: 0 })
     return
   }
 
@@ -107,5 +108,5 @@ export const GET = async (req: any, res: Response) => {
     })
     .filter(Boolean)
 
-  res.json({ members })
+  res.json({ members, count: members.length })
 }

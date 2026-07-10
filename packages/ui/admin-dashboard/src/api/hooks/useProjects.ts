@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { api } from "../client"
+import { buildQuery } from "@/lib/buildQuery"
 import { useAuth } from "@/stores/auth"
 
 const SUGGEST_DEBOUNCE_MS = 250
@@ -64,15 +65,15 @@ export function useProjects(options?: { allWorkspaces?: boolean; workspaceIds?: 
   const wsId = scopeToWorkspace ? workspace?.id : undefined
   return useQuery({
     queryKey: [...projectKeys.list(), wsId ?? wsIds ?? (orgScope ? "org" : "all"), limit],
-    queryFn: () => {
-      const params = new URLSearchParams()
-      if (wsId) params.set("workspace_id", wsId)
-      else if (wsIds?.length) params.set("workspace_ids", wsIds.join(","))
-      if (orgScope) params.set("org_scope", "true")
-      if (limit) params.set("limit", String(limit))
-      const qs = params.toString() ? `?${params}` : ""
-      return api.get<ProjectsResponse>(`/admin/projects${qs}`)
-    },
+    queryFn: () =>
+      api.get<ProjectsResponse>(
+        `/admin/projects${buildQuery({
+          workspace_id: wsId,
+          workspace_ids: !wsId ? wsIds?.join(",") : undefined,
+          org_scope: orgScope || undefined,
+          limit: limit || undefined,
+        })}`
+      ),
     select: (data) => data.projects,
     enabled: scopeToWorkspace ? !!workspace?.id : true,
     staleTime: 1000 * 60 * 2,
@@ -114,7 +115,7 @@ export function useSuggestProjectIdentifier(name: string, options: { enabled?: b
     queryKey: ["projects", "suggest-identifier", debouncedName] as const,
     queryFn: () =>
       api.get<{ identifier: string }>(
-        `/admin/projects/suggest-identifier?name=${encodeURIComponent(debouncedName)}`
+        `/admin/projects/suggest-identifier${buildQuery({ name: debouncedName })}`
       ),
     select: (data) => data.identifier,
     enabled: enabled && debouncedName.trim().length > 0,

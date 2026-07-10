@@ -1,4 +1,5 @@
 import type { SubscriberArgs, SubscriberConfig } from "@meridianjs/types"
+import { EVENTS } from "@meridianjs/types"
 import { sseManager } from "@meridianjs/framework"
 import { buildEmail, buildIssueUrl, capitalize, resolveTemplate } from "./_email-helper.js"
 
@@ -96,4 +97,4 @@ export default async function handler({ event, container }: SubscriberArgs<Issue
   }
 }
 
-export const config: SubscriberConfig = { event: "issue.created" }
+export const config: SubscriberConfig = { event: EVENTS.ISSUE_CREATED }

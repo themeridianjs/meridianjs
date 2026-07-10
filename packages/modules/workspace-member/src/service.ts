@@ -1,5 +1,6 @@
 import { MeridianService } from "@meridianjs/framework-utils"
 import type { MeridianContainer } from "@meridianjs/types"
+import { ROLES } from "@meridianjs/types"
 import WorkspaceMemberModel from "./models/workspace-member.js"
 import WorkspaceAccessRequestModel from "./models/workspace-access-request.js"
 
@@ -29,7 +30,7 @@ export class WorkspaceMemberModuleService extends MeridianService({
     return !!(await this.getMembership(workspaceId, userId))
   }
 
-  async ensureMember(workspaceId: string, userId: string, role: "admin" | "member" = "member") {
+  async ensureMember(workspaceId: string, userId: string, role: "admin" | "member" = ROLES.MEMBER) {
     if (await this.isMember(workspaceId, userId)) return
     try {
       return await this.createWorkspaceMember({ workspace_id: workspaceId, user_id: userId, role })

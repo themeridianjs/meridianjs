@@ -1,20 +1,21 @@
 import type { Response } from "express"
 import { requirePermission } from "@meridianjs/auth"
+import { ROLES, PROJECT_ROLES } from "@meridianjs/types"
+import { isGlobalAdmin } from "../../../../utils/project-access.js"
 
 /** Check if the caller is allowed to manage share settings for this project. */
 async function canManageShare(req: any, project: { id: string; workspace_id: string }): Promise<boolean> {
-  const roles: string[] = req.user?.roles ?? []
-  if (roles.includes("super-admin") || roles.includes("admin")) return true
+  if (isGlobalAdmin(req)) return true
 
   const workspaceMemberService = req.scope.resolve("workspaceMemberModuleService") as any
   const projectMemberService = req.scope.resolve("projectMemberModuleService") as any
   const userId = req.user?.id
 
   const membership = await workspaceMemberService.getMembership(project.workspace_id, userId).catch(() => null)
-  if (membership?.role === "admin") return true
+  if (membership?.role === ROLES.ADMIN) return true
 
   const members = await projectMemberService.listProjectMembers(project.id)
-  return members.some((m: any) => m.user_id === userId && m.role === "manager")
+  return members.some((m: any) => m.user_id === userId && m.role === PROJECT_ROLES.MANAGER)
 }
 
 export const POST = async (req: any, res: Response) => {

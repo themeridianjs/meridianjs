@@ -1,5 +1,6 @@
 import type { Response } from "express"
 import { requirePermission } from "@meridianjs/auth"
+import { HEALTH_STATUSES } from "@meridianjs/types"
 import { hasProjectAccess } from "../../../../utils/project-access.js"
 
 export const GET = async (req: any, res: Response) => {
@@ -22,9 +23,8 @@ export const POST = async (req: any, res: Response) => {
     res.status(400).json({ error: { message: "health and title are required" } })
     return
   }
-  const validHealth = ["on_track", "delayed", "on_hold", "completed"]
-  if (!validHealth.includes(health)) {
-    res.status(400).json({ error: { message: `health must be one of: ${validHealth.join(", ")}` } })
+  if (!HEALTH_STATUSES.includes(health)) {
+    res.status(400).json({ error: { message: `health must be one of: ${HEALTH_STATUSES.join(", ")}` } })
     return
   }
   const svc = req.scope.resolve("projectModuleService") as any

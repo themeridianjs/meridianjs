@@ -1,4 +1,5 @@
 import type { SubscriberArgs, SubscriberConfig } from "@meridianjs/types"
+import { EVENTS } from "@meridianjs/types"
 import { sseManager } from "@meridianjs/framework"
 import { buildEmail, resolveTemplate } from "./_email-helper.js"
 
@@ -72,4 +73,4 @@ export default async function handler({ event, container }: SubscriberArgs<Works
   }
 }
 
-export const config: SubscriberConfig = { event: "workspace.access_request_resolved" }
+export const config: SubscriberConfig = { event: EVENTS.WORKSPACE_ACCESS_REQUEST_RESOLVED }

@@ -2,6 +2,7 @@ import type { Response, NextFunction } from "express"
 import { requirePermission } from "@meridianjs/auth"
 import { assertWorkspaceAccess } from "../../../../utils/workspace-access.js"
 import { assignDefaultUserRole } from "../../../../utils/assign-default-role.js"
+import { EVENTS, ROLES } from "@meridianjs/types"
 
 export const GET = async (req: any, res: Response) => {
   if (!await assertWorkspaceAccess(req, res)) return
@@ -59,7 +60,7 @@ export const POST = async (req: any, res: Response, next: NextFunction) => {
       }
 
       // workspace_member.role only supports "admin" | "member" — map super-admin → admin
-      const wsRole: "admin" | "member" = role === "member" ? "member" : "admin"
+      const wsRole: "admin" | "member" = role === ROLES.MEMBER ? ROLES.MEMBER : ROLES.ADMIN
 
       const member = await workspaceMemberService.createWorkspaceMember({
         workspace_id: req.params.id,
@@ -71,7 +72,7 @@ export const POST = async (req: any, res: Response, next: NextFunction) => {
 
       const eventBus = req.scope.resolve("eventBus") as any
       eventBus.emit({
-        name: "workspace.member_added",
+        name: EVENTS.WORKSPACE_MEMBER_ADDED,
         data: {
           workspace_id: req.params.id,
           user_id,

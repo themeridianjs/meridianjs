@@ -1,5 +1,6 @@
 import { MeridianService } from "@meridianjs/framework-utils"
 import type { MeridianContainer } from "@meridianjs/types"
+import { PROJECT_ROLES } from "@meridianjs/types"
 import ProjectMemberModel from "./models/project-member.js"
 import ProjectTeamModel from "./models/project-team.js"
 import ProjectAccessRequestModel from "./models/project-access-request.js"
@@ -60,7 +61,7 @@ export class ProjectMemberModuleService extends MeridianService({
     return teams.map((t: any) => ({ id: t.id, team_id: t.team_id, project_id: t.project_id }))
   }
 
-  async ensureProjectMember(projectId: string, userId: string, role: "manager" | "member" | "viewer" = "member") {
+  async ensureProjectMember(projectId: string, userId: string, role: "manager" | "member" | "viewer" = PROJECT_ROLES.MEMBER) {
     const repo = this.container.resolve<any>("projectMemberRepository")
     if (await repo.findOne({ project_id: projectId, user_id: userId })) return
     try {

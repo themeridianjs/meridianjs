@@ -1,12 +1,13 @@
 import type { Response } from "express"
 import { requirePermission } from "@meridianjs/auth"
 import { assertIssueAccess } from "../../../../utils/issue-access.js"
+import { EVENTS } from "@meridianjs/types"
 
 export const GET = async (req: any, res: Response) => {
   if (!await assertIssueAccess(req, res)) return
   const issueService = req.scope.resolve("issueModuleService") as any
   const comments = await issueService.listCommentsByIssue(req.params.id)
-  res.json({ comments })
+  res.json({ comments, count: comments.length })
 }
 
 export const POST = async (req: any, res: Response) => {
@@ -26,7 +27,7 @@ export const POST = async (req: any, res: Response) => {
     const mentionedUserIds: string[] = Array.isArray(metadata?.mentioned_user_ids)
       ? metadata.mentioned_user_ids.filter((id: unknown) => typeof id === "string")
       : []
-    eventBus.emit({ name: "comment.created", data: { comment_id: comment.id, issue_id: req.params.id, author_id: comment.author_id, mentioned_user_ids: mentionedUserIds } }).catch(() => {})
+    eventBus.emit({ name: EVENTS.COMMENT_CREATED, data: { comment_id: comment.id, issue_id: req.params.id, author_id: comment.author_id, mentioned_user_ids: mentionedUserIds } }).catch(() => {})
     res.status(201).json({ comment })
   })
 }

@@ -1,4 +1,4 @@
-import { PRIVILEGED_ROLES } from "@meridianjs/types"
+import { PRIVILEGED_ROLES, ROLES, PROJECT_ROLES } from "@meridianjs/types"
 
 /**
  * Shared project access check.
@@ -23,7 +23,7 @@ export async function hasProjectAccess(req: any, project: { id: string; workspac
 
   const membership = await workspaceMemberService.getMembership(project.workspace_id, userId)
   if (!membership) return false
-  if (membership.role === "admin") return true
+  if (membership.role === ROLES.ADMIN) return true
 
   const userTeamIds = await teamMemberService.getUserTeamIds(userId)
   const accessibleProjectIds = await projectMemberService.getAccessibleProjectIds(userId, userTeamIds)
@@ -50,12 +50,12 @@ export async function resolveProjectAndAccess(
 
   const workspaceMemberService = req.scope.resolve("workspaceMemberModuleService") as any
   const wsMembership = await workspaceMemberService.getMembership(project.workspace_id, req.user?.id)
-  if (wsMembership?.role === "admin") return { project, isAuthorized: true }
+  if (wsMembership?.role === ROLES.ADMIN) return { project, isAuthorized: true }
 
   const projectMemberService = req.scope.resolve("projectMemberModuleService") as any
   const members = await projectMemberService.listProjectMembers(project.id)
   const myMembership = members.find((m: any) => m.user_id === req.user?.id)
-  if (myMembership?.role === "manager") return { project, isAuthorized: true }
+  if (myMembership?.role === PROJECT_ROLES.MANAGER) return { project, isAuthorized: true }
 
   return { project, isAuthorized: false }
 }
