@@ -62,7 +62,7 @@ export const updateIssueStatusWorkflow = createWorkflow(
     await logStatusChangedStep(activityInput)
     await emitEventStep({
       name: "issue.status_changed",
-      data: { issue_id: updated.id, workspace_id: updated.workspace_id, actor_id: actor_id ?? "system", new_status: newStatus },
+      data: { issue_id: updated.id, project_id: updated.project_id, workspace_id: updated.workspace_id, actor_id: actor_id ?? "system", new_status: newStatus },
     })
     return new WorkflowResponse(updated)
   }

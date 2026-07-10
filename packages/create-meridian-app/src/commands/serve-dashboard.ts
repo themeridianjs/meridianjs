@@ -29,40 +29,33 @@ const MIME_TYPES: Record<string, string> = {
  * exposed on `window.__React` and `window.__ReactJsxRuntime`.
  */
 function makeReactWindowPlugin(): Plugin {
+  // Map each react-family specifier to the window global the pre-built dashboard
+  // exposes. Emitting CJS (module.exports = <global>) lets esbuild's interop
+  // forward EVERY export dynamically — no hand-maintained export allow-list that
+  // silently drops APIs (useSyncExternalStore, useInsertionEffect, …) — and
+  // ensures react-dom resolves to the dashboard's instance rather than a second
+  // bundled copy (mismatched React instances break hooks/context).
+  const globalFor: Record<string, string> = {
+    "react": "window.__React",
+    "react/jsx-runtime": "window.__ReactJsxRuntime",
+    "react/jsx-dev-runtime": "window.__ReactJsxRuntime",
+    "react-dom": "window.__ReactDOM",
+    "react-dom/client": "window.__ReactDOMClient",
+  }
+
   return {
     name: "react-window",
     setup(build) {
-      build.onResolve({ filter: /^react(\/.*)?$/ }, (args) => ({
+      build.onResolve({ filter: /^react(-dom)?(\/.*)?$/ }, (args) => ({
         path: args.path,
         namespace: "react-window",
       }))
 
       build.onLoad({ filter: /.*/, namespace: "react-window" }, (args) => {
-        if (args.path === "react/jsx-runtime") {
-          return {
-            contents: `
-              const { jsx, jsxs, Fragment } = window.__ReactJsxRuntime;
-              export { jsx, jsxs, Fragment };
-            `,
-            loader: "js",
-          }
-        }
-        // Full react namespace forwarded from window.__React
-        return {
-          contents: `
-            const R = window.__React;
-            export default R;
-            export const {
-              createElement, createContext, cloneElement, isValidElement,
-              useState, useEffect, useContext, useReducer, useCallback, useMemo,
-              useRef, useImperativeHandle, useLayoutEffect, useDebugValue, useId,
-              useDeferredValue, useTransition, startTransition,
-              memo, forwardRef, lazy, Suspense, StrictMode, Fragment,
-              Component, PureComponent, Children, createRef,
-            } = R;
-          `,
-          loader: "js",
-        }
+        const target = globalFor[args.path] ?? "window.__React"
+        // CJS export — esbuild rewrites `import { x } from "react"` to property
+        // access on this object, so any current or future export resolves.
+        return { contents: `module.exports = ${target};`, loader: "js" }
       })
     },
   }

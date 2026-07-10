@@ -72,6 +72,7 @@ export default async function handler({ event, container }: SubscriberArgs<Comme
   sseManager.broadcast(issue.workspace_id, "comment.created", {
     comment_id: data.comment_id,
     issue_id: data.issue_id,
+    project_id: issue.project_id,
   })
   if (activeRecipients.length > 0 || newMentions.length > 0) {
     sseManager.broadcast(issue.workspace_id, "notification.created", {})

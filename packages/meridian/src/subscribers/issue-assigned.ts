@@ -41,6 +41,7 @@ export default async function handler({ event, container }: SubscriberArgs<Issue
 
   sseManager.broadcast(data.workspace_id, "issue.assigned", {
     issue_id: data.issue_id,
+    project_id: data.project_id,
     assignee_ids: data.assignee_ids,
   })
   if (activeAssignees.length > 0) {

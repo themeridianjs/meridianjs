@@ -53,6 +53,8 @@ interface KanbanColumnProps {
   category: Category
   issues: Issue[]
   childCounts?: Map<string, number>
+  /** Shared user display map, passed from the board so cards don't each subscribe. */
+  userMap?: Map<string, { name: string; initials: string }>
   /** When true, this column is part of a sortable column context */
   sortable?: boolean
   onIssueClick?: (issue: Issue) => void
@@ -67,7 +69,7 @@ interface KanbanColumnProps {
 }
 
 export function KanbanColumn({
-  id, label, color, category, issues, childCounts, sortable, onIssueClick,
+  id, label, color, category, issues, childCounts, userMap, sortable, onIssueClick,
   onRename, onDelete, onUpdateCategory,
   isRenaming, renameValue, onRenameChange, onRenameSubmit, onRenameCancel,
 }: KanbanColumnProps) {
@@ -205,6 +207,7 @@ export function KanbanColumn({
               key={issue.id}
               issue={issue}
               childCount={childCounts?.get(issue.id) ?? 0}
+              userMap={userMap}
               onClick={() => onIssueClick?.(issue)}
             />
           ))}

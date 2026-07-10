@@ -19,28 +19,31 @@ import { SetupWorkspacePage } from "@/pages/SetupWorkspacePage"
 import { AwaitingAccessPage } from "@/pages/AwaitingAccessPage"
 import { ProjectsPage } from "@/pages/ProjectsPage"
 import { ProjectBoardPage } from "@/pages/ProjectBoardPage"
-import { ProjectIssuesPage } from "@/pages/ProjectIssuesPage"
-import { ProjectAccessPage } from "@/pages/ProjectAccessPage"
-import { IssueDetailPage } from "@/pages/IssueDetailPage"
-import { IssueNewPage } from "@/pages/IssueNewPage"
 import { MyTasksPage } from "@/pages/MyTasksPage"
 import { NotificationsPage } from "@/pages/NotificationsPage"
 import { SprintsPage } from "@/pages/SprintsPage"
-import { WorkspaceSettingsPage } from "@/pages/WorkspaceSettingsPage"
-import { RolesPage } from "@/pages/RolesPage"
 import { InviteAcceptPage } from "@/pages/InviteAcceptPage"
 import { ReportingPage } from "@/pages/ReportingPage"
 import { ProjectReportsPage } from "@/pages/ProjectReportsPage"
 import { ProjectActivityPage } from "@/pages/ProjectActivityPage"
-import { OrgSettingsPage } from "@/pages/OrgSettingsPage"
 import { OrgReportsPage } from "@/pages/OrgReportsPage"
 import { PublicProjectPage } from "@/pages/public/PublicProjectPage"
 import { GoogleCallbackPage } from "@/pages/GoogleCallbackPage"
-import { ProfilePage } from "@/pages/ProfilePage"
 import { ForgotPasswordPage } from "@/pages/ForgotPasswordPage"
 import { ResetPasswordPage } from "@/pages/ResetPasswordPage"
 import { RequestProjectAccessPage } from "@/pages/RequestProjectAccessPage"
 import { RequestWorkspaceAccessPage } from "@/pages/RequestWorkspaceAccessPage"
+
+// Heavy, less-frequently-hit pages are code-split so they stay out of the
+// initial bundle (a login/first paint shouldn't pull in settings/detail code).
+const ProjectIssuesPage = lazy(() => import("@/pages/ProjectIssuesPage").then(m => ({ default: m.ProjectIssuesPage })))
+const ProjectAccessPage = lazy(() => import("@/pages/ProjectAccessPage").then(m => ({ default: m.ProjectAccessPage })))
+const IssueDetailPage = lazy(() => import("@/pages/IssueDetailPage").then(m => ({ default: m.IssueDetailPage })))
+const IssueNewPage = lazy(() => import("@/pages/IssueNewPage").then(m => ({ default: m.IssueNewPage })))
+const WorkspaceSettingsPage = lazy(() => import("@/pages/WorkspaceSettingsPage").then(m => ({ default: m.WorkspaceSettingsPage })))
+const RolesPage = lazy(() => import("@/pages/RolesPage").then(m => ({ default: m.RolesPage })))
+const OrgSettingsPage = lazy(() => import("@/pages/OrgSettingsPage").then(m => ({ default: m.OrgSettingsPage })))
+const ProfilePage = lazy(() => import("@/pages/ProfilePage").then(m => ({ default: m.ProfilePage })))
 
 const ProjectTimelinePage = lazy(() => import("@/pages/ProjectTimelinePage").then(m => ({ default: m.ProjectTimelinePage })))
 const ProjectHealthPage = lazy(() => import("@/pages/ProjectHealthPage").then(m => ({ default: m.ProjectHealthPage })))
@@ -212,6 +215,7 @@ function useClearCacheOnLogout() {
 export function App() {
   useClearCacheOnLogout()
   return (
+    <Suspense fallback={<div className="flex items-center justify-center h-full text-sm text-muted-foreground">Loading…</div>}>
     <Routes>
       {/* Public */}
       <Route
@@ -389,5 +393,6 @@ export function App() {
       {/* Fallback */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </Suspense>
   )
 }

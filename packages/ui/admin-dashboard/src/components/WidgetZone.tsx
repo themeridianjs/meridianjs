@@ -13,9 +13,11 @@ export function WidgetZone<Z extends Zone>({
     <>
       {widgets.map((Widget, i) => (
         // props cast is intentional: type safety is enforced at registration time
-        // via WidgetDefinition<Z>; key uses component name for stable reconciliation
+        // via WidgetDefinition<Z>. Key by registration index — the widget list is
+        // static, and component .name is unreliable (minification collapses
+        // distinct components to the same mangled name → duplicate keys).
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        <Widget key={Widget.displayName ?? Widget.name ?? i} {...(props as any)} />
+        <Widget key={`${zone}:${i}`} {...(props as any)} />
       ))}
     </>
   )

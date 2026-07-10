@@ -23,11 +23,17 @@ import type { ProjectStatus } from "@/api/hooks/useProjectStatuses"
 import { useDeleteProjectStatus, useUpdateProjectStatus } from "@/api/hooks/useProjectStatuses"
 import { KanbanColumn } from "./KanbanColumn"
 import { IssueCard } from "./IssueCard"
+import { useUserMap } from "@/api/hooks/useUsers"
 import { AddStatusColumn } from "./AddStatusColumn"
 import { DeleteStatusDialog } from "./DeleteStatusDialog"
 import { api } from "@/api/client"
 import { toast } from "sonner"
-import confetti from "canvas-confetti"
+// canvas-confetti is loaded lazily on first celebration to keep it out of the
+// board's initial bundle.
+async function fireConfetti() {
+  const { default: confetti } = await import("canvas-confetti")
+  confetti({ particleCount: 80, spread: 60, origin: { y: 0.6 } })
+}
 
 interface KanbanBoardProps {
   issues: Issue[]
@@ -138,6 +144,10 @@ export function KanbanBoard({
     }
     return map
   }, [issues])
+
+  // Fetch the user display map once here and pass it to every card, rather than
+  // each card subscribing to the query independently.
+  const { data: userMap } = useUserMap()
 
   useEffect(() => {
     setColumnOrder((prev) => {
@@ -382,11 +392,7 @@ export function KanbanBoard({
 
           const targetStatus = statuses.find((s) => s.key === overColKey)
           if (targetStatus?.category === "completed") {
-            confetti({
-              particleCount: 80,
-              spread: 60,
-              origin: { y: 0.6 },
-            })
+            void fireConfetti()
           }
         })
         .catch(() => {
@@ -476,6 +482,7 @@ export function KanbanBoard({
               category={status.category}
               issues={columns[status.key] ?? []}
               childCounts={childCounts}
+              userMap={userMap}
               sortable
               onIssueClick={onIssueClick}
               onRename={readOnly ? undefined : () => {

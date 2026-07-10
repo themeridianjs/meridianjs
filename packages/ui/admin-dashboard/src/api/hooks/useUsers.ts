@@ -157,10 +157,11 @@ export function useAllUsers() {
   })
 }
 
-export function useUserMap() {
+export function useUserMap(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: [...userKeys.all, "map"],
     queryFn: () => api.get<UserMapResponse>("/admin/users/map"),
+    enabled: options?.enabled ?? true,
     select: (data) =>
       new Map(
         data.users.map((u) => {

@@ -1,8 +1,11 @@
+import { memo } from "react"
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import type { Issue } from "@/api/hooks/useIssues"
 import { useUserMap } from "@/api/hooks/useUsers"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+
+type UserDisplayMap = Map<string, { name: string; initials: string }>
 import { ISSUE_PRIORITY_COLORS } from "@/lib/constants"
 import { cn } from "@/lib/utils"
 import { Circle, Zap, ArrowUp, ArrowDown, Minus, ListTree, Calendar } from "lucide-react"
@@ -23,10 +26,14 @@ interface IssueCardProps {
   issue: Issue
   childCount?: number
   onClick?: () => void
+  /** Optional shared user map — pass from the board to avoid one query subscription per card. */
+  userMap?: UserDisplayMap
 }
 
-export function IssueCard({ issue, childCount = 0, onClick }: IssueCardProps) {
-  const { data: userMap } = useUserMap()
+function IssueCardImpl({ issue, childCount = 0, onClick, userMap: userMapProp }: IssueCardProps) {
+  // Fall back to the hook when no shared map is passed (keeps standalone usage working).
+  const { data: userMapFromHook } = useUserMap({ enabled: userMapProp === undefined })
+  const userMap = userMapProp ?? userMapFromHook
   const {
     attributes,
     listeners,
@@ -108,3 +115,7 @@ export function IssueCard({ issue, childCount = 0, onClick }: IssueCardProps) {
     </div>
   )
 }
+
+// Memoized: on a large board, drag/hover updates board-level state constantly;
+// without memo every card re-renders on each onDragOver tick.
+export const IssueCard = memo(IssueCardImpl)

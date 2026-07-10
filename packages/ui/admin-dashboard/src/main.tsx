@@ -1,5 +1,7 @@
 import React, { StrictMode } from "react"
 import * as ReactJsxRuntime from "react/jsx-runtime"
+import * as ReactDOM from "react-dom"
+import * as ReactDOMClient from "react-dom/client"
 import { createRoot } from "react-dom/client"
 import { BrowserRouter } from "react-router-dom"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
@@ -21,6 +23,8 @@ import "./index.css"
 // so the pre-built dashboard and user extensions share the same React instance.
 ;(window as any).__React = React
 ;(window as any).__ReactJsxRuntime = ReactJsxRuntime
+;(window as any).__ReactDOM = ReactDOM
+;(window as any).__ReactDOMClient = ReactDOMClient
 
 const queryClient = new QueryClient({
   defaultOptions: {

@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, type ReactNode } from "react"
+import { api } from "../api/client"
 
 interface User {
   id: string
@@ -91,23 +92,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   })
 
-  const login = (rawUser: Omit<User, "roles" | "permissions">, newToken: string) => {
+  const login = useCallback((rawUser: Omit<User, "roles" | "permissions">, newToken: string) => {
     const { roles, permissions } = decodeTokenPayload(newToken)
     const userWithRoles: User = { ...rawUser, roles, permissions }
     setUser(userWithRoles)
     setToken(newToken)
     localStorage.setItem(TOKEN_KEY, newToken)
     localStorage.setItem(USER_KEY, JSON.stringify(userWithRoles))
-  }
+  }, [])
 
-  const logout = () => {
-    // Fire-and-forget: revoke the session on the server so the token can't be reused
-    const currentToken = localStorage.getItem(TOKEN_KEY)
-    if (currentToken) {
-      fetch("/auth/logout", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${currentToken}`, "Content-Type": "application/json" },
-      }).catch(() => {})
+  const logout = useCallback(() => {
+    // Fire-and-forget: revoke the session on the server so the token can't be
+    // reused. Use the api client so it targets BASE_URL — a raw relative
+    // fetch("/auth/logout") would hit the dashboard origin (not the API) in
+    // split-origin deployments and never actually revoke the token.
+    if (localStorage.getItem(TOKEN_KEY)) {
+      api.post("/auth/logout").catch(() => {})
     }
     setUser(null)
     setToken(null)
@@ -115,7 +115,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem(TOKEN_KEY)
     localStorage.removeItem(USER_KEY)
     localStorage.removeItem(WORKSPACE_KEY)
-  }
+  }, [])
 
   useEffect(() => {
     const handle = () => {
@@ -124,33 +124,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     window.addEventListener("meridian:unauthorized", handle)
     return () => window.removeEventListener("meridian:unauthorized", handle)
-  }, [])
+  }, [logout])
 
-  const setWorkspace = (w: WorkspaceRef | null) => {
+  const setWorkspace = useCallback((w: WorkspaceRef | null) => {
     setWorkspaceState(w)
     if (w) {
       localStorage.setItem(WORKSPACE_KEY, JSON.stringify(w))
     } else {
       localStorage.removeItem(WORKSPACE_KEY)
     }
-  }
+  }, [])
 
-  const updateLocalUser = (updates: Partial<Omit<User, "roles" | "permissions">>) => {
+  const updateLocalUser = useCallback((updates: Partial<Omit<User, "roles" | "permissions">>) => {
     setUser((prev) => {
       if (!prev) return prev
       const updated = { ...prev, ...updates }
       localStorage.setItem(USER_KEY, JSON.stringify(updated))
       return updated
     })
-  }
+  }, [])
 
-  return (
-    <AuthContext.Provider
-      value={{ user, token, workspace, isAuthenticated: !!token && !!user, login, logout, setWorkspace, updateLocalUser }}
-    >
-      {children}
-    </AuthContext.Provider>
+  const value = useMemo<AuthState>(
+    () => ({
+      user, token, workspace,
+      isAuthenticated: !!token && !!user,
+      login, logout, setWorkspace, updateLocalUser,
+    }),
+    [user, token, workspace, login, logout, setWorkspace, updateLocalUser]
   )
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
 export function useAuth() {

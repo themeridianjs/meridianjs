@@ -162,10 +162,16 @@ export function useIssues(projectId?: string, filters?: BoardFilters) {
       const first = await api.get<IssuesResponse>(`/admin/issues?${params}`)
       if (first.count <= first.issues.length) return first
 
-      // Fetch remaining pages in parallel
+      // Fetch remaining pages in parallel.
       const pageSize = first.issues.length
+      // Guard: an empty first page with a non-zero count would make pages
+      // Infinity and throw a RangeError. Bail out with what we have.
+      if (pageSize === 0) return first
       const remaining = first.count - pageSize
-      const pages = Math.ceil(remaining / pageSize)
+      // Cap total extra pages so a huge board can't fire hundreds of parallel
+      // requests / blow up client memory. Beyond this, callers should paginate.
+      const MAX_EXTRA_PAGES = 20
+      const pages = Math.min(Math.ceil(remaining / pageSize), MAX_EXTRA_PAGES)
       const fetches = Array.from({ length: pages }, (_, i) => {
         const p = new URLSearchParams(params)
         p.set("offset", String(pageSize * (i + 1)))
@@ -265,10 +271,13 @@ export function useUpdateIssue(id: string, projectId: string) {
 
     // Optimistically patch the list cache so the cell updates instantly and
     // the refetch on settle doesn't cause a visible flash or row reorder.
+    // Patch EVERY board variant for this project (the board key includes the
+    // active filters, so a single no-filter key would miss the filtered board).
     onMutate: async (newData) => {
-      await qc.cancelQueries({ queryKey: issueKeys.byProject(projectId) })
-      const previous = qc.getQueryData<IssuesResponse>(issueKeys.byProject(projectId))
-      qc.setQueryData<IssuesResponse>(issueKeys.byProject(projectId), (old) => {
+      const boardPrefix = ["issues", "project", projectId] as const
+      await qc.cancelQueries({ queryKey: boardPrefix })
+      const previous = qc.getQueriesData<IssuesResponse>({ queryKey: boardPrefix })
+      qc.setQueriesData<IssuesResponse>({ queryKey: boardPrefix }, (old) => {
         if (!old) return old
         return {
           ...old,
@@ -280,11 +289,11 @@ export function useUpdateIssue(id: string, projectId: string) {
       return { previous }
     },
 
-    // Roll back on error
-    onError: (_err, _vars, context: { previous?: IssuesResponse } | undefined) => {
-      if (context?.previous) {
-        qc.setQueryData<IssuesResponse>(issueKeys.byProject(projectId), context.previous)
-      }
+    // Roll back on error — restore each board variant snapshot.
+    onError: (_err, _vars, context: { previous?: [readonly unknown[], IssuesResponse | undefined][] } | undefined) => {
+      context?.previous?.forEach(([key, data]) => {
+        qc.setQueryData(key, data)
+      })
     },
 
     // Always reconcile with server after settle
