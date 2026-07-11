@@ -68,6 +68,7 @@ export function renderPackageJson(vars: ProjectTemplateVars): string {
         "@meridianjs/types": MERIDIAN_DEP,
         "@meridianjs/auth": MERIDIAN_DEP,
         "@meridianjs/event-bus-local": MERIDIAN_DEP,
+        "@meridianjs/plugin-mcp": MERIDIAN_DEP,
         "dotenv": "^16.0.0",
         ...(vars.dashboard ? { "@meridianjs/admin-dashboard": MERIDIAN_DEP } : {}),
         ...Object.fromEntries(
@@ -194,6 +195,9 @@ export default defineConfig({
   ],
   plugins: [
     { resolve: "@meridianjs/meridian" },
+    // MCP server at /mcp — connect Claude, Cursor, and other LLM clients
+    // using personal access tokens (created at /admin/api-tokens)
+    { resolve: "@meridianjs/plugin-mcp" },
   ],
 })
 `
@@ -233,7 +237,7 @@ process.on("SIGINT", async () => {
 }
 
 export function renderMiddlewares(): string {
-  return `import { authenticateJWT } from "@meridianjs/auth"
+  return `import { authenticate } from "@meridianjs/auth"
 import { authRateLimit, oauthRateLimit, apiRateLimit } from "@meridianjs/framework"
 
 /**
@@ -241,7 +245,7 @@ import { authRateLimit, oauthRateLimit, apiRateLimit } from "@meridianjs/framewo
  *
  * /auth/login, /auth/register — strict rate limit (brute-force protection)
  * /auth/google                — looser limit (a full OAuth flow = 3 requests)
- * /admin/*                    — rate-limited + JWT required
+ * /admin/*                    — rate-limited + JWT or personal access token required
  */
 export default {
   routes: [
@@ -251,7 +255,7 @@ export default {
     { matcher: "/auth/reset-password",  middlewares: [authRateLimit] },
     { matcher: "/auth/google",          middlewares: [oauthRateLimit] },
     { matcher: "/auth/invite",          middlewares: [authRateLimit] },
-    { matcher: "/admin", middlewares: [apiRateLimit, authenticateJWT] },
+    { matcher: "/admin", middlewares: [apiRateLimit, authenticate] },
   ],
 }
 `

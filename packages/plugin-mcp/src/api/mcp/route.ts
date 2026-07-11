@@ -16,7 +16,7 @@ import { registerTools } from "../../tools/index.js"
  */
 export const middlewares = [apiRateLimit, authenticateBearer]
 
-const SERVER_INFO = { name: "meridian", version: "1.0.0" }
+const SERVER_INFO = { name: "meridian", version: "2.6.0" }
 
 const INSTRUCTIONS = [
   "Meridian project management tools.",
