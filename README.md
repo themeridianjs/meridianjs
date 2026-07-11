@@ -299,13 +299,18 @@ Notes: PATs are accepted only via the `Authorization` header (never `?token=`); 
 
 `POST /mcp` — Streamable HTTP transport, stateless, JSON responses. Requests must send `Accept: application/json, text/event-stream` and a Bearer PAT (or JWT). `GET`/`DELETE /mcp` return `405` (no sessions in stateless mode).
 
-**Connect Claude Code:**
+### Connecting clients
+
+All clients need the same two inputs: your MCP URL (`https://your-app.com/mcp`) and a PAT (`mrd_...`).
+
+**Claude Code** — one command (add `--scope user` to enable it in every project):
 ```bash
 claude mcp add --transport http meridian https://your-app.com/mcp \
   --header "Authorization: Bearer mrd_..."
 ```
+Verify with `claude mcp list`, then ask: *"List my Meridian projects."*
 
-**Connect Claude Desktop** (`claude_desktop_config.json` — the header goes through an env var because Desktop mangles args containing spaces):
+**Claude Desktop** — edit `claude_desktop_config.json` (macOS: `~/Library/Application Support/Claude/`), then fully restart the app (Cmd+Q). The header goes through an env var because Desktop mangles args containing spaces:
 ```json
 {
   "mcpServers": {
@@ -318,9 +323,39 @@ claude mcp add --transport http meridian https://your-app.com/mcp \
 }
 ```
 
-> claude.ai **web** custom connectors require OAuth discovery and are not yet supported — use Claude Desktop/Code, Cursor, or MCP Inspector, which all support static headers.
+**Cursor** — Cursor Settings → Tools & Integrations → MCP → Add, or edit `~/.cursor/mcp.json` (global) / `.cursor/mcp.json` (per-project — gitignore it, it holds your token):
+```json
+{
+  "mcpServers": {
+    "meridian": {
+      "url": "https://your-app.com/mcp",
+      "headers": { "Authorization": "Bearer mrd_..." }
+    }
+  }
+}
+```
+Toggle the server on in the MCP settings panel and use it in Agent (Composer) mode.
 
-**Verify with curl:**
+**VS Code (GitHub Copilot)** — create `.vscode/mcp.json` (or run **MCP: Open User Configuration**). The `inputs` block makes VS Code prompt for the token once and store it securely — nothing sensitive in the file:
+```json
+{
+  "inputs": [
+    { "type": "promptString", "id": "meridian-pat", "description": "Meridian API token (mrd_...)", "password": true }
+  ],
+  "servers": {
+    "meridian": {
+      "type": "http",
+      "url": "https://your-app.com/mcp",
+      "headers": { "Authorization": "Bearer ${input:meridian-pat}" }
+    }
+  }
+}
+```
+Click the **Start** code-lens above the server entry, then use Copilot Chat in **Agent mode** (MCP tools don't appear in Ask mode).
+
+> **ChatGPT and claude.ai web are not yet supported** — their custom connectors authenticate only via OAuth 2.0 and cannot send static bearer headers. OAuth support is planned; until then use the clients above (all header-capable, as is MCP Inspector).
+
+**Verify with curl** (if this returns the tool list, the server is fine and any remaining issue is client config):
 ```bash
 curl -s -X POST https://your-app.com/mcp \
   -H "Content-Type: application/json" \
