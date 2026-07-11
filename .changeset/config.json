@@ -10,6 +10,7 @@
       "@meridianjs/workflow-engine",
       "@meridianjs/auth",
       "@meridianjs/meridian",
+      "@meridianjs/plugin-mcp",
       "@meridianjs/admin-dashboard",
       "create-meridian-app"
     ]

@@ -1,6 +1,6 @@
 {
   "name": "@meridianjs/api-token",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Meridian API token module — personal access tokens for programmatic and MCP access",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -25,8 +25,8 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@meridianjs/framework-utils": "^2.0.0",
-    "@meridianjs/types": "^2.0.0",
+    "@meridianjs/framework-utils": "^2.7.0",
+    "@meridianjs/types": "^2.7.0",
     "@mikro-orm/core": "^6.4.3",
     "@mikro-orm/postgresql": "^6.4.3"
   },
