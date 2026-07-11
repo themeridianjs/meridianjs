@@ -1,5 +1,12 @@
 # @meridianjs/auth
 
+## 2.7.2
+
+### Patch Changes
+
+- @meridianjs/types@2.7.2
+- @meridianjs/framework-utils@2.7.2
+
 ## 2.7.1
 
 ### Patch Changes

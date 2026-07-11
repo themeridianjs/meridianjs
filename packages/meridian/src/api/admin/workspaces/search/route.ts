@@ -13,7 +13,7 @@ export const GET = async (req: any, res: Response) => {
     filters.$or = [{ name: { $ilike: term } }, { slug: { $ilike: term } }]
   }
 
-  const [workspaces] = await workspaceService.listAndCountWorkspaces(filters, { limit: 20 })
+  const [workspaces] = await workspaceService.listAndCountWorkspaces(filters, { limit: 50 })
 
   // Batch the membership + pending-request lookups into two queries total
   // instead of two per result row.

@@ -23,7 +23,7 @@ export function useWorkspaces(enabledOrOptions: boolean | { orgScope?: boolean; 
   const enabled = typeof enabledOrOptions === "boolean" ? enabledOrOptions : true
   const orgScope = typeof enabledOrOptions === "object" ? (enabledOrOptions.orgScope ?? false) : false
   const refetchInterval = typeof enabledOrOptions === "object" ? (enabledOrOptions.refetchInterval ?? false) : false
-  const qs = buildQuery({ org_scope: orgScope || undefined })
+  const qs = buildQuery({ org_scope: orgScope || undefined, limit: 1000 })
   return useQuery({
     queryKey: ["workspaces", orgScope ? "org" : "default"],
     queryFn: () => api.get<WorkspacesResponse>(`/admin/workspaces${qs}`),

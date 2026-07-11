@@ -1,5 +1,16 @@
 # @meridianjs/meridian
 
+## 2.7.2
+
+### Patch Changes
+
+- Workspace switcher is now a searchable combobox: type to filter your workspaces (by name or slug) and to search joinable public workspaces server-side. The workspace list loads up to 1000 entries (was 200 default) and the public-workspace search returns up to 50 results (was 20).
+  - @meridianjs/types@2.7.2
+  - @meridianjs/framework-utils@2.7.2
+  - @meridianjs/framework@2.7.2
+  - @meridianjs/workflow-engine@2.7.2
+  - @meridianjs/auth@2.7.2
+
 ## 2.7.1
 
 ### Patch Changes

@@ -1,5 +1,15 @@
 # @meridianjs/plugin-mcp
 
+## 2.7.2
+
+### Patch Changes
+
+- Updated dependencies
+  - @meridianjs/meridian@2.7.2
+  - @meridianjs/types@2.7.2
+  - @meridianjs/framework@2.7.2
+  - @meridianjs/auth@2.7.2
+
 ## 2.7.1
 
 ### Patch Changes

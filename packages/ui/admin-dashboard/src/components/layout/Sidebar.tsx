@@ -34,7 +34,7 @@ import {
   SidebarMenuItem,
   SidebarSeparator,
 } from "@/components/ui/sidebar"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import type { ComponentProps } from "react"
 type SidebarProps = ComponentProps<typeof SidebarRoot>
 import {
@@ -52,6 +52,15 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -62,7 +71,15 @@ function WorkspaceSwitcher() {
   const { workspace, setWorkspace } = useAuth()
   const { data: workspaces } = useWorkspaces()
   const [dropdownOpen, setDropdownOpen] = useState(false)
-  const { data: allPublic = [] } = useSearchWorkspaces("", { enabled: dropdownOpen })
+  const [query, setQuery] = useState("")
+  // Debounced copy of the search input — drives the server-side search of
+  // public workspaces while cmdk filters the already-loaded lists instantly.
+  const [debouncedQuery, setDebouncedQuery] = useState("")
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedQuery(query), 250)
+    return () => clearTimeout(t)
+  }, [query])
+  const { data: allPublic = [] } = useSearchWorkspaces(debouncedQuery, { enabled: dropdownOpen })
   const requestAccess = useRequestWorkspaceAccess()
   const navigate = useNavigate()
 
@@ -96,8 +113,17 @@ function WorkspaceSwitcher() {
     <>
     <SidebarMenu>
       <SidebarMenuItem>
-        <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
-          <DropdownMenuTrigger asChild>
+        <Popover
+          open={dropdownOpen}
+          onOpenChange={(open) => {
+            setDropdownOpen(open)
+            if (!open) {
+              setQuery("")
+              setDebouncedQuery("")
+            }
+          }}
+        >
+          <PopoverTrigger asChild>
             <SidebarMenuButton
               size="lg"
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
@@ -117,85 +143,102 @@ function WorkspaceSwitcher() {
               </div>
               <ChevronsUpDown className="ml-auto size-4 shrink-0" />
             </SidebarMenuButton>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
+          </PopoverTrigger>
+          <PopoverContent
+            className="w-(--radix-popover-trigger-width) min-w-56 rounded-lg p-0"
             side="bottom"
             align="start"
             sideOffset={4}
           >
-            <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">
-              My workspaces
-            </DropdownMenuLabel>
-            <div className="max-h-48 overflow-y-auto">
-              {sortedWorkspaces.map((w) => (
-                <DropdownMenuItem
-                  key={w.id}
-                  className="cursor-pointer gap-2 p-2"
-                  onClick={() => {
-                    setWorkspace({ id: w.id, name: w.name, slug: w.slug, logo_url: w.logo_url })
-                    navigate(`/${w.slug}/projects`)
-                  }}
-                >
-                  {w.logo_url ? (
-                    <img src={w.logo_url} alt={w.name} className="size-6 rounded-sm object-cover shrink-0" />
-                  ) : (
-                    <div className="flex size-6 items-center justify-center rounded-sm bg-foreground text-background shrink-0">
-                      <span className="text-[10px] font-bold">{w.name[0].toUpperCase()}</span>
-                    </div>
-                  )}
-                  <span className="flex-1 truncate">{w.name}</span>
-                  {w.id === workspace?.id && (
-                    <Check className="size-3.5 text-muted-foreground shrink-0" />
-                  )}
-                </DropdownMenuItem>
-              ))}
-            </div>
-
-            {joinable.length > 0 && (
-              <>
-                <DropdownMenuSeparator />
-                <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">
-                  Other workspaces
-                </DropdownMenuLabel>
-                <div className="max-h-36 overflow-y-auto">
-                  {joinable.map((w) => {
-                    const requested = requestedIds.has(w.id)
-                    return (
-                      <DropdownMenuItem
-                        key={w.id}
-                        className="cursor-pointer gap-2 p-2"
-                        onClick={() => { if (!requested) { setConfirmWorkspace({ id: w.id, name: w.name }); setConfirmMessage("") } }}
-                        disabled={requested}
-                      >
-                        <div className="flex size-6 items-center justify-center rounded-sm bg-muted text-muted-foreground shrink-0">
+            <Command>
+              <CommandInput
+                placeholder="Search workspaces..."
+                className="h-9 text-sm"
+                value={query}
+                onValueChange={setQuery}
+              />
+              <CommandList>
+                <CommandEmpty className="py-4 text-center text-xs text-muted-foreground">
+                  No workspaces found.
+                </CommandEmpty>
+                <CommandGroup heading="My workspaces">
+                  {sortedWorkspaces.map((w) => (
+                    <CommandItem
+                      key={w.id}
+                      value={`${w.name} ${w.slug}`}
+                      className="cursor-pointer gap-2 p-2"
+                      onSelect={() => {
+                        setWorkspace({ id: w.id, name: w.name, slug: w.slug, logo_url: w.logo_url })
+                        setDropdownOpen(false)
+                        navigate(`/${w.slug}/projects`)
+                      }}
+                    >
+                      {w.logo_url ? (
+                        <img src={w.logo_url} alt={w.name} className="size-6 rounded-sm object-cover shrink-0" />
+                      ) : (
+                        <div className="flex size-6 items-center justify-center rounded-sm bg-foreground text-background shrink-0">
                           <span className="text-[10px] font-bold">{w.name[0].toUpperCase()}</span>
                         </div>
-                        <span className="flex-1 truncate text-muted-foreground">{w.name}</span>
-                        {requested ? (
-                          <span className="text-[10px] text-muted-foreground shrink-0">Requested</span>
-                        ) : (
-                          <Lock className="size-3.5 text-muted-foreground shrink-0" />
-                        )}
-                      </DropdownMenuItem>
-                    )
-                  })}
-                </div>
-              </>
-            )}
+                      )}
+                      <span className="flex-1 truncate">{w.name}</span>
+                      {w.id === workspace?.id && (
+                        <Check className="size-3.5 text-muted-foreground shrink-0" />
+                      )}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
 
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              className="cursor-pointer gap-2 p-2 text-muted-foreground"
-              onClick={() => navigate("/setup")}
-            >
-              <div className="flex size-6 items-center justify-center rounded-md border bg-background">
-                <span className="text-xs font-semibold">+</span>
-              </div>
-              <span>Create workspace</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+                {joinable.length > 0 && (
+                  <CommandGroup heading="Other workspaces">
+                    {joinable.map((w) => {
+                      const requested = requestedIds.has(w.id) || w.has_pending_request
+                      return (
+                        <CommandItem
+                          key={w.id}
+                          value={`${w.name} ${w.slug}`}
+                          className="cursor-pointer gap-2 p-2"
+                          disabled={requested}
+                          onSelect={() => {
+                            if (!requested) {
+                              setConfirmWorkspace({ id: w.id, name: w.name })
+                              setConfirmMessage("")
+                            }
+                          }}
+                        >
+                          <div className="flex size-6 items-center justify-center rounded-sm bg-muted text-muted-foreground shrink-0">
+                            <span className="text-[10px] font-bold">{w.name[0].toUpperCase()}</span>
+                          </div>
+                          <span className="flex-1 truncate text-muted-foreground">{w.name}</span>
+                          {requested ? (
+                            <span className="text-[10px] text-muted-foreground shrink-0">Requested</span>
+                          ) : (
+                            <Lock className="size-3.5 text-muted-foreground shrink-0" />
+                          )}
+                        </CommandItem>
+                      )
+                    })}
+                  </CommandGroup>
+                )}
+              </CommandList>
+            </Command>
+            {/* Outside the Command so it stays visible regardless of the filter */}
+            <div className="border-t p-1">
+              <button
+                type="button"
+                className="flex w-full cursor-pointer items-center gap-2 rounded-sm p-2 text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                onClick={() => {
+                  setDropdownOpen(false)
+                  navigate("/setup")
+                }}
+              >
+                <div className="flex size-6 items-center justify-center rounded-md border bg-background">
+                  <span className="text-xs font-semibold">+</span>
+                </div>
+                <span>Create workspace</span>
+              </button>
+            </div>
+          </PopoverContent>
+        </Popover>
       </SidebarMenuItem>
     </SidebarMenu>
 
