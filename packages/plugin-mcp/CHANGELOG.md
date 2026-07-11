@@ -1,5 +1,15 @@
 # @meridianjs/plugin-mcp
 
+## 2.7.1
+
+### Patch Changes
+
+- MCP `create_task` and `update_task` accept `assignee_emails` — emails are resolved to users server-side (case-insensitive), merged and deduped with `assignee_ids`, with clear errors for unknown or deactivated users. LLM clients no longer need a `list_members` round-trip to assign by email.
+  - @meridianjs/types@2.7.1
+  - @meridianjs/framework@2.7.1
+  - @meridianjs/auth@2.7.1
+  - @meridianjs/meridian@2.7.1
+
 ## 2.7.0
 
 ### Minor Changes

@@ -41,6 +41,49 @@ async function loadIssueWithAccess(ctx: McpToolContext, issueId: string) {
   return { issue }
 }
 
+/** Escapes LIKE wildcards so an email is matched literally (case-insensitively). */
+function escapeLike(value: string): string {
+  return value.replace(/[\\%_]/g, "\\$&")
+}
+
+/**
+ * Resolves assignee_emails to user ids and merges them with assignee_ids.
+ * Returns { ids } on success or { error } naming every email that failed —
+ * server-side resolution so clients can't pass a hallucinated user id.
+ */
+async function resolveAssigneeIds(
+  ctx: McpToolContext,
+  ids: string[] | undefined,
+  emails: string[] | undefined
+): Promise<{ ids: string[] } | { error: string }> {
+  const merged = [...(ids ?? [])]
+  if (emails && emails.length > 0) {
+    const userService = ctx.scope.resolve("userModuleService") as any
+    const [users] = await userService.listAndCountUsers(
+      { $or: emails.map((e) => ({ email: { $ilike: escapeLike(e.trim()) } })) },
+      { limit: emails.length * 2 }
+    )
+    const byEmail = new Map(
+      (users as any[]).map((u) => [String(u.email).toLowerCase(), u])
+    )
+    const missing: string[] = []
+    const inactive: string[] = []
+    for (const email of emails) {
+      const user = byEmail.get(email.trim().toLowerCase())
+      if (!user) missing.push(email)
+      else if (user.deleted_at || user.is_active === false) inactive.push(email)
+      else merged.push(user.id)
+    }
+    if (missing.length > 0) {
+      return { error: `No user found with email(s): ${missing.join(", ")} — use list_members to see valid members` }
+    }
+    if (inactive.length > 0) {
+      return { error: `User(s) deactivated and cannot be assigned: ${inactive.join(", ")}` }
+    }
+  }
+  return { ids: [...new Set(merged)] }
+}
+
 /** Project ids the caller may read — mirrors GET /admin/issues scoping. */
 async function accessibleProjectIds(ctx: McpToolContext): Promise<string[]> {
   const projectService = ctx.scope.resolve("projectModuleService") as any
@@ -140,6 +183,7 @@ export function registerTaskTools(server: McpServer, ctx: McpToolContext) {
         priority: z.enum(["urgent", "high", "medium", "low", "none"]).optional(),
         status: z.string().optional().describe("Status key (see list_project_statuses); defaults to backlog"),
         assignee_ids: z.array(z.string()).optional().describe("User IDs to assign (see list_members)"),
+        assignee_emails: z.array(z.string()).optional().describe("Assign by email address — resolved to users server-side; combines with assignee_ids"),
         due_date: z.string().optional().describe("ISO 8601 date, e.g. 2026-08-01"),
         sprint_id: z.string().optional(),
         estimate: z.number().optional(),
@@ -154,6 +198,9 @@ export function registerTaskTools(server: McpServer, ctx: McpToolContext) {
       if (!project) return err(`Project ${input.project_id} not found`)
       if (!(await hasProjectAccess(asReqLike(ctx), project))) return err("Forbidden")
 
+      const assignees = await resolveAssigneeIds(ctx, input.assignee_ids, input.assignee_emails)
+      if ("error" in assignees) return err(assignees.error)
+
       const { result: issue, errors, transaction_status } = await createIssueWorkflow(ctx.scope).run({
         input: {
           title: input.title,
@@ -163,7 +210,7 @@ export function registerTaskTools(server: McpServer, ctx: McpToolContext) {
           type: input.type,
           priority: input.priority,
           status: input.status,
-          assignee_ids: input.assignee_ids ?? null,
+          assignee_ids: assignees.ids.length > 0 ? assignees.ids : null,
           reporter_id: ctx.user?.id ?? null,
           parent_id: input.parent_id ?? null,
           due_date: input.due_date ? new Date(input.due_date) : undefined,
@@ -193,6 +240,7 @@ export function registerTaskTools(server: McpServer, ctx: McpToolContext) {
         priority: z.enum(["urgent", "high", "medium", "low", "none"]).optional(),
         type: z.enum(["bug", "feature", "task", "epic", "story", "improvement"]).optional(),
         assignee_ids: z.array(z.string()).optional().describe("Replaces the full assignee list"),
+        assignee_emails: z.array(z.string()).optional().describe("Assign by email address — resolved to users server-side; combines with assignee_ids to form the new full assignee list"),
         due_date: z.string().nullable().optional().describe("ISO 8601 date, or null to clear"),
         sprint_id: z.string().nullable().optional(),
         estimate: z.number().nullable().optional(),
@@ -219,11 +267,13 @@ export function registerTaskTools(server: McpServer, ctx: McpToolContext) {
       }
 
       // Assignment changes likewise.
-      if (input.assignee_ids !== undefined) {
+      if (input.assignee_ids !== undefined || input.assignee_emails !== undefined) {
+        const assignees = await resolveAssigneeIds(ctx, input.assignee_ids, input.assignee_emails)
+        if ("error" in assignees) return err(assignees.error)
         const { result, errors, transaction_status } = await assignIssueWorkflow(ctx.scope).run({
           input: {
             issueId: input.task_id,
-            assignee_ids: input.assignee_ids,
+            assignee_ids: assignees.ids,
             actor_id: ctx.user?.id ?? null,
           },
         })
