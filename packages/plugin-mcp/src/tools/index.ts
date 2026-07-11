@@ -3,6 +3,7 @@ import type { McpToolContext } from "../helpers.js"
 import { registerTaskTools } from "./tasks.js"
 import { registerProjectTools } from "./projects.js"
 import { registerMemberTools } from "./members.js"
+import { registerWorkspaceTools } from "./workspaces.js"
 
 /**
  * Registers all Meridian tools on a per-request McpServer instance.
@@ -11,6 +12,7 @@ import { registerMemberTools } from "./members.js"
  * entirely for read-only API tokens (they don't appear in tools/list).
  */
 export function registerTools(server: McpServer, ctx: McpToolContext): void {
+  registerWorkspaceTools(server, ctx)
   registerProjectTools(server, ctx)
   registerMemberTools(server, ctx)
   registerTaskTools(server, ctx)

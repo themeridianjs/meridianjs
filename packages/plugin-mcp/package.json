@@ -1,6 +1,6 @@
 {
   "name": "@meridianjs/plugin-mcp",
-  "version": "2.7.2",
+  "version": "2.7.3",
   "description": "Meridian plugin: MCP server (Streamable HTTP) so LLM clients can manage tasks via personal access tokens",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

@@ -9,8 +9,9 @@ export function registerProjectTools(server: McpServer, ctx: McpToolContext) {
     {
       title: "List projects",
       description:
-        "List the projects the caller can access. Use the returned project IDs with create_task and search_tasks.",
+        "List the projects the caller can access, optionally scoped to one workspace. Use the returned project IDs with create_task and search_tasks.",
       inputSchema: {
+        workspace_id: z.string().optional().describe("Scope to one workspace (see list_workspaces)"),
         search: z.string().optional().describe("Filter by project name"),
         limit: z.number().int().min(1).max(200).optional().describe("Max results, default 50"),
       },
@@ -23,9 +24,17 @@ export function registerProjectTools(server: McpServer, ctx: McpToolContext) {
 
       if (isGlobalAdmin(asReqLike(ctx))) {
         const workspaceIds = await getAccessibleWorkspaceIds(asReqLike(ctx))
-        if (workspaceIds.length === 0) return ok({ projects: [], count: 0 })
-        filters.workspace_id = workspaceIds.length === 1 ? workspaceIds[0] : workspaceIds
+        if (input.workspace_id) {
+          if (!workspaceIds.includes(input.workspace_id)) {
+            return err("Workspace not found or access denied")
+          }
+          filters.workspace_id = input.workspace_id
+        } else {
+          if (workspaceIds.length === 0) return ok({ projects: [], count: 0 })
+          filters.workspace_id = workspaceIds.length === 1 ? workspaceIds[0] : workspaceIds
+        }
       } else {
+        if (input.workspace_id) filters.workspace_id = input.workspace_id
         const teamMemberService = ctx.scope.resolve("teamMemberModuleService") as any
         const projectMemberService = ctx.scope.resolve("projectMemberModuleService") as any
         const teamIds = await teamMemberService.getUserTeamIds(ctx.user.id)

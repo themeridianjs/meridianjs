@@ -368,7 +368,8 @@ curl -s -X POST https://your-app.com/mcp \
 
 | Tool | Scope | Description |
 |---|---|---|
-| `list_projects` | read | Projects the caller can access — `{ search?, limit? }` |
+| `list_workspaces` | read | Workspaces the caller can access — `{ search?, limit? }` |
+| `list_projects` | read | Projects the caller can access, optionally scoped to one workspace — `{ workspace_id?, search?, limit? }` |
 | `list_project_statuses` | read | Board columns / status keys of a project — `{ project_id }` |
 | `list_members` | read | Assignable users (id, email, name) — `{ project_id?, limit? }` |
 | `get_task` | read | One task by id — `{ task_id }` |
@@ -377,7 +378,7 @@ curl -s -X POST https://your-app.com/mcp \
 | `update_task` | write | Update fields on a task — `{ task_id, title?, description?, status?, priority?, type?, assignee_ids?, assignee_emails?, due_date?, sprint_id?, estimate? }` |
 | `add_comment` | write | Comment on a task — `{ task_id, body }` |
 
-- **Read-only tokens see only the 5 read tools** — write tools are omitted from `tools/list` entirely.
+- **Read-only tokens see only the 6 read tools** — write tools are omitted from `tools/list` entirely.
 - `assignee_emails` resolves emails to users server-side (case-insensitive) and merges with `assignee_ids`; unknown or deactivated emails return a clear error.
 - Mutations run the same workflows as the REST routes (activity log, notifications, and real-time events all fire); failures come back as MCP tool errors, never protocol errors.
 

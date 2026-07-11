@@ -20,7 +20,8 @@ const SERVER_INFO = { name: "meridian", version: "2.6.0" }
 
 const INSTRUCTIONS = [
   "Meridian project management tools.",
-  "Typical flow: list_projects to find a project, list_project_statuses for its workflow columns,",
+  "Typical flow: list_workspaces to find a workspace, list_projects (optionally filtered by workspace_id)",
+  "to find a project, list_project_statuses for its workflow columns,",
   "list_members for assignable user IDs, then create_task / update_task / add_comment.",
 ].join(" ")
 
