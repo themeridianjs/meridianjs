@@ -13,6 +13,7 @@ Open-source project management framework — a self-hosted, developer-first alte
 - **Plugin system** — extend with custom modules, routes, subscribers, and jobs
 - **Widget zones** — inject custom React components into named slots in the admin UI
 - **RBAC** — JWT-based auth with role and permission guards
+- **MCP server** — connect Claude, Cursor, and other LLM clients via the Model Context Protocol, authenticated with personal access tokens
 - **CLI** — scaffold new projects with `npx create-meridian-app`
 
 ## Quick Start
@@ -260,6 +261,130 @@ export async function GET(req: Request, res: Response) {
   res.json({ items })
 }
 ```
+
+## LLM Integration — MCP Server & API Tokens
+
+Meridian ships an [MCP](https://modelcontextprotocol.io) server (`@meridianjs/plugin-mcp`) so LLM clients — Claude Desktop, Claude Code, Cursor, or your own agents — can create and manage tasks. Authentication uses **personal access tokens (PATs)**: a token acts as the user who created it, so all existing role, permission, and project-access checks apply unchanged. The same tokens also work as Bearer tokens on the regular REST API.
+
+### Personal access tokens
+
+Create tokens in the dashboard under **Profile → API Tokens**, or via the API. Tokens look like `mrd_<64 hex chars>`, are stored hashed (sha256), and carry scopes:
+
+| Scope | Grants |
+|---|---|
+| `read` | List/search projects, tasks, members; all `GET` requests on the REST API |
+| `write` | Create/update tasks, add comments; mutating REST requests |
+
+Token management routes (require a JWT session or the dashboard — **a token cannot mint other tokens**):
+
+| Route | Description |
+|---|---|
+| `GET /admin/api-tokens` | List your tokens (name, prefix, scopes, last used — never the secret) |
+| `POST /admin/api-tokens` | Create a token — body `{ "name": "claude", "scopes": ["read","write"], "expires_in_days": 90 }` (`expires_in_days` optional). Response includes the plaintext `token` **once**; it is never retrievable again |
+| `DELETE /admin/api-tokens/:id` | Revoke a token (immediate, irreversible) |
+
+```bash
+# Create a token (with a JWT from /auth/login)
+curl -X POST https://your-app.com/admin/api-tokens \
+  -H "Authorization: Bearer <jwt>" -H "Content-Type: application/json" \
+  -d '{"name":"claude","scopes":["read","write"]}'
+
+# Use it on any REST route
+curl https://your-app.com/admin/issues?limit=5 -H "Authorization: Bearer mrd_..."
+```
+
+Notes: PATs are accepted only via the `Authorization` header (never `?token=`); read-only tokens are limited to `GET`/`HEAD`/`OPTIONS` on REST and receive `403` on mutations.
+
+### MCP endpoint
+
+`POST /mcp` — Streamable HTTP transport, stateless, JSON responses. Requests must send `Accept: application/json, text/event-stream` and a Bearer PAT (or JWT). `GET`/`DELETE /mcp` return `405` (no sessions in stateless mode).
+
+**Connect Claude Code:**
+```bash
+claude mcp add --transport http meridian https://your-app.com/mcp \
+  --header "Authorization: Bearer mrd_..."
+```
+
+**Connect Claude Desktop** (`claude_desktop_config.json` — the header goes through an env var because Desktop mangles args containing spaces):
+```json
+{
+  "mcpServers": {
+    "meridian": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "https://your-app.com/mcp", "--header", "Authorization:${AUTH_HEADER}"],
+      "env": { "AUTH_HEADER": "Bearer mrd_..." }
+    }
+  }
+}
+```
+
+> claude.ai **web** custom connectors require OAuth discovery and are not yet supported — use Claude Desktop/Code, Cursor, or MCP Inspector, which all support static headers.
+
+**Verify with curl:**
+```bash
+curl -s -X POST https://your-app.com/mcp \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -H "Authorization: Bearer mrd_..." \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
+```
+
+### MCP tools
+
+| Tool | Scope | Description |
+|---|---|---|
+| `list_projects` | read | Projects the caller can access — `{ search?, limit? }` |
+| `list_project_statuses` | read | Board columns / status keys of a project — `{ project_id }` |
+| `list_members` | read | Assignable users (id, email, name) — `{ project_id?, limit? }` |
+| `get_task` | read | One task by id — `{ task_id }` |
+| `search_tasks` | read | Filter/search tasks — `{ project_id?, status?, priority?, assignee_id?, search?, limit? }` |
+| `create_task` | write | Create a task — `{ title, project_id, description?, type?, priority?, status?, assignee_ids?, assignee_emails?, due_date?, sprint_id?, estimate?, parent_id? }` |
+| `update_task` | write | Update fields on a task — `{ task_id, title?, description?, status?, priority?, type?, assignee_ids?, assignee_emails?, due_date?, sprint_id?, estimate? }` |
+| `add_comment` | write | Comment on a task — `{ task_id, body }` |
+
+- **Read-only tokens see only the 5 read tools** — write tools are omitted from `tools/list` entirely.
+- `assignee_emails` resolves emails to users server-side (case-insensitive) and merges with `assignee_ids`; unknown or deactivated emails return a clear error.
+- Mutations run the same workflows as the REST routes (activity log, notifications, and real-time events all fire); failures come back as MCP tool errors, never protocol errors.
+
+**Example `tools/call`:**
+```bash
+curl -s -X POST https://your-app.com/mcp \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -H "Authorization: Bearer mrd_..." \
+  -d '{
+    "jsonrpc": "2.0", "id": 2, "method": "tools/call",
+    "params": {
+      "name": "create_task",
+      "arguments": {
+        "title": "Fix login redirect",
+        "project_id": "<uuid from list_projects>",
+        "priority": "high",
+        "assignee_emails": ["dev@example.com"]
+      }
+    }
+  }'
+```
+
+### Enabling on an existing app
+
+New `create-meridian-app` projects include everything. Existing apps need three one-time steps:
+
+```bash
+npm install @meridianjs/plugin-mcp        # 1. install the plugin
+```
+```typescript
+// 2. meridian.config.ts
+plugins: [
+  { resolve: "@meridianjs/meridian" },
+  { resolve: "@meridianjs/plugin-mcp" },
+],
+```
+```bash
+MERIDIAN_DB_SYNC=1 npm start              # 3. one boot to create the api_token table
+```
+
+Optionally swap `authenticateJWT` → `authenticate` in `src/api/middlewares.ts` (`/admin` matcher) so PATs also work on the REST API.
 
 ## Admin Dashboard Widgets
 
