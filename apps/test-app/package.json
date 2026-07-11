@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@meridianjs/activity": "*",
+    "@meridianjs/api-token": "*",
     "@meridianjs/app-role": "*",
     "@meridianjs/auth": "*",
     "@meridianjs/email-ses": "*",
@@ -21,6 +22,7 @@
     "@meridianjs/job-queue-redis": "*",
     "@meridianjs/meridian": "*",
     "@meridianjs/notification": "*",
+    "@meridianjs/plugin-mcp": "*",
     "@meridianjs/plugin-webhook": "*",
     "@meridianjs/project": "*",
     "@meridianjs/project-member": "*",

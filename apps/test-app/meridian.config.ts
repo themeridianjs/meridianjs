@@ -69,5 +69,7 @@ export default defineConfig({
   plugins: [
     // Default meridian routes/workflows/links/subscribers
     { resolve: "@meridianjs/meridian" },
+    // MCP server at /mcp — LLM clients authenticate with personal access tokens
+    { resolve: "@meridianjs/plugin-mcp" },
   ],
 })

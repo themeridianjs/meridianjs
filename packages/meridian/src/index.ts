@@ -4,6 +4,12 @@ import type { PluginRegistrationContext } from "@meridianjs/types"
 
 export { transferProjectWorkflow } from "./workflows/transfer-project.js"
 export type { TransferProjectInput } from "./workflows/transfer-project.js"
+export { createIssueWorkflow } from "./workflows/create-issue.js"
+export type { CreateIssueInput } from "./workflows/create-issue.js"
+export { updateIssueStatusWorkflow } from "./workflows/update-issue-status.js"
+export { assignIssueWorkflow } from "./workflows/assign-issue.js"
+export { hasProjectAccess, isGlobalAdmin } from "./api/utils/project-access.js"
+export { getAccessibleWorkspaceIds } from "./api/utils/workspace-access.js"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -36,6 +42,7 @@ const CORE_MODULES = [
   "@meridianjs/project-member",
   "@meridianjs/app-role",
   "@meridianjs/org-calendar",
+  "@meridianjs/api-token",
 ]
 
 class ConsoleEmailService {

@@ -11,5 +11,6 @@ export default Module(AUTH_MODULE, {
 
 export { AuthModuleService }
 export { authenticateJWT } from "./middleware.js"
+export { authenticate, authenticateBearer, createAuthenticate } from "./authenticate.js"
 export { requireRoles, requireWorkspace, requirePermission } from "./guards.js"
 export type { RegisterInput, LoginInput, AuthResult, JwtPayload, GoogleAuthInput } from "./service.js"

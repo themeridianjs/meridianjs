@@ -1,5 +1,5 @@
 import { Outlet, useNavigate, NavLink, useLocation } from "react-router-dom"
-import { User, ArrowLeft, Clock, ChevronsUpDown, LogOut } from "lucide-react"
+import { User, ArrowLeft, Clock, ChevronsUpDown, LogOut, KeyRound } from "lucide-react"
 import { useAuth } from "@/stores/auth"
 import { ThemeToggle } from "@/components/theme/ThemeToggle"
 import {
@@ -143,6 +143,16 @@ function ProfileSidebar() {
                   )}
                 </NavLink>
               </SidebarMenuItem>
+              <SidebarMenuItem>
+                <NavLink to="/profile/api-tokens">
+                  {({ isActive }) => (
+                    <SidebarMenuButton isActive={isActive} tooltip="API Tokens">
+                      <KeyRound />
+                      <span>API Tokens</span>
+                    </SidebarMenuButton>
+                  )}
+                </NavLink>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -158,8 +168,9 @@ function ProfileSidebar() {
 export function ProfileLayout() {
   const location = useLocation()
   const isTimesheets = location.pathname.includes("/timesheets")
-  const pageTitle = isTimesheets ? "Timesheets" : "Profile"
-  const PageIcon = isTimesheets ? Clock : User
+  const isApiTokens = location.pathname.includes("/api-tokens")
+  const pageTitle = isTimesheets ? "Timesheets" : isApiTokens ? "API Tokens" : "Profile"
+  const PageIcon = isTimesheets ? Clock : isApiTokens ? KeyRound : User
 
   return (
     <SidebarProvider>
