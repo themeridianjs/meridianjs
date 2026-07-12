@@ -4,6 +4,7 @@ import { registerTaskTools } from "./tasks.js"
 import { registerProjectTools } from "./projects.js"
 import { registerMemberTools } from "./members.js"
 import { registerWorkspaceTools } from "./workspaces.js"
+import { registerReportTools } from "./reports.js"
 
 /**
  * Registers all Meridian tools on a per-request McpServer instance.
@@ -16,4 +17,5 @@ export function registerTools(server: McpServer, ctx: McpToolContext): void {
   registerProjectTools(server, ctx)
   registerMemberTools(server, ctx)
   registerTaskTools(server, ctx)
+  registerReportTools(server, ctx)
 }

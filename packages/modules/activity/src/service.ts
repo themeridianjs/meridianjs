@@ -41,6 +41,48 @@ export class ActivityModuleService extends MeridianService({ Activity: ActivityM
   }
 
   /**
+   * Query activity records across entities for reporting (per-actor and
+   * per-period views). Ordered created_at DESC. Records older than the
+   * cleanup-old-activities retention window have been purged, so results
+   * only cover that window.
+   */
+  async listActivities(filters: {
+    actor_id?: string
+    workspace_id?: string | string[]
+    entity_type?: string
+    action?: string | string[]
+    /** Inclusive lower bound on created_at. */
+    from?: Date
+    /** Exclusive upper bound on created_at. */
+    to?: Date
+    /** Default 500, capped at 2000. */
+    limit?: number
+  }): Promise<any[]> {
+    const repo = this.container.resolve<any>("activityRepository")
+    const where: Record<string, unknown> = {}
+
+    if (filters.actor_id) where.actor_id = filters.actor_id
+    if (filters.entity_type) where.entity_type = filters.entity_type
+    if (filters.workspace_id) {
+      where.workspace_id = Array.isArray(filters.workspace_id)
+        ? { $in: filters.workspace_id }
+        : filters.workspace_id
+    }
+    if (filters.action) {
+      where.action = Array.isArray(filters.action) ? { $in: filters.action } : filters.action
+    }
+    if (filters.from || filters.to) {
+      const range: Record<string, unknown> = {}
+      if (filters.from) range.$gte = filters.from
+      if (filters.to) range.$lt = filters.to
+      where.created_at = range
+    }
+
+    const limit = Math.min(filters.limit ?? 500, 2000)
+    return repo.find(where, { orderBy: { created_at: "DESC" }, limit })
+  }
+
+  /**
    * Hard-delete activity records older than `daysOld` days.
    * Called by the cleanup-old-activities scheduled job.
    * Returns the number of records deleted.

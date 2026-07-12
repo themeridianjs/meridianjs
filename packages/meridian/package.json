@@ -1,6 +1,6 @@
 {
   "name": "@meridianjs/meridian",
-  "version": "2.7.2",
+  "version": "2.7.3",
   "description": "Default API routes, workflows, links, and subscribers for Meridian applications",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -30,7 +30,7 @@
     "@meridianjs/project": "^2.0.0",
     "@meridianjs/issue": "^2.0.0",
     "@meridianjs/sprint": "^1.0.1",
-    "@meridianjs/activity": "^1.0.1",
+    "@meridianjs/activity": "^1.1.0",
     "@meridianjs/notification": "^2.0.0",
     "@meridianjs/invitation": "^2.0.0",
     "@meridianjs/workspace-member": "^2.0.0",

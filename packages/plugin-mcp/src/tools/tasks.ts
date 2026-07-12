@@ -6,14 +6,15 @@ import {
   assignIssueWorkflow,
   hasProjectAccess,
   isGlobalAdmin,
-  getAccessibleWorkspaceIds,
 } from "@meridianjs/meridian"
 import { EVENTS } from "@meridianjs/types"
 import {
   type McpToolContext,
+  accessibleProjectIds,
   asReqLike,
   canWrite,
   err,
+  escapeLike,
   hasPermission,
   ok,
   workflowError,
@@ -39,11 +40,6 @@ async function loadIssueWithAccess(ctx: McpToolContext, issueId: string) {
     }
   }
   return { issue }
-}
-
-/** Escapes LIKE wildcards so an email is matched literally (case-insensitively). */
-function escapeLike(value: string): string {
-  return value.replace(/[\\%_]/g, "\\$&")
 }
 
 /**
@@ -82,24 +78,6 @@ async function resolveAssigneeIds(
     }
   }
   return { ids: [...new Set(merged)] }
-}
-
-/** Project ids the caller may read — mirrors GET /admin/issues scoping. */
-async function accessibleProjectIds(ctx: McpToolContext): Promise<string[]> {
-  const projectService = ctx.scope.resolve("projectModuleService") as any
-  if (isGlobalAdmin(asReqLike(ctx))) {
-    const workspaceIds = await getAccessibleWorkspaceIds(asReqLike(ctx))
-    if (workspaceIds.length === 0) return []
-    const [projects] = await projectService.listAndCountProjects(
-      { workspace_id: workspaceIds.length === 1 ? workspaceIds[0] : workspaceIds },
-      { limit: 1000 }
-    )
-    return (projects as any[]).map((p) => p.id)
-  }
-  const teamMemberService = ctx.scope.resolve("teamMemberModuleService") as any
-  const projectMemberService = ctx.scope.resolve("projectMemberModuleService") as any
-  const teamIds = await teamMemberService.getUserTeamIds(ctx.user.id)
-  return projectMemberService.getAccessibleProjectIds(ctx.user.id, teamIds)
 }
 
 export function registerTaskTools(server: McpServer, ctx: McpToolContext) {

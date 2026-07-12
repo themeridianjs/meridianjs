@@ -1,4 +1,5 @@
 import { PRIVILEGED_ROLES } from "@meridianjs/types"
+import { isGlobalAdmin, getAccessibleWorkspaceIds } from "@meridianjs/meridian"
 
 /** Per-request context every tool closes over. */
 export interface McpToolContext {
@@ -29,6 +30,29 @@ export function canWrite(ctx: McpToolContext): boolean {
   if (ctx.user?.authType !== "api-token") return true
   const scopes: string[] = ctx.user?.tokenScopes ?? []
   return scopes.includes("write")
+}
+
+/** Escapes LIKE wildcards so an email is matched literally (case-insensitively). */
+export function escapeLike(value: string): string {
+  return value.replace(/[\\%_]/g, "\\$&")
+}
+
+/** Project ids the caller may read — mirrors GET /admin/issues scoping. */
+export async function accessibleProjectIds(ctx: McpToolContext): Promise<string[]> {
+  const projectService = ctx.scope.resolve("projectModuleService") as any
+  if (isGlobalAdmin(asReqLike(ctx))) {
+    const workspaceIds = await getAccessibleWorkspaceIds(asReqLike(ctx))
+    if (workspaceIds.length === 0) return []
+    const [projects] = await projectService.listAndCountProjects(
+      { workspace_id: workspaceIds.length === 1 ? workspaceIds[0] : workspaceIds },
+      { limit: 1000 }
+    )
+    return (projects as any[]).map((p) => p.id)
+  }
+  const teamMemberService = ctx.scope.resolve("teamMemberModuleService") as any
+  const projectMemberService = ctx.scope.resolve("projectMemberModuleService") as any
+  const teamIds = await teamMemberService.getUserTeamIds(ctx.user.id)
+  return projectMemberService.getAccessibleProjectIds(ctx.user.id, teamIds)
 }
 
 export function ok(data: unknown) {
