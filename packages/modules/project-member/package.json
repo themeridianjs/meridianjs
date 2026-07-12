@@ -1,6 +1,6 @@
 {
   "name": "@meridianjs/project-member",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Meridian project-member module — project access control via users and teams",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",

@@ -1,6 +1,6 @@
 {
   "name": "@meridianjs/event-bus-local",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "Local in-process event bus for Meridian (development/testing)",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",

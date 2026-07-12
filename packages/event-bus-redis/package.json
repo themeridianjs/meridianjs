@@ -1,6 +1,6 @@
 {
   "name": "@meridianjs/event-bus-redis",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "Meridian Redis event bus — BullMQ-backed IEventBus for production",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",

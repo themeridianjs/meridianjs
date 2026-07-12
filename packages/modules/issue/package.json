@@ -1,6 +1,6 @@
 {
   "name": "@meridianjs/issue",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Meridian issue module — Issue and Comment domain models",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",

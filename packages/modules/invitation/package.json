@@ -1,6 +1,6 @@
 {
   "name": "@meridianjs/invitation",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Meridian invitation module — workspace invitation management",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",

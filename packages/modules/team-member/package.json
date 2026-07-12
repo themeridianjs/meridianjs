@@ -1,6 +1,6 @@
 {
   "name": "@meridianjs/team-member",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Meridian team-member module — tracks team membership",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
